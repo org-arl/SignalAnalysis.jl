@@ -5,10 +5,10 @@ axisname(a::Axis{N,<:Any}) where N = uppercase(string(N)[1:1]) * string(N)[2:end
 @recipe function plot(s::AxisArray, f=nothing)
     ticks --> :native
     s1 = s
-    clims = nothing
+    slims = nothing
     if f != nothing
         s1 = f.(s.data)
-        if f == pow2db || f == mag2db
+        if f == pow2db || f == amp2db
             slims = (maximum(s1)-30, maximum(s1)+5)
         end
     end

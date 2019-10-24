@@ -4,7 +4,7 @@ using AxisArrays
 using DSP
 using RecipesBase
 
-export pow2db, mag2db, db2amp, db2pow
+export pow2db, amp2db, db2amp, db2pow
 
 include("signal.jl")
 include("basic.jl")
