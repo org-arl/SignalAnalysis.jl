@@ -1,7 +1,3 @@
-### plotting recipes
-
-axisname(a::Axis{N,<:Any}) where N = uppercase(string(N)[1:1]) * string(N)[2:end]
-
 @recipe function plot(s::AxisArray, f=nothing)
     ticks --> :native
     s1 = s
@@ -40,3 +36,7 @@ axisname(a::Axis{N,<:Any}) where N = uppercase(string(N)[1:1]) * string(N)[2:end
         end
     end
 end
+
+### utility functions
+
+axisname(a::Axis{N,<:Any}) where N = uppercase(string(N)[1:1]) * string(N)[2:end]

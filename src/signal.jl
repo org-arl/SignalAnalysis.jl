@@ -1,5 +1,3 @@
-### interface functions
-
 export isanalytic, samplingrate, sampledsignal
 
 "Create a signal from samples, converting to/from analytic representation, if needed."

@@ -1,5 +1,3 @@
-### interface functions
-
 export energy, meantime, rmsduration, meanfrequency, bandwidth, ifreq, psd, specgram
 
 "Get total signal energy."
@@ -39,7 +37,8 @@ end
 specgram(s, n=min(div(length(s),8),256), noverlap=div(n,2); kwargs...) = specgram(sampledsignal(s), n, noverlap; kwargs...)
 function specgram(s::AxisArray, n=min(div(length(s),8),256), noverlap=div(n,2); kwargs...)
     fs = samplingrate(s)
-    p = spectrogram(s, n, noverlap; fs=fs, kwargs...)
+    # FIXME: spectrogram does not work correctly with analytic signal input, so forcing signal to be real
+    p = spectrogram(sampledsignal(s, analytic=false), n, noverlap; fs=fs, kwargs...)
     AxisArray(power(p), Axis{:frequency}(freq(p)), Axis{:time}(time(p)))
 end
 
