@@ -8,7 +8,7 @@ function psd(s; fs=deffs, nfft=1024, plot=plot, window=nothing, label=nothing, k
   while nfft > size(s,1)
     nfft = div(nfft, 2)
   end
-  p = welch_pgram(s, nfft; fs=fs, window=window)
+  p = welch_pgram(s, nfft; fs=freqQ(fs), window=window)
   f = freq(p)
   funit = "Hz"
   if maximum(f) >= 10000
@@ -25,7 +25,7 @@ psd!(s; fs=deffs, nfft=1024, window=nothing, label=nothing, kwargs...) = psd(s; 
 
 "Plot spectrogram of the signal."
 function specgram(s; fs=deffs, nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, kwargs...)
-  p = spectrogram(s, nfft, noverlap; fs=fs, window=window)
+  p = spectrogram(s, nfft, noverlap; fs=freqQ(fs), window=window)
   t = time(p)
   f = freq(p)
   z = power(p)
@@ -51,7 +51,7 @@ end
 
 "Plot timeseries of the signal."
 function timeseries(s; fs=deffs, downsample=nothing, pooling=nothing, plot=plot, label=nothing, kwargs...)
-  fs1 = float(fs)
+  fs1 = freqQ(fs)
   n = size(s,1)
   if isanalytic(s)
     s = real(s)
