@@ -10,12 +10,18 @@ function psd(s; fs=deffs, nfft=1024, plot=plot, window=nothing, label=nothing, k
   end
   p = welch_pgram(s, nfft; fs=freqQ(fs), window=window)
   f = freq(p)
+  z = power(p)
+  if isanalytic(s)
+    ndx = sortperm(f)
+    f = f[ndx]
+    z = z[ndx]
+  end
   funit = "Hz"
   if maximum(f) >= 10000
     f /= 1000.0
     funit = "kHz"
   end
-  plot(f, power(p); label=label, kwargs...)
+  plot(f, z; label=label, kwargs...)
   xlabel!("Frequency ("*funit*")")
   ylabel!("Power spectral density (dB/Hz)")
 end
@@ -51,7 +57,7 @@ end
 
 "Plot timeseries of the signal."
 function timeseries(s; fs=deffs, downsample=nothing, pooling=nothing, plot=plot, label=nothing, kwargs...)
-  fs1 = freqQ(fs)
+  fs = freqQ(fs)
   n = size(s,1)
   if isanalytic(s)
     s = real(s)
@@ -73,9 +79,9 @@ function timeseries(s; fs=deffs, downsample=nothing, pooling=nothing, plot=plot,
       end
       s = y
     end
-    fs1 /= downsample
+    fs /= downsample
   end
-  t = time(s; fs=fs1)
+  t = time(s; fs=fs)
   tunit = "s"
   if maximum(t) <= 1.0
     t *= 1000.0

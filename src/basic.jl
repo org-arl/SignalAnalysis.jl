@@ -1,5 +1,5 @@
 export samplingrate, isanalytic, analytic
-export energy, meantime, rmsduration, meanfrequency, bandwidth, ifreq
+export energy, meantime, rmsduration, meanfrequency, rmsbandwidth, ifreq
 
 deffs = 1.0
 
@@ -50,8 +50,8 @@ function meanfrequency(s; fs=deffs, nfft=1024, window=nothing)
   end
 end
 
-"Get bandwidth of the signal."
-function bandwidth(s; fs=deffs, nfft=1024, window=nothing)
+"Get RMS bandwidth of the signal."
+function rmsbandwidth(s; fs=deffs, nfft=1024, window=nothing)
   mapslices(s; dims=1) do s1
     p = welch_pgram(s1, ceil(Int, length(s1)/nfft); fs=freqQ(fs), window=window)
     f = freq(p)

@@ -13,16 +13,16 @@ end
 
 "Generate a frequency modulated chirp signal."
 function chirp(freq1, freq2, duration; fs=deffs, shape=:linear, phase=0.0, window=nothing, analytic=true)
-    f1 = freqQ(freq1)
-    f2 = freqQ(freq2)
-    T = timeQ(duration)
-    t = 0:1/freqQ(fs):T
+    freq1 = freqQ(freq1)
+    freq2 = freqQ(freq2)
+    duration = timeQ(duration)
+    t = 0:1/freqQ(fs):duration
     if shape == :linear
-        cby2 = (f2-f1)/T/2.0
-        x = exp.(2im*π .* (cby2.*t.^2 .+ f1.*t) .+ phase)
+        cby2 = (freq2-freq1)/duration/2.0
+        x = exp.(2im*π .* (cby2.*t.^2 .+ freq1.*t) .+ phase)
     elseif shape == :hyperbolic
-        s = f2*T/(f2-f1)
-        x = exp.(-2im*π*s*f1 .* log.(abs.(1.0 .- t./s)))
+        s = freq2*duration/(freq2-freq1)
+        x = exp.(-2im*π*s*freq1 .* log.(abs.(1.0 .- t./s)))
     else
         @assert false "Unknown chirp shape"
     end
