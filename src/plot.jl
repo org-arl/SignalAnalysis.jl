@@ -1,10 +1,14 @@
-@recipe function plot(s::AxisArray, f=nothing)
+### plotting recipes
+
+axisname(a::Axis{N,<:Any}) where N = uppercase(string(N)[1:1]) * string(N)[2:end]
+
+@recipe function plot(s::AxisArray; apply=nothing)
     ticks --> :native
     s1 = s
     slims = nothing
-    if f != nothing
-        s1 = f.(s.data)
-        if f == pow2db || f == amp2db
+    if apply != nothing
+        s1 = apply.(s.data)
+        if apply == pow2db || apply == amp2db
             slims = (maximum(s1)-30, maximum(s1)+5)
         end
     end

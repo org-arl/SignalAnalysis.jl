@@ -73,13 +73,13 @@ end
     x1 = randn(8000)
     x = sampledsignal(x1, 8000)
     @test energy(x) isa Number
-    @test energy(x) == energy(x1)
-    @test energy(x) ≈ sum(abs2, x1)
+    @test energy(x) == energy(x1)/8000
+    @test energy(x) ≈ sum(abs2, x1)/8000
 
     x1 = randn((8000,2))
     x = sampledsignal(x1, 8000)
     @test size(energy(x)) == (1,2)
-    @test energy(x) == energy(x1)
-    @test energy(x) ≈ sum(abs2, x1, dims=1)
+    @test energy(x) == energy(x1)/8000
+    @test energy(x) ≈ sum(abs2, x1, dims=1)/8000
 
 end
