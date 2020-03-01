@@ -1,7 +1,5 @@
 ### plotting recipes
 
-axisname(a::Axis{N,<:Any}) where N = uppercase(string(N)[1:1]) * string(N)[2:end]
-
 @recipe function plot(s::AxisArray; apply=nothing)
     ticks --> :native
     s1 = s
