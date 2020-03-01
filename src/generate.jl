@@ -2,18 +2,18 @@ export cw, chirp
 export hanning, hamming, tukey, cosine, lanczos, triang, bartlett, gaussian, bartlett_hann, blackman, kaiser, dpss
 
 "Generate a sinusoidal signal."
-function cw(freq, duration, samplingrate; phase=0.0, window=nothing, starttime=0.0, analytic=true)
-    t = 0:1/samplingrate:duration
+function cw(freq, duration; fs=deffs, phase=0.0, window=nothing, analytic=true)
+    t = 0:1/fs:duration
     x = exp.(2im*π*freq.*t .+ phase)
     if window != nothing
         x .*= getwindow(window, length(t))
     end
-    sampledsignal(x, samplingrate, starttime=starttime, analytic=analytic)
+    analytic ? x : real(x)
 end
 
 "Generate a frequency modulated chirp signal."
-function chirp(freq1, freq2, duration, samplingrate, shape=:linear; phase=0.0, window=nothing, starttime=0.0, analytic=true)
-    t = 0:1/samplingrate:duration
+function chirp(freq1, freq2, duration; fs=deffs, shape=:linear, phase=0.0, window=nothing, analytic=true)
+    t = 0:1/fs:duration
     if shape == :linear
         cby2 = (freq2-freq1)/duration/2.0
         x = exp.(2im*π .* (cby2.*t.^2 .+ freq1.*t) .+ phase)
@@ -26,7 +26,7 @@ function chirp(freq1, freq2, duration, samplingrate, shape=:linear; phase=0.0, w
     if window != nothing
         x .*= getwindow(window, length(t))
     end
-    sampledsignal(x, samplingrate, starttime=starttime, analytic=analytic)
+    analytic ? x : real(x)
 end
 
 ### utility functions

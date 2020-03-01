@@ -1,44 +1,48 @@
-### plotting recipes
+export psd, psd!, specgram
 
-@recipe function plot(s::AxisArray; apply=nothing)
-    ticks --> :native
-    s1 = s
-    slims = nothing
-    if apply != nothing
-        s1 = apply.(s.data)
-        if apply == pow2db || apply == amp2db
-            slims = (maximum(s1)-30, maximum(s1)+5)
-        end
+"Plot power spectral density of the signal."
+function psd(s; fs=deffs, nfft=1024, plot=plot, window=nothing, label=nothing, kwargs...)
+    nfft = nextfastfft(nfft)
+    while nfft > size(s,1)
+        nfft = div(nfft, 2)
     end
-    if ndims(s) == 2 && axisname(s.axes[1]) == "Frequency" && axisname(s.axes[2]) == "Time"
-        xlabel --> "Time"
-        ylabel --> "Frequency"
-        if slims != nothing
-            clims --> slims
-        end
-        @series begin
-            seriestype := :heatmap
-            s.axes[2].val, s.axes[1].val, real(s1)
-        end
-    else
-        xlabel --> axisname(s.axes[1])
-        legend --> ndims(s) > 1
-        if slims != nothing
-            ylims --> slims
-        end
-        @series begin
-            seriestype := :line
-            time(s), real(s1)
-        end
-        if s1 isa AbstractArray{<:Complex}
-            @series begin
-                seriestype := :line
-                time(s), imag(s1)
-            end
-        end
+    p = welch_pgram(s, nfft; fs=fs, window=window)
+    f = freq(p)
+    funit = "Hz"
+    if maximum(f) >= 10000
+        f /= 1000.0
+        funit = "kHz"
     end
+    plot(f, power(p); label=label, kwargs...)
+    xlabel!("Frequency ("*funit*")")
+    ylabel!("Power spectral density (dB/Hz)")
 end
 
-### utility functions
+"Plot power spectral density of the signal."
+psd!(s; fs=deffs, nfft=1024, window=nothing, label=nothing, kwargs...) = psd(s; fs=fs, nfft=nfft, plot=plot!, window=window, label=label, kwargs...)
 
-axisname(a::Axis{N,<:Any}) where N = uppercase(string(N)[1:1]) * string(N)[2:end]
+"Plot spectrogram of the signal."
+function specgram(s; fs=deffs, nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, kwargs...)
+    p = spectrogram(s, nfft, noverlap; fs=fs, window=window)
+    t = time(p)
+    f = freq(p)
+    z = power(p)
+    if isanalytic(s)
+        ndx = sortperm(f)
+        f = f[ndx]
+        z = z[ndx, :]
+    end
+    tunit = "s"
+    funit = "Hz"
+    if maximum(f) >= 10000
+        f /= 1000.0
+        funit = "kHz"
+    end
+    if maximum(t) <= 1.0
+        t *= 1000.0
+        tunit = "ms"
+    end
+    heatmap(t, f, z; kwargs...)
+    xlabel!("Time ("*tunit*")")
+    ylabel!("Frequency ("*funit*")")
+end
