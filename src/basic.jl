@@ -1,16 +1,57 @@
 export samplingrate, isanalytic, analytic
+export padded, slide
 export energy, meantime, rmsduration, meanfrequency, rmsbandwidth, ifreq
 
 deffs = 1.0
 
-"Set default sampling rate."
+"Set default sampling rate. Returns previous sampling rate."
 function samplingrate(fs)
   global deffs
+  old = deffs
   deffs = freqQ(fs)
+  return old
 end
 
 "Get default sampling rate."
 samplingrate() = deffs
+
+"Run code block with temporary sampling rate."
+function samplingrate(f::Function, fs)
+  old = samplingrate(fs)
+  rv = f()
+  samplingrate(old)
+  return rv
+end
+
+"Generate a padded view of a signal with optional delay/advance."
+function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, N}
+  if length(padding) == 1
+    left = padding
+    right = padding
+  else
+    left = padding[1]
+    right = padding[2]
+  end
+  PaddedView(fill, s, (1-left:length(s)+right,), (1+delay:delay+length(s),))
+end
+
+"Slide a window over a signal, process each window, and optionally collect the results."
+function slide(f::Function, s::AbstractVector, nsamples=1, overlap=0, args...)
+  @assert overlap < nsamples "overlap must be less than nsamples"
+  n = size(s,1)
+  m = nsamples - overlap
+  M = (n-nsamples)÷m
+  s1 = @view s[1:nsamples]
+  rv = f(1, s1, args...)
+  out = rv == nothing ? nothing : Array{typeof(rv),1}(undef, 1+M)
+  rv == nothing || (out[1] = rv)
+  for j = 1:M
+    s1 = @view s[j*m+1:j*m+nsamples]
+    rv = f(j+1, s1, args...)
+    out == nothing || (out[j+1] = rv)
+  end
+  return out
+end
 
 "Convert a signal to analytic representation."
 analytic(s::AbstractArray) = isanalytic(s) ? s : hilbert(s)
