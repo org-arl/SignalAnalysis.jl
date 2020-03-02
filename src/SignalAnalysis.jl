@@ -3,6 +3,7 @@ module SignalAnalysis
 using Requires
 using DSP
 using PaddedViews
+using ProgressMeter
 
 export pow2db, amp2db, db2amp, db2pow
 

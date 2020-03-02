@@ -36,27 +36,31 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, 
 end
 
 "Slide a window over a signal, process each window."
-function slide(f::Function, s::AbstractVector, nsamples, overlap=0, args...)
+function slide(f::Function, s::AbstractVector, nsamples, overlap=0, args...; showprogress=true)
   @assert overlap < nsamples "overlap must be less than nsamples"
   n = size(s,1)
   m = nsamples - overlap
   mmax = (n-nsamples)÷m
+  showprogress && (p = Progress(mmax+1, 1, "Processing: "))
   for j = 0:mmax
     s1 = @view s[j*m+1:j*m+nsamples]
     f(s1, j+1, j*m+1, args...)
+    showprogress && next!(p)
   end
 end
 
 "Slide a window over a signal, process each window, and collect the results."
-function slide(f::Function, ::Type{T}, s::AbstractVector, nsamples, overlap=0, args...) where {T}
+function slide(f::Function, ::Type{T}, s::AbstractVector, nsamples, overlap=0, args...; showprogress=true) where {T}
   @assert overlap < nsamples "overlap must be less than nsamples"
   n = size(s,1)
   m = nsamples - overlap
   mmax = (n-nsamples)÷m
   out = Array{T,1}(undef, 1+mmax)
+  showprogress && (p = Progress(mmax+1, 1, "Processing: "))
   for j = 0:mmax
     s1 = @view s[j*m+1:j*m+nsamples]
     out[j+1] = f(s1, j+1, j*m+1, args...)
+    showprogress && next!(p)
   end
   return out
 end
