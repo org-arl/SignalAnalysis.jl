@@ -21,7 +21,7 @@ function psd(s; fs=deffs, nfft=1024, plot=plot, window=nothing, label=nothing, k
     f /= 1000.0
     funit = "kHz"
   end
-  plot(f, z; label=label, kwargs...)
+  plot(f, pow2db.(z); label=label, kwargs...)
   xlabel!("Frequency ("*funit*")")
   ylabel!("Power spectral density (dB/Hz)")
 end
@@ -50,7 +50,7 @@ function specgram(s; fs=deffs, nfft=min(div(length(s),8),256), noverlap=div(nfft
     t *= 1000.0
     tunit = "ms"
   end
-  heatmap(t, f, z; kwargs...)
+  heatmap(t, f, pow2db.(z); kwargs...)
   xlabel!("Time ("*tunit*")")
   ylabel!("Frequency ("*funit*")")
 end
