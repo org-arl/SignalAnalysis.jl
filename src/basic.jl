@@ -35,20 +35,28 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, 
   PaddedView(fill, s, (1-left:length(s)+right,), (1+delay:delay+length(s),))
 end
 
-"Slide a window over a signal, process each window, and optionally collect the results."
-function slide(f::Function, s::AbstractVector, nsamples=1, overlap=0, args...)
+"Slide a window over a signal, process each window."
+function slide(f::Function, s::AbstractVector, nsamples, overlap=0, args...)
   @assert overlap < nsamples "overlap must be less than nsamples"
   n = size(s,1)
   m = nsamples - overlap
-  M = (n-nsamples)÷m
-  s1 = @view s[1:nsamples]
-  rv = f(1, s1, args...)
-  out = rv == nothing ? nothing : Array{typeof(rv),1}(undef, 1+M)
-  rv == nothing || (out[1] = rv)
-  for j = 1:M
+  mmax = (n-nsamples)÷m
+  for j = 0:mmax
     s1 = @view s[j*m+1:j*m+nsamples]
-    rv = f(j+1, s1, args...)
-    out == nothing || (out[j+1] = rv)
+    f(s1, j+1, j*m+1, args...)
+  end
+end
+
+"Slide a window over a signal, process each window, and collect the results."
+function slide(f::Function, ::Type{T}, s::AbstractVector, nsamples, overlap=0, args...) where {T}
+  @assert overlap < nsamples "overlap must be less than nsamples"
+  n = size(s,1)
+  m = nsamples - overlap
+  mmax = (n-nsamples)÷m
+  out = Array{T,1}(undef, 1+mmax)
+  for j = 0:mmax
+    s1 = @view s[j*m+1:j*m+nsamples]
+    out[j+1] = f(s1, j+1, j*m+1, args...)
   end
   return out
 end
