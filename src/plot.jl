@@ -3,35 +3,39 @@ using Plots
 export psd, psd!, specgram, timeseries, timeseries!, filtfreqz, filtfreqz!
 
 "Plot power spectral density of the signal."
-function psd(s; fs=deffs, nfft=1024, plot=plot, window=nothing, label=nothing, kwargs...)
+function psd(s; fs=deffs, nfft=1024, plot=plot, window=nothing, legend=false, kwargs...)
   nfft = nextfastfft(nfft)
   while nfft > size(s,1)
     nfft = div(nfft, 2)
   end
-  p = welch_pgram(s, nfft; fs=freqQ(fs), window=window)
-  f = freq(p)
-  z = power(p)
-  if isanalytic(s)
-    ndx = sortperm(f)
-    f = f[ndx]
-    z = z[ndx]
-  end
   funit = "Hz"
-  if maximum(f) >= 10000
-    f /= 1000.0
-    funit = "kHz"
+  for j = 1:size(s,2)
+    p = welch_pgram(s[:,j], nfft; fs=freqQ(fs), window=window)
+    f = freq(p)
+    z = power(p)
+    if isanalytic(s)
+      ndx = sortperm(f)
+      f = f[ndx]
+      z = z[ndx]
+    end
+    if maximum(f) >= 10000
+      f /= 1000.0
+      funit = "kHz"
+    end
+    plot(f, pow2db.(z); leg=legend, kwargs...)
+    plot = plot!
   end
-  plot(f, pow2db.(z); label=label, kwargs...)
   xlabel!("Frequency ("*funit*")")
   ylabel!("Power spectral density (dB/Hz)")
 end
 
 "Plot power spectral density of the signal."
-psd!(s; fs=deffs, nfft=1024, window=nothing, label=nothing, kwargs...) = psd(s; fs=fs, nfft=nfft, plot=plot!, window=window, label=label, kwargs...)
+psd!(s; fs=deffs, nfft=1024, window=nothing, legend=false, kwargs...) = psd(s; fs=fs, nfft=nfft, plot=plot!, window=window, legend=legend, kwargs...)
 
 "Plot spectrogram of the signal."
 function specgram(s; fs=deffs, nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, kwargs...)
-  p = spectrogram(s, nfft, noverlap; fs=freqQ(fs), window=window)
+  @assert size(s,2) == 1 "specgram only works with vectors"
+  p = spectrogram(s[:,1], nfft, noverlap; fs=freqQ(fs), window=window)
   t = time(p)
   f = freq(p)
   z = power(p)
@@ -56,7 +60,7 @@ function specgram(s; fs=deffs, nfft=min(div(length(s),8),256), noverlap=div(nfft
 end
 
 "Plot timeseries of the signal."
-function timeseries(s; fs=deffs, downsample=nothing, pooling=nothing, plot=plot, label=nothing, kwargs...)
+function timeseries(s; fs=deffs, downsample=nothing, pooling=nothing, plot=plot, legend=false, kwargs...)
   fs = freqQ(fs)
   n = size(s,1)
   if isanalytic(s)
@@ -87,12 +91,13 @@ function timeseries(s; fs=deffs, downsample=nothing, pooling=nothing, plot=plot,
     t *= 1000.0
     tunit = "ms"
   end
-  plot(t, s; label=label, kwargs...)
+  plot(t, s; leg=legend, kwargs...)
   xlabel!("Time ("*tunit*")")
 end
 
 "Plot timeseries of the signal."
-timeseries!(s; fs=deffs, downsample=nothing, pooling=nothing, label=nothing, kwargs...) = timeseries(s; fs=fs, downsample=downsample, pooling=pooling, plot=plot!, label=label, kwargs...)
+timeseries!(s; fs=deffs, downsample=nothing, pooling=nothing, legend=false, kwargs...) = timeseries(s; fs=fs, downsample=downsample, pooling=pooling, plot=plot!, legend=legend, kwargs...)
+
 "Plot frequency response of filter."
 function filtfreqz(num::AbstractArray, den::AbstractArray=[1]; fs=deffs, nfreq=256, plot=plot, legend=false, kwargs...)
   fs = freqQ(fs)
