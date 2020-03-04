@@ -1,6 +1,6 @@
 export samplingrate, isanalytic, analytic
 export padded, slide
-export energy, meantime, rmsduration, meanfrequency, rmsbandwidth, ifreq
+export energy, meantime, rmsduration, meanfrequency, rmsbandwidth, ifreq, fir
 
 deffs = 1.0
 
@@ -111,6 +111,19 @@ function rmsbandwidth(s; fs=deffs, nfft=1024, window=nothing)
     f0 = wmean(f, power(p))
     sqrt.(wmean((f.-f0).^2, power(p)))
   end
+end
+
+"Design FIR filter."
+function fir(n, f1, f2=nothing; fs=deffs, method=FIRWindow(hanning(n)))
+  fs = freqQ(fs)
+  if f1 == 0
+    f = Lowpass(freqQ(f2); fs=fs)
+  elseif f2 == nothing || freqQ(f2) == fs/2
+    f = Highpass(freqQ(f1); fs=fs)
+  else
+    f = Bandpass(freqQ(f1), freqQ(f2); fs=fs)
+  end
+  return digitalfilter(f, method)
 end
 
 ### utility functions

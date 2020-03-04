@@ -10,6 +10,9 @@ timeQ(q::TimeQuantity) = float(ustrip(upreferred(q)))
 freqQ(q) = float(q)
 freqQ(q::FreqQuantity) = float(ustrip(upreferred(q)))
 
+Base.float(q::TimeQuantity) = float(ustrip(upreferred(q)))
+Base.float(q::FreqQuantity) = float(ustrip(upreferred(q)))
+
 Base.getindex(s::AbstractArray, t::Quantity{T,𝐓,U}, ndx...) where {T,U} = s[toindex(t),ndx...]
 
 (:)(start::TimeQuantity, stop::TimeQuantity) = toindex(start):toindex(stop)

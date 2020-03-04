@@ -1,6 +1,6 @@
 using Plots
 
-export psd, psd!, specgram, timeseries, timeseries!
+export psd, psd!, specgram, timeseries, timeseries!, filtfreqz, filtfreqz!
 
 "Plot power spectral density of the signal."
 function psd(s; fs=deffs, nfft=1024, plot=plot, window=nothing, label=nothing, kwargs...)
@@ -93,3 +93,24 @@ end
 
 "Plot timeseries of the signal."
 timeseries!(s; fs=deffs, downsample=nothing, pooling=nothing, label=nothing, kwargs...) = timeseries(s; fs=fs, downsample=downsample, pooling=pooling, plot=plot!, label=label, kwargs...)
+"Plot frequency response of filter."
+function filtfreqz(num::AbstractArray, den::AbstractArray=[1]; fs=deffs, nfreq=256, plot=plot, legend=false, kwargs...)
+  fs = freqQ(fs)
+  f = collect(range(0, stop=fs/2, length=nfreq))
+  z = Filters.freqz(PolynomialRatio(num, den), f, fs)
+  funit = "Hz"
+  if maximum(f) >= 10000
+    f /= 1000.0
+    funit = "kHz"
+  end
+  p1 = plot(f, pow2db.(abs.(z)); leg=legend, kwargs...)
+  xlabel!("Frequency ("*funit*")")
+  ylabel!("Magnitude (dB)")
+  p2 = plot(f, angle.(z); leg=legend, kwargs...)
+  xlabel!("Frequency ("*funit*")")
+  ylabel!("Phase (radians)")
+  plot(p1, p2, layout=2, size=(600,300))
+end
+
+"Plot frequency response of filter."
+filtfreqz!(num::AbstractArray, den::AbstractArray=[1]; fs=deffs, nfreq=256, legend=false, kwargs...) = freqz(num, den; fs=fs, nfreq=nfreq, plot=plot!, legend=legend, kwargs...)
