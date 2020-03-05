@@ -128,5 +128,6 @@ end
 
 ### utility functions
 
+wmean(x::AbstractVector, w::AbstractVector) = (x'w) / sum(w)
 wmean(x, w::AbstractVector) = sum(x.*w) ./ sum(w)
 wmean(x, w::AbstractMatrix) = sum(x.*w; dims=1) ./ sum(w; dims=1)
