@@ -2,18 +2,18 @@ export samplingrate, isanalytic, analytic
 export padded, slide
 export energy, meantime, rmsduration, meanfrequency, rmsbandwidth, ifreq, fir
 
-deffs = 1.0
+const deffs = Ref(1.0)
 
 "Set default sampling rate. Returns previous sampling rate."
 function samplingrate(fs)
   global deffs
-  old = deffs
-  deffs = freqQ(fs)
+  old = deffs[]
+  deffs[] = freqQ(fs)
   return old
 end
 
 "Get default sampling rate."
-samplingrate() = deffs
+samplingrate() = deffs[]
 
 "Run code block with temporary sampling rate."
 function samplingrate(f::Function, fs)
@@ -72,30 +72,30 @@ analytic(s::AbstractArray) = isanalytic(s) ? s : hilbert(s)
 isanalytic(s::AbstractArray) = eltype(s) <: Complex
 
 "Get time vector corresponding to each sample in signal."
-Base.time(s::AbstractArray; fs=deffs) = float(0:size(s,1)-1)./freqQ(fs)
+Base.time(s::AbstractArray; fs=deffs[]) = float(0:size(s,1)-1)./freqQ(fs)
 
 "Convert time to index."
-toindex(t; fs=deffs) = 1 + round(Int, timeQ(t)*freqQ(fs))
+toindex(t; fs=deffs[]) = 1 + round(Int, timeQ(t)*freqQ(fs))
 
 "Get total signal energy."
-energy(s::AbstractVector; fs=deffs) = sum(abs2, s)/freqQ(fs)
-energy(s::AbstractMatrix; fs=deffs) = dropdims(sum(abs2, s; dims=1); dims=1)./freqQ(fs)
+energy(s::AbstractVector; fs=deffs[]) = sum(abs2, s)/freqQ(fs)
+energy(s::AbstractMatrix; fs=deffs[]) = dropdims(sum(abs2, s; dims=1); dims=1)./freqQ(fs)
 
 "Get mean time of the signal."
-meantime(s; fs=deffs) = wmean(time(s; fs=fs), abs.(s).^2)
+meantime(s; fs=deffs[]) = wmean(time(s; fs=fs), abs.(s).^2)
 
 "Get RMS duration of the signal."
-rmsduration(s; fs=deffs) = sqrt.(wmean(time(s; fs=fs).^2, abs.(s).^2) .- meantime(s; fs=fs).^2)
+rmsduration(s; fs=deffs[]) = sqrt.(wmean(time(s; fs=fs).^2, abs.(s).^2) .- meantime(s; fs=fs).^2)
 
 "Get instantaneous frequency of the signal."
-function ifreq(s; fs=deffs)
+function ifreq(s; fs=deffs[])
   s1 = analytic(s)
   f1 = freqQ(fs)/(2π) * diff(unwrap(angle.(s1); dims=1); dims=1)
   vcat(f1[[1],:], (f1[1:end-1,:]+f1[2:end,:])/2, f1[[end],:])
 end
 
 "Get mean frequency of the signal."
-function meanfrequency(s; fs=deffs, nfft=1024, window=nothing)
+function meanfrequency(s; fs=deffs[], nfft=1024, window=nothing)
   mapslices(s; dims=1) do s1
     p = welch_pgram(s1, ceil(Int, length(s1)/nfft); fs=freqQ(fs), window=window)
     f = freq(p)
@@ -104,7 +104,7 @@ function meanfrequency(s; fs=deffs, nfft=1024, window=nothing)
 end
 
 "Get RMS bandwidth of the signal."
-function rmsbandwidth(s; fs=deffs, nfft=1024, window=nothing)
+function rmsbandwidth(s; fs=deffs[], nfft=1024, window=nothing)
   mapslices(s; dims=1) do s1
     p = welch_pgram(s1, ceil(Int, length(s1)/nfft); fs=freqQ(fs), window=window)
     f = freq(p)
@@ -114,7 +114,7 @@ function rmsbandwidth(s; fs=deffs, nfft=1024, window=nothing)
 end
 
 "Design FIR filter."
-function fir(n, f1, f2=nothing; fs=deffs, method=FIRWindow(hanning(n)))
+function fir(n, f1, f2=nothing; fs=deffs[], method=FIRWindow(hanning(n)))
   fs = freqQ(fs)
   if f1 == 0
     f = Lowpass(freqQ(f2); fs=fs)

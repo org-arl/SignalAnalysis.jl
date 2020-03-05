@@ -2,7 +2,7 @@ export cw, chirp
 export hanning, hamming, tukey, cosine, lanczos, triang, bartlett, gaussian, bartlett_hann, blackman, kaiser, dpss
 
 "Generate a sinusoidal signal."
-function cw(freq, duration; fs=deffs, phase=0.0, window=nothing)
+function cw(freq, duration; fs=deffs[], phase=0.0, window=nothing)
     t = 0:1/freqQ(fs):timeQ(duration)
     x = exp.(2im*π*freqQ(freq).*t .+ phase)
     if window != nothing
@@ -12,7 +12,7 @@ function cw(freq, duration; fs=deffs, phase=0.0, window=nothing)
 end
 
 "Generate a frequency modulated chirp signal."
-function chirp(freq1, freq2, duration; fs=deffs, shape=:linear, phase=0.0, window=nothing)
+function chirp(freq1, freq2, duration; fs=deffs[], shape=:linear, phase=0.0, window=nothing)
     f1 = freqQ(freq1)
     f2 = freqQ(freq2)
     d = timeQ(duration)
