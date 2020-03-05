@@ -82,16 +82,16 @@ energy(s::AbstractVector; fs=deffs[]) = sum(abs2, s)/freqQ(fs)
 energy(s::AbstractMatrix; fs=deffs[]) = vec(sum(abs2, s; dims=1))./freqQ(fs)
 
 "Get mean time of the signal."
-meantime(s; fs=deffs[]) = wmean(time(s; fs=fs), abs.(s).^2)
+meantime(s; fs=deffs[]) = wmean(time(s; fs=fs), abs2.(s))
 
 "Get RMS duration of the signal."
-rmsduration(s; fs=deffs[]) = sqrt.(wmean(time(s; fs=fs).^2, abs.(s).^2) .- meantime(s; fs=fs).^2)
+rmsduration(s; fs=deffs[]) = sqrt.(wmean(time(s; fs=fs).^2, abs2.(s)) .- meantime(s; fs=fs).^2)
 
 "Get instantaneous frequency of the signal."
 function ifreq(s; fs=deffs[])
   s1 = analytic(s)
   f1 = freqQ(fs)/(2π) * diff(unwrap(angle.(s1); dims=1); dims=1)
-  vcat(f1[[1],:], (f1[1:end-1,:]+f1[2:end,:])/2, f1[[end],:])
+  vcat(f1[1:1,:], (f1[1:end-1,:]+f1[2:end,:])/2, f1[end:end,:])
 end
 
 "Get mean frequency of the signal."
