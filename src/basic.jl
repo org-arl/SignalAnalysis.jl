@@ -79,7 +79,7 @@ toindex(t; fs=deffs[]) = 1 + round(Int, timeQ(t)*freqQ(fs))
 
 "Get total signal energy."
 energy(s::AbstractVector; fs=deffs[]) = sum(abs2, s)/freqQ(fs)
-energy(s::AbstractMatrix; fs=deffs[]) = dropdims(sum(abs2, s; dims=1); dims=1)./freqQ(fs)
+energy(s::AbstractMatrix; fs=deffs[]) = vec(sum(abs2, s; dims=1))./freqQ(fs)
 
 "Get mean time of the signal."
 meantime(s; fs=deffs[]) = wmean(time(s; fs=fs), abs.(s).^2)
