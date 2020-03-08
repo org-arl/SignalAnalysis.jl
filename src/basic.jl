@@ -72,7 +72,7 @@ analytic(s::AbstractArray) = isanalytic(s) ? s : hilbert(s)
 isanalytic(s::AbstractArray) = eltype(s) <: Complex
 
 "Get time vector corresponding to each sample in signal."
-Base.time(s::AbstractArray; fs=deffs) = float(0:size(s,1)-1)./freqQ(fs)
+Base.time(s::AbstractArray; fs=deffs, t0=0.0) = t0 .+ float(0:size(s,1)-1)./freqQ(fs)
 
 "Convert time to index."
 toindex(t; fs=deffs) = 1 + round(Int, timeQ(t)*freqQ(fs))
