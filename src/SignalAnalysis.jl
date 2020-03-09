@@ -8,6 +8,8 @@ using ProgressMeter
 export pow2db, amp2db, db2amp, db2pow
 
 include("basic.jl")
+include("dsp.jl")
+include("rand.jl")
 include("generate.jl")
 include("units.jl")
 
