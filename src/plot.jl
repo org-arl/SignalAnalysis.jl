@@ -3,7 +3,7 @@ using Plots
 export psd, psd!, specgram, timeseries, timeseries!, filtfreqz, filtfreqz!
 
 "Plot power spectral density of the signal."
-function psd(s; fs=deffs[], nfft=1024, plot=plot, window=nothing, legend=false, kwargs...)
+function psd(s; fs=deffs[], nfft=1024, plot=plot, window=nothing, legend=false, logfreq=false, kwargs...)
   nfft = nextfastfft(nfft)
   while nfft > size(s,1)
     nfft = div(nfft, 2)
@@ -22,7 +22,11 @@ function psd(s; fs=deffs[], nfft=1024, plot=plot, window=nothing, legend=false, 
       f /= 1000.0
       funit = "kHz"
     end
-    plot(f, pow2db.(z); leg=legend, kwargs...)
+    if logfreq
+      plot(f[2:end], pow2db.(z[2:end]); leg=legend, xaxis=:log, kwargs...)
+    else
+      plot(f, pow2db.(z); leg=legend, kwargs...)
+    end
     plot = plot!
   end
   xlabel!("Frequency ("*funit*")")
