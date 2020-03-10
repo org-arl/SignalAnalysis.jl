@@ -95,7 +95,7 @@ function timeseries(s; fs=deffs[], t0=0.0, downsample=nothing, pooling=orderedex
       end
       s = y
     end
-    fs /= downsample
+    fs /= n/size(s,1)
   end
   t = time(s; t0=t0, fs=fs)
   tunit = "s"
