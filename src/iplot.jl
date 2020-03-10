@@ -3,7 +3,7 @@ using Interact
 export itimeseries
 
 "Plot interactive timeseries of the signal."
-function itimeseries(s; fs=deffs, t0=0.0, legend=false, size=(800,400), ylabel=nothing, kwargs...)
+function itimeseries(s; fs=deffs[], t0=0.0, legend=false, size=(800,400), ylabel=nothing, kwargs...)
   siglen = length(s)/fs
   panback = button("<")
   panfwd = button(">")
@@ -12,18 +12,19 @@ function itimeseries(s; fs=deffs, t0=0.0, legend=false, size=(800,400), ylabel=n
   zoomin = button("+")
   zoom = widget((100:length(s))/fs; value=1000/fs, label="Zoom:") |> onchange
   mean = x -> sum(x)/length(x)
-  pooling = widget(OrderedDict("sample"=>nothing, "min"=>minimum, "max"=>maximum, "mean"=>mean); label="Pooling:")
+  #pooling = widget(OrderedDict("minmax"=>orderedextrema, "sample"=>nothing, "min"=>minimum, "max"=>maximum, "mean"=>mean); label="Pooling:")
   ymin = minimum(s)
   ymax = maximum(s)
   f = (t, z) -> begin
     t = round(Int, t*fs)
     z = round(Int, z*fs)
     t1 = max(t - z÷2, 1)
-    t2 = min(t1 + z, length(s))
+    t2 = min(t1 + z, Base.size(s,1))
     t1 = max(t2 - z, 1)
     ds = ceil(Int, (t2-t1)/(10*size[1]))
-    timeseries(s[t1:t2,:]; size=size, fs=fs, t0=t0+float(t1-1)/fs, downsample=ds, pooling=pooling[], legend=legend, kwargs...)
-    ds == 1 || annotate!(t0+(t1+t2)/2/fs, ymin+(ymax-ymin)/20, text("Downsampled by $ds", :red, 8))
+    timeseries(s[t1:t2,:]; size=size, fs=fs, t0=t0+float(t1-1)/fs, downsample=ds, legend=legend, kwargs...)
+    #timeseries(s[t1:t2,:]; size=size, fs=fs, t0=t0+float(t1-1)/fs, downsample=ds, pooling=pooling[], legend=legend, kwargs...)
+    #ds == 1 || annotate!(t0+(t1+t2)/2/fs, ymin+(ymax-ymin)/20, text("Downsampled by $ds", :red, 8))
     ylabel == nothing || ylabel!(ylabel)
     ylims!(ymin, ymax)
   end
@@ -31,9 +32,10 @@ function itimeseries(s; fs=deffs, t0=0.0, legend=false, size=(800,400), ylabel=n
   on(n -> pan[] = min(pan[]+zoom[]/2, siglen), panfwd)
   on(n -> zoom[] = min(zoom[]*1.5, siglen), zoomout)
   on(n -> zoom[] = max(zoom[]/1.5, 100/fs), zoomin)
-  on(n -> zoom[] = zoom[], pooling)
+  #on(n -> zoom[] = zoom[], pooling)
   vbox(
-    hbox(panback, hskip(5px), panfwd, pan, zoomout, hskip(5px), zoomin, zoom, pooling),
+    hbox(panback, hskip(5px), panfwd, pan, zoomout, hskip(5px), zoomin, zoom),
+    #hbox(pooling),
     map(f, pan, zoom)
   )
 end

@@ -1,6 +1,6 @@
 using Plots
 
-export psd, psd!, specgram, timeseries, timeseries!, filtfreqz, filtfreqz!
+export psd, psd!, specgram, timeseries, timeseries!, filtfreqz, filtfreqz!, orderedextrema
 
 "Plot power spectral density of the signal."
 function psd(s; fs=deffs[], nfft=1024, plot=plot, window=nothing, legend=false, logfreq=false, kwargs...)
@@ -63,15 +63,18 @@ function specgram(s; fs=deffs[], nfft=min(div(length(s),8),256), noverlap=div(nf
   ylabel!("Frequency ("*funit*")")
 end
 
+"Minmax pooling for perceptual integrity of timeseries."
+orderedextrema(x) = argmin(x) < argmax(x) ? (minimum(x), maximum(x)) : (maximum(x), minimum(x))
+
 "Plot timeseries of the signal."
-function timeseries(s; fs=deffs[], t0=0.0, downsample=nothing, pooling=nothing, plot=plot, legend=false, kwargs...)
+function timeseries(s; fs=deffs[], t0=0.0, downsample=nothing, pooling=orderedextrema, plot=plot, legend=false, kwargs...)
   fs = freqQ(fs)
   n = size(s,1)
   if isanalytic(s)
     s = real(s)
   end
-  if downsample == nothing && n > 10000
-    downsample = ceil(Int, n/10000)
+  if downsample == nothing && n > 5000
+    downsample = ceil(Int, n/5000)
     @warn "Too many points; downsampling by $downsample"
   end
   if downsample != nothing && downsample != 1
@@ -79,11 +82,16 @@ function timeseries(s; fs=deffs[], t0=0.0, downsample=nothing, pooling=nothing, 
       phase = floor(Int, downsample/2)
       s = s[1+phase:downsample:end,:]
     elseif ndims(s) == 1
-      s = pooling.(Periodograms.arraysplit(s, downsample, 0))
+      s = collect(Iterators.flatten(pooling.(Periodograms.arraysplit(s, downsample, 0))))
     else
-      y = zeros(floor(Int,n/downsample), size(s,2))
-      for j in 1:size(s,2)
-        y[:,j] = pooling.(Periodograms.arraysplit(s[:,j], downsample, 0))
+      y = collect(Iterators.flatten(pooling.(Periodograms.arraysplit(s[:,1], downsample, 0))))
+      if size(s,2) > 1
+        y1 = zeros(length(y), size(s,2))
+        y1[:,1] .= y
+        y = y1
+      end
+      for j in 2:size(s,2)
+        y[:,j] .= collect(Iterators.flatten(pooling.(Periodograms.arraysplit(s[:,j], downsample, 0))))
       end
       s = y
     end
