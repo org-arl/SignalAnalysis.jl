@@ -15,8 +15,12 @@ end
 
 "DC removal filter."
 function removedc!(s; α=0.95)
-  # based on https://www.embedded.com/dsp-tricks-dc-removal/ real-time DC removal filter (d)
-  s[2:end] .+= (α-1)*s[1:end-1]
+  # based on Lyons 2011 (3rd ed) real-time DC removal filter in Fig. 13-62(d)
+  for j = 2:length(s)
+    s[j] += α*s[j-1]
+  end
+  s[2:end] .+= -s[1:end-1]
+  s *= sqrt(α)
   return s
 end
 
