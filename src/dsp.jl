@@ -1,7 +1,7 @@
 export fir, removedc, removedc!
 
 "Design FIR filter."
-function fir(n, f1, f2=nothing; fs=deffs, method=FIRWindow(hanning(n)))
+function fir(n, f1, f2=nothing; fs=deffs[], method=FIRWindow(hanning(n)))
   fs = freqQ(fs)
   if f1 == 0
     f = Lowpass(freqQ(f2); fs=fs)
