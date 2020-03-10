@@ -104,7 +104,7 @@ end
 timeseries!(s; fs=deffs[], downsample=nothing, pooling=nothing, legend=false, kwargs...) = timeseries(s; fs=fs, downsample=downsample, pooling=pooling, plot=plot!, legend=legend, kwargs...)
 
 "Plot frequency response of filter."
-function filtfreqz(num::AbstractArray, den::AbstractArray=[1]; fs=deffs[], nfreq=256, plot=plot, legend=false, kwargs...)
+function filtfreqz(num::AbstractArray, den::AbstractArray=[1]; fs=deffs[], nfreq=256, logfreq=false, plot=plot, legend=false, kwargs...)
   fs = freqQ(fs)
   f = collect(range(0, stop=fs/2, length=nfreq))
   z = Filters.freqz(PolynomialRatio(num, den), f, fs)
@@ -113,10 +113,18 @@ function filtfreqz(num::AbstractArray, den::AbstractArray=[1]; fs=deffs[], nfreq
     f /= 1000.0
     funit = "kHz"
   end
-  p1 = plot(f, pow2db.(abs.(z)); leg=legend, kwargs...)
+  if logfreq
+    p1 = plot(f[2:end], amp2db.(abs.(z[2:end])); leg=legend, xaxis=:log, kwargs...)
+  else
+    p1 = plot(f, amp2db.(abs.(z)); leg=legend, kwargs...)
+  end
   xlabel!("Frequency ("*funit*")")
   ylabel!("Magnitude (dB)")
-  p2 = plot(f, angle.(z); leg=legend, kwargs...)
+  if logfreq
+    p2 = plot(f[2:end], angle.(z[2:end]); leg=legend, xaxis=:log, kwargs...)
+  else
+    p2 = plot(f, angle.(z); leg=legend, kwargs...)
+  end
   xlabel!("Frequency ("*funit*")")
   ylabel!("Phase (radians)")
   plot(p1, p2, layout=2, size=(600,300))
