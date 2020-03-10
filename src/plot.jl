@@ -60,7 +60,7 @@ function specgram(s; fs=deffs[], nfft=min(div(length(s),8),256), noverlap=div(nf
 end
 
 "Plot timeseries of the signal."
-function timeseries(s; fs=deffs[], downsample=nothing, pooling=nothing, plot=plot, legend=false, kwargs...)
+function timeseries(s; fs=deffs[], t0=0.0, downsample=nothing, pooling=nothing, plot=plot, legend=false, kwargs...)
   fs = freqQ(fs)
   n = size(s,1)
   if isanalytic(s)
@@ -85,13 +85,14 @@ function timeseries(s; fs=deffs[], downsample=nothing, pooling=nothing, plot=plo
     end
     fs /= downsample
   end
-  t = time(s; fs=fs)
+  t = time(s; t0=t0, fs=fs)
   tunit = "s"
   if maximum(t) <= 1.0
     t *= 1000.0
     tunit = "ms"
   end
   plot(t, s; leg=legend, kwargs...)
+  xlims!(minimum(t), maximum(t))
   xlabel!("Time ("*tunit*")")
 end
 
