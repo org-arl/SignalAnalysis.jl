@@ -18,13 +18,13 @@ PinkGaussian(n) = PinkGaussian(n=n)
 
 function Random.rand!(rng::AbstractRNG, d::RedGaussian{T}, x::AbstractVector{T}) where {T<:Real}
   length(x) >= d.n || throw(ArgumentError("length of x must be at least n"))
-  extra = 2
+  extra = 100
   v = rand(rng, Normal{T}(0.0,d.σ), length(x)+extra)
   for j = 2:length(v)
     v[j] += v[j-1]
   end
   removedc!(v)
-  x .= v[extra+1:end]/√2
+  x .= v[extra+1:end]/3.20377
   return x
 end
 
