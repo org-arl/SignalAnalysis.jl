@@ -37,16 +37,36 @@ end
 psd!(s; fs=deffs[], nfft=1024, window=nothing, legend=false, kwargs...) = psd(s; fs=fs, nfft=nfft, plot=plot!, window=window, legend=legend, kwargs...)
 
 "Plot spectrogram of the signal."
-function specgram(s; fs=deffs[], nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, kwargs...)
+function specgram(s; fs=deffs[], nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, t0=0.0, downsample=nothing, pooling=mean, kwargs...)
   @assert size(s,2) == 1 "specgram only works with vectors"
   p = spectrogram(s[:,1], nfft, noverlap; fs=freqQ(fs), window=window)
-  t = time(p)
+  t = t0 .+ time(p)
   f = freq(p)
   z = power(p)
+  if downsample == nothing && length(t) > 5000
+    downsample = ceil(Int, length(t)/5000)
+    @warn "Too many points; downsampling by $downsample"
+  end
+  if downsample != nothing && downsample != 1
+    if pooling == nothing
+      phase = floor(Int, downsample/2)
+      t = t[1+phase:downsample:end]
+      z = z[:,1+phase:downsample:end]
+    else
+      y1 = collect(Iterators.flatten(pooling.(Periodograms.arraysplit(z[1,:], downsample, 0))))
+      y = zeros(size(z,1), length(y1))
+      y[1,:] .= y1
+      for j in 2:size(z,1)
+        y[j,:] .= collect(Iterators.flatten(pooling.(Periodograms.arraysplit(z[j,:], downsample, 0))))
+      end
+      z = y
+      t = t[1:downsample:end][1:size(z,2)]
+    end
+  end
   if isanalytic(s)
     ndx = sortperm(f)
     f = f[ndx]
-    z = z[ndx, :]
+    z = z[ndx,:]
   end
   tunit = "s"
   funit = "Hz"

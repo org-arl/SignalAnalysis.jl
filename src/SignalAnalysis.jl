@@ -6,6 +6,7 @@ using PaddedViews
 using ProgressMeter
 using Distributions
 using Random
+using Statistics
 
 export pow2db, amp2db, db2amp, db2pow
 
