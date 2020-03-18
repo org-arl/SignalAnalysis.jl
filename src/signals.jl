@@ -1,7 +1,7 @@
 import SampledSignals
 import SampledSignals: SampleBuf, domain
 
-export signal, @rate, @samerateas, domain, analytic, isanalytic
+export signal, @rate, @samerateas, domain, analytic, isanalytic, samples
 
 SignalBase.nframes(x::SampleBuf) = SampledSignals.nframes(x)
 SignalBase.framerate(x::SampleBuf) = SampledSignals.samplerate(x)
@@ -108,3 +108,10 @@ $(SIGNATURES)
 Checks if a signal is analytic.
 """
 isanalytic(s) = eltype(s) <: Complex
+
+"""
+$(SIGNATURES)
+Gets the underlying samples in the signal.
+"""
+samples(s::SampleBuf) = s.data
+samples(s) = s
