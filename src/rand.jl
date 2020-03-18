@@ -2,6 +2,21 @@ export RedGaussian, PinkGaussian
 
 # TODO: doesn't handle rand(::RedGaussian, m) for m samples of n-vectors yet (see _rand!)
 
+"""
+  $(TYPEDEF)
+Red Gaussian noise distribution for random variate generation.
+
+# Example:
+```jldoctest
+julia> using SignalAnalysis
+julia> rand(RedGaussian(1000))
+1000-element Array{Float64,1}:
+[...]
+
+julia> rand(RedGaussian(1000, 2.0))
+1000-element Array{Float64,1}:
+[...]
+"""
 Base.@kwdef struct RedGaussian{T} <: Distributions.ContinuousMultivariateDistribution
   n::Int
   σ::T = 1.0
@@ -9,6 +24,21 @@ end
 
 RedGaussian(n) = RedGaussian(n=n)
 
+"""
+  $(TYPEDEF)
+Pink Gaussian noise distribution for random variate generation.
+
+# Example:
+```jldoctest
+julia> using SignalAnalysis
+julia> rand(PinkGaussian(1000))
+1000-element Array{Float64,1}:
+[...]
+
+julia> rand(PinkGaussian(1000, 2.0))
+1000-element Array{Float64,1}:
+[...]
+"""
 Base.@kwdef struct PinkGaussian{T} <: Distributions.ContinuousMultivariateDistribution
   n::Int
   σ::T = 1.0

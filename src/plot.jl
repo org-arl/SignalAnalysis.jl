@@ -3,7 +3,7 @@ using Plots
 export psd, psd!, specgram, timeseries, timeseries!, filtfreqz, filtfreqz!, orderedextrema
 
 "Plot power spectral density of the signal."
-function psd(s; fs=deffs[], nfft=1024, plot=plot, window=nothing, legend=false, logfreq=false, kwargs...)
+function psd(s; fs=framerate(s), nfft=1024, plot=plot, window=nothing, legend=false, logfreq=false, kwargs...)
   nfft = nextfastfft(nfft)
   while nfft > size(s,1)
     nfft = div(nfft, 2)
@@ -34,10 +34,10 @@ function psd(s; fs=deffs[], nfft=1024, plot=plot, window=nothing, legend=false, 
 end
 
 "Plot power spectral density of the signal."
-psd!(s; fs=deffs[], nfft=1024, window=nothing, legend=false, kwargs...) = psd(s; fs=fs, nfft=nfft, plot=plot!, window=window, legend=legend, kwargs...)
+psd!(s; fs=framerate(s), nfft=1024, window=nothing, legend=false, kwargs...) = psd(s; fs=fs, nfft=nfft, plot=plot!, window=window, legend=legend, kwargs...)
 
 "Plot spectrogram of the signal."
-function specgram(s; fs=deffs[], nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, t0=0.0, downsample=nothing, pooling=mean, kwargs...)
+function specgram(s; fs=framerate(s), nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, t0=0.0, downsample=nothing, pooling=mean, kwargs...)
   @assert size(s,2) == 1 "specgram only works with vectors"
   p = spectrogram(s[:,1], nfft, noverlap; fs=freqQ(fs), window=window)
   t = t0 .+ time(p)
@@ -87,7 +87,7 @@ end
 orderedextrema(x) = argmin(x) < argmax(x) ? (minimum(x), maximum(x)) : (maximum(x), minimum(x))
 
 "Plot timeseries of the signal."
-function timeseries(s; fs=deffs[], t0=0.0, downsample=nothing, pooling=orderedextrema, plot=plot, legend=false, kwargs...)
+function timeseries(s; fs=framerate(s), t0=0.0, downsample=nothing, pooling=orderedextrema, plot=plot, legend=false, kwargs...)
   fs = freqQ(fs)
   n = size(s,1)
   if isanalytic(s)
@@ -129,10 +129,10 @@ function timeseries(s; fs=deffs[], t0=0.0, downsample=nothing, pooling=orderedex
 end
 
 "Plot timeseries of the signal."
-timeseries!(s; fs=deffs[], downsample=nothing, pooling=nothing, legend=false, kwargs...) = timeseries(s; fs=fs, downsample=downsample, pooling=pooling, plot=plot!, legend=legend, kwargs...)
+timeseries!(s; fs=framerate(s), downsample=nothing, pooling=nothing, legend=false, kwargs...) = timeseries(s; fs=fs, downsample=downsample, pooling=pooling, plot=plot!, legend=legend, kwargs...)
 
 "Plot frequency response of filter."
-function filtfreqz(num::AbstractArray, den::AbstractArray=[1]; fs=deffs[], nfreq=256, logfreq=false, plot=plot, legend=false, kwargs...)
+function filtfreqz(num::AbstractArray, den::AbstractArray=[1]; fs, nfreq=256, logfreq=false, plot=plot, legend=false, kwargs...)
   fs = freqQ(fs)
   f = collect(range(0, stop=fs/2, length=nfreq))
   z = Filters.freqz(PolynomialRatio(num, den), f, fs)
@@ -159,4 +159,4 @@ function filtfreqz(num::AbstractArray, den::AbstractArray=[1]; fs=deffs[], nfreq
 end
 
 "Plot frequency response of filter."
-filtfreqz!(num::AbstractArray, den::AbstractArray=[1]; fs=deffs[], nfreq=256, legend=false, kwargs...) = freqz(num, den; fs=fs, nfreq=nfreq, plot=plot!, legend=legend, kwargs...)
+filtfreqz!(num::AbstractArray, den::AbstractArray=[1]; fs, nfreq=256, legend=false, kwargs...) = freqz(num, den; fs=fs, nfreq=nfreq, plot=plot!, legend=legend, kwargs...)

@@ -1,19 +1,25 @@
 module SignalAnalysis
 
 using Requires
-using DSP
 using PaddedViews
 using ProgressMeter
 using Distributions
 using Random
 using Statistics
+using DocStringExtensions
 
+using DSP
 export pow2db, amp2db, db2amp, db2pow
+
+using SignalBase
+using SignalBase.Units
+export nframes, nchannels, sampletype, framerate, duration
+
+include("signals.jl")
 
 include("basic.jl")
 include("dsp.jl")
 include("generate.jl")
-include("units.jl")
 include("rand.jl")
 
 function __init__()

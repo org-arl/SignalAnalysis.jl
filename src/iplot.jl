@@ -3,7 +3,7 @@ using Interact
 export itimeseries, ispecgram
 
 "Plot interactive timeseries of the signal."
-function itimeseries(s; fs=deffs[], t0=0.0, legend=false, size=(800,400), ylabel=nothing, kwargs...)
+function itimeseries(s; fs=framerate(s), t0=0.0, legend=false, size=(800,400), ylabel=nothing, kwargs...)
   siglen = length(s)/fs
   panback = button("<")
   panfwd = button(">")
@@ -40,7 +40,7 @@ function itimeseries(s; fs=deffs[], t0=0.0, legend=false, size=(800,400), ylabel
 end
 
 "Plot interactive specgram of the signal."
-function ispecgram(s; fs=deffs[], nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, t0=0.0, size=(800,400), kwargs...)
+function ispecgram(s; fs=framerate(s), nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, t0=0.0, size=(800,400), kwargs...)
   @assert Base.size(s,2) == 1 "ispecgram only works with vectors"
   siglen = length(s)/fs
   panback = button("<")

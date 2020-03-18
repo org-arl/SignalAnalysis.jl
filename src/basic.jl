@@ -1,29 +1,13 @@
-export samplingrate, isanalytic, analytic
+export isanalytic, analytic
 export padded, slide
 export energy, meantime, rmsduration, meanfrequency, rmsbandwidth, ifreq
 
-const deffs = Ref(1.0)
+# TODO: ifreq, meanfrequency and rmsbandwidth are broken, fix!
 
-"Set default sampling rate. Returns previous sampling rate."
-function samplingrate(fs)
-  global deffs
-  old = deffs[]
-  deffs[] = freqQ(fs)
-  return old
-end
-
-"Get default sampling rate."
-samplingrate() = deffs[]
-
-"Run code block with temporary sampling rate."
-function samplingrate(f::Function, fs)
-  old = samplingrate(fs)
-  rv = f()
-  samplingrate(old)
-  return rv
-end
-
-"Generate a padded view of a signal with optional delay/advance."
+"""
+$(SIGNATURES)
+Generate a padded view of a signal with optional delay/advance.
+"""
 function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, N}
   if length(padding) == 1
     left = padding
@@ -35,7 +19,10 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, 
   PaddedView(fill, s, (1-left:length(s)+right,), (1+delay:delay+length(s),))
 end
 
-"Slide a window over a signal, process each window."
+"""
+$(SIGNATURES)
+Slide a window over a signal, process each window.
+"""
 function slide(f::Function, s::AbstractVector, nsamples, overlap=0, args...; showprogress=true)
   @assert overlap < nsamples "overlap must be less than nsamples"
   n = size(s,1)
@@ -49,7 +36,10 @@ function slide(f::Function, s::AbstractVector, nsamples, overlap=0, args...; sho
   end
 end
 
-"Slide a window over a signal, process each window, and collect the results."
+"""
+$(SIGNATURES)
+Slide a window over a signal, process each window, and collect the results.
+"""
 function slide(f::Function, ::Type{T}, s::AbstractVector, nsamples, overlap=0, args...; showprogress=true) where {T}
   @assert overlap < nsamples "overlap must be less than nsamples"
   n = size(s,1)
@@ -65,48 +55,60 @@ function slide(f::Function, ::Type{T}, s::AbstractVector, nsamples, overlap=0, a
   return out
 end
 
-"Convert a signal to analytic representation."
-analytic(s::AbstractArray) = isanalytic(s) ? s : hilbert(s)
+# TODO: add back toindex
+#"Convert time to index."
+#toindex(t; fs=???) = 1 + round(Int, toseconds(t)*inHz(fs))
 
-"Check if signal is analytic."
-isanalytic(s::AbstractArray) = eltype(s) <: Complex
+"""
+$(SIGNATURES)
+Get total signal energy.
+"""
+energy(s::AbstractVector; fs=framerate(s)) = sum(abs2, s)/inHz(fs)
+energy(s::AbstractMatrix; fs=framerate(s)) = vec(sum(abs2, s; dims=1))./inHz(fs)
 
-"Get time vector corresponding to each sample in signal."
-Base.time(s::AbstractArray; fs=deffs[], t0=0.0) = t0 .+ float(0:size(s,1)-1)./freqQ(fs)
+"""
+$(SIGNATURES)
+Get mean time of the signal.
+"""
+meantime(s::SampleBuf) = wmean(domain(s), abs2.(s))
+meantime(s; fs) = wmean((0:size(s,1)-1)/fs, abs2.(s))
 
-"Convert time to index."
-toindex(t; fs=deffs[]) = 1 + round(Int, timeQ(t)*freqQ(fs))
+"""
+$(SIGNATURES)
+Get RMS duration of the signal.
+"""
+rmsduration(s::SampleBuf) = sqrt.(wmean(domain(s).^2, abs2.(s)) .- meantime(s).^2)
+rmsduration(s; fs) = sqrt.(wmean(((0:size(s,1)-1)/fs).^2, abs2.(s)) .- meantime(s; fs=fs).^2)
 
-"Get total signal energy."
-energy(s::AbstractVector; fs=deffs[]) = sum(abs2, s)/freqQ(fs)
-energy(s::AbstractMatrix; fs=deffs[]) = vec(sum(abs2, s; dims=1))./freqQ(fs)
-
-"Get mean time of the signal."
-meantime(s; fs=deffs[]) = wmean(time(s; fs=fs), abs2.(s))
-
-"Get RMS duration of the signal."
-rmsduration(s; fs=deffs[]) = sqrt.(wmean(time(s; fs=fs).^2, abs2.(s)) .- meantime(s; fs=fs).^2)
-
-"Get instantaneous frequency of the signal."
-function ifreq(s; fs=deffs[])
+"""
+$(SIGNATURES)
+Get instantaneous frequency of the signal.
+"""
+function ifreq(s; fs=framerate(s))
   s1 = analytic(s)
-  f1 = freqQ(fs)/(2π) * diff(unwrap(angle.(s1); dims=1); dims=1)
+  f1 = inHz(fs)/(2π) * diff(unwrap(angle.(s1); dims=1); dims=1)
   vcat(f1[1:1,:], (f1[1:end-1,:]+f1[2:end,:])/2, f1[end:end,:])
 end
 
-"Get mean frequency of the signal."
-function meanfrequency(s; fs=deffs[], nfft=1024, window=nothing)
+"""
+$(SIGNATURES)
+Get mean frequency of the signal.
+"""
+function meanfrequency(s; fs=framerate(s), nfft=1024, window=nothing)
   mapslices(s; dims=1) do s1
-    p = welch_pgram(s1, ceil(Int, length(s1)/nfft); fs=freqQ(fs), window=window)
+    p = welch_pgram(s1, ceil(Int, length(s1)/nfft); fs=inHz(fs), window=window)
     f = freq(p)
     wmean(f, power(p))
   end
 end
 
-"Get RMS bandwidth of the signal."
-function rmsbandwidth(s; fs=deffs[], nfft=1024, window=nothing)
+"""
+$(SIGNATURES)
+Get RMS bandwidth of the signal.
+"""
+function rmsbandwidth(s; fs=framerate(s), nfft=1024, window=nothing)
   mapslices(s; dims=1) do s1
-    p = welch_pgram(s1, ceil(Int, length(s1)/nfft); fs=freqQ(fs), window=window)
+    p = welch_pgram(s1, ceil(Int, length(s1)/nfft); fs=inHz(fs), window=window)
     f = freq(p)
     f0 = wmean(f, power(p))
     sqrt.(wmean((f.-f0).^2, power(p)))
@@ -117,4 +119,3 @@ end
 
 wmean(x::AbstractVector, w::AbstractVector) = (x'w) / sum(w)
 wmean(x, w::AbstractVector) = sum(x.*w) ./ sum(w)
-wmean(x, w::AbstractMatrix) = sum(x.*w; dims=1) ./ sum(w; dims=1)
