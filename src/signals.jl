@@ -8,6 +8,11 @@ SignalBase.framerate(x::SampleBuf) = SampledSignals.samplerate(x)
 SignalBase.nchannels(x::SampleBuf) = SampledSignals.nchannels(x)
 SignalBase.sampletype(x::SampleBuf) = eltype(x)
 
+SignalBase.nframes(x::AbstractArray) = size(x,1)
+SignalBase.framerate(x::AbstractArray) = 1.0
+SignalBase.nchannels(x::AbstractArray) = size(x,2)
+SignalBase.sampletype(x::AbstractArray) = eltype(x)
+
 """
 $(SIGNATURES)
 Creates a signal with frame rate `fs`.
