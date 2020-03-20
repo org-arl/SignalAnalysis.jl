@@ -136,7 +136,7 @@ Plots a spectrogram of the data.
 - other `kwargs` are passed on to `plot`
 """
 @userplot Specgram
-@recipe function plot(s::Specgram; fs=2.0, nfft=256, noverlap=div(nfft,2),
+@recipe function plot(s::Specgram; fs=1.0, nfft=256, noverlap=div(nfft,2),
                       window=nothing, t0=0.0, downsample=:auto, pooling=:mean)
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
     error("specgram should be provided timeseries data")
@@ -214,7 +214,7 @@ end
     freqresp(num; kwargs...)
     freqresp(num, den; kwargs...)
 
-Plots a frequency response of a digital filter.
+Plots frequency response of a digital filter.
 
 # Optional keyword arguments
 - `fs=1.0`: sampling frequency
@@ -259,6 +259,7 @@ Plots a frequency response of a digital filter.
     subplot := 1
     xguide --> "Frequency ("*funit*")"
     yguide --> "Response (dB)"
+    legend --> false
     f, amp2db.(abs.(z))
   end
   @series begin
@@ -266,6 +267,7 @@ Plots a frequency response of a digital filter.
     subplot := 2
     xguide --> "Frequency ("*funit*")"
     yguide --> "Phase (radians)"
+    legend --> false
     f, angle.(z)
   end
 end
