@@ -1,9 +1,14 @@
 using Interact
 
-export itimeseries, ispecgram
+export iplot, ispecgram
 
-"Plot interactive timeseries of the signal."
-function itimeseries(s; fs=framerate(s), t0=0.0, legend=false, size=(800,400), ylabel=nothing, kwargs...)
+"""
+$(SIGNATURES)
+Plots interactive timeseries of the signal.
+"""
+function iplot(s; fs=framerate(s), t0=0.0, legend=false, size=(800,400), ylabel=nothing, kwargs...)
+  fs = inHz(fs)
+  s = samples(s)
   siglen = length(s)/fs
   panback = button("<")
   panfwd = button(">")
@@ -21,7 +26,9 @@ function itimeseries(s; fs=framerate(s), t0=0.0, legend=false, size=(800,400), y
     t2 = min(t1 + z, Base.size(s,1))
     t1 = max(t2 - z, 1)
     ds = ceil(Int, (t2-t1)/(10*size[1]))
-    timeseries(@view s[t1:t2,:]; size=size, fs=fs, t0=t0+float(t1-1)/fs, downsample=ds, legend=legend, kwargs...)
+    #s1 = @view s[t1:t2,:]
+    s1 = s[t1:t2,:]
+    plot(signal(s1, fs); size=size, t0=t0+float(t1-1)/fs, downsample=ds, leg=legend, kwargs...)
     #timeseries(s[t1:t2,:]; size=size, fs=fs, t0=t0+float(t1-1)/fs, downsample=ds, pooling=pooling[], legend=legend, kwargs...)
     #ds == 1 || annotate!(t0+(t1+t2)/2/fs, ymin+(ymax-ymin)/20, text("Downsampled by $ds", :red, 8))
     ylabel == nothing || ylabel!(ylabel)
@@ -39,9 +46,13 @@ function itimeseries(s; fs=framerate(s), t0=0.0, legend=false, size=(800,400), y
   )
 end
 
-"Plot interactive specgram of the signal."
+"""
+$(SIGNATURES)
+Plots interactive spectrogram of the signal.
+"""
 function ispecgram(s; fs=framerate(s), nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, t0=0.0, size=(800,400), kwargs...)
   @assert Base.size(s,2) == 1 "ispecgram only works with vectors"
+  fs = inHz(fs)
   siglen = length(s)/fs
   panback = button("<")
   panfwd = button(">")
