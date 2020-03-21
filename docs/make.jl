@@ -1,4 +1,4 @@
-using Documenter
+using Documenter, Plots
 
 push!(LOAD_PATH,"../../src/")
 using SignalAnalysis

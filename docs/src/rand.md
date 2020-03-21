@@ -1,3 +1,6 @@
-# Random signals
+# Random noise generation
 
-[ TODO ]
+```@docs
+PinkGaussian
+RedGaussian
+```

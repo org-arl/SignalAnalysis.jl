@@ -1,7 +1,7 @@
 using Plots
 
 """
-    plot(data; kwargs...)
+    plot(data::SampleBuf; kwargs...)
 
 Plots timeseries from a sample buffer.
 

@@ -129,7 +129,8 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, 
 end
 
 """
-$(SIGNATURES)
+    slide(f::Function, s::AbstractVector, nframes, overlap=0, args...; showprogress=true)
+
 Slides a window over a signal, processing each window. If the total number of frames
 in the signal is not an integral multiple of `nframes`, the last incomplete
 block of samples remains unprocessed.
@@ -170,8 +171,9 @@ function slide(f::Function, s::AbstractVector, nframes, overlap=0, args...; show
 end
 
 """
-$(SIGNATURES)
-Slides a window over a signal, processing each window, and collecting the results.
+    slide(f::Function, ::Type{T}, s::AbstractVector, nframes, overlap=0, args...; showprogress=true) where T
+
+Slides a window over a signal, processing each window, and collecting the results of type `T`.
 If the total number of frames in the signal is not an integral multiple of
 `nframes`, the last incomplete block of samples remains unprocessed.
 
