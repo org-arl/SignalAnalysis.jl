@@ -7,22 +7,21 @@ specified `method`. If frame rate `fs` is not specified, `f1` and `f2` are given
 in normalized units (1.0 being Nyquist). If `f1` is 0, the designed filter is
 a lowpass filter, and if `f2` is `nothing` then it is a highpass filter.
 
-This method is a convenience wrapper around [`DSP.digitalfilter`](@ref).
+This method is a convenience wrapper around `DSP.digitalfilter`.
 
 # Examples:
-```jldoctest
-julia> using SignalAnalysis, SignalAnalysis.Units
+```julia-repl
 julia> lpf = fir(127, 0, 10kHz; fs=44.1kHz)   # design a lowpass filter
 127-element Array{Float64,1}:
-[...]
+  ⋮
 
 julia> hpf = fir(127, 10kHz; fs=44.1kHz)      # design a highpass filter
 127-element Array{Float64,1}:
-[...]
+  ⋮
 
 julia> bpf = fir(127, 1kHz, 5kHz; fs=44.1kHz) # design a bandpass filter
 127-element Array{Float64,1}:
-[...]
+  ⋮
 ```
 """
 function fir(n, f1, f2=nothing; fs=2.0, method=FIRWindow(hanning(n)))

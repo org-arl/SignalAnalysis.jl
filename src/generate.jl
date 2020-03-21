@@ -7,22 +7,18 @@ Generates a sinusoidal signal with specified `freq` and `duration` at frame
 rate `fs`. The starting `phase` and `window` type may be optionally specified.
 
 # Examples:
-```jldoctest
-julia> using SignalAnalysis, SignalAnalysis.Units
+```julia-repl
 julia> x = cw(5kHz, 200ms, 44.1kHz)
 8821-frame, 1-channel SampleBuf{Complex{Float64}, 1}
 0.20002267573696145s sampled at 44100.0Hz
-[...]
 
 julia> x = cw(5kHz, 200ms, 44.1kHz; window=hamming)
 8821-frame, 1-channel SampleBuf{Complex{Float64}, 1}
 0.20002267573696145s sampled at 44100.0Hz
-[...]
 
 julia> x = cw(-5kHz, 200ms, 44.1kHz; phase=45°, window=(tukey, 0.05))
 8821-frame, 1-channel SampleBuf{Complex{Float64}, 1}
 0.20002267573696145s sampled at 44100.0Hz
-[...]
 ```
 """
 function cw(freq, duration, fs; phase=0.0, window=nothing)
@@ -43,22 +39,18 @@ be controlled using `shape` (`:linear` (default) or `:hyperbolic`). The
 starting `phase` and `window` type may be optionally specified.
 
 # Examples:
-```jldoctest
-julia> using SignalAnalysis, SignalAnalysis.Units
+```julia-repl
 julia> x = chirp(5kHz, 7kHz, 100ms, 44.1kHz)
 4411-frame, 1-channel SampleBuf{Complex{Float64}, 1}
 0.10002267573696146s sampled at 44100.0Hz
-[...]
 
 julia> x = chirp(5kHz, 7kHz, 100ms, 44.1kHz; phase=45°, window=hamming)
 4411-frame, 1-channel SampleBuf{Complex{Float64}, 1}
 0.10002267573696146s sampled at 44100.0Hz
-[...]
 
 julia> x = chirp(5kHz, 7kHz, 100ms, 44.1kHz; shape=:hyperbolic, window=(tukey,0.05))
 4411-frame, 1-channel SampleBuf{Complex{Float64}, 1}
 0.10002267573696146s sampled at 44100.0Hz
-[...]
 ```
 """
 function chirp(freq1, freq2, duration, fs=2.0; shape=:linear, phase=0.0, window=nothing)

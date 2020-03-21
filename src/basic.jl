@@ -27,8 +27,7 @@ The processing function receives a view on the original signal, and therefore
 may modify the signal if desired.
 
 # Examples:
-```jldoctest
-julia> using SignalAnalysis, SignalAnalysis.Units
+```julia-repl
 julia> x = signal(ones(1000), 8kHz);
 julia> slide(x, 250) do x1, blknum, firstframe
          println(size(x1), ", ", blknum, ", ", firstframe)
@@ -41,6 +40,7 @@ julia> slide(x, 250) do x1, blknum, firstframe
 julia> slide(x, 250) do x1, blknum, firstframe
          x1 .= blknum
        end
+
 julia> x[1], x[251], x[501], x[751]
 (1.0, 2.0, 3.0, 4.0)
 ```
@@ -65,8 +65,7 @@ If the total number of frames in the signal is not an integral multiple of
 `nframes`, the last incomplete block of samples remains unprocessed.
 
 # Examples:
-```jldoctest
-julia> using SignalAnalysis, SignalAnalysis.Units
+```julia-repl
 julia> x = signal(ones(1000), 8kHz);
 julia> slide(Float32, x, 250) do x1, blknum, firstframe
          sum(x1)*blknum
@@ -77,7 +76,7 @@ julia> slide(Float32, x, 250) do x1, blknum, firstframe
   750.0
  1000.0
 
- julia> slide(Tuple{Int,Float64}, x, 250) do x1, blknum, firstframe
+julia> slide(Tuple{Int,Float64}, x, 250) do x1, blknum, firstframe
           (blknum, sum(x1)*blknum)
         end
 4-element Array{Tuple{Int64,Float64},1}:
@@ -107,21 +106,22 @@ $(SIGNATURES)
 Converts time to signal frame number.
 
 # Examples:
-```jldoctest
-julia> using SignalAnalysis, SignalAnalysis.Units
+```julia-repl
 julia> x = signal(randn(2000), 8kHz);
 julia> toframe(0.2s, x)
 1601
+
 julia> toframe([0.2s, 201ms], x)
 2-element Array{Int64,1}:
  1601
  1609
- julia> toframe(0.2:0.01:0.3, x)
+
+julia> toframe(0.2:0.01:0.3, x)
  11-element Array{Int64,1}:
   1601
   1681
   1761
-[...]
+   ⋮
 ```
 """
 toframe(t, s::SampleBuf) = 1 .+ round.(Int, inseconds.(t)*framerate(s))
