@@ -90,6 +90,14 @@ function demon(x; fs=framerate(x), downsample=250, method=:rms, cutoff=1.0)
     end
     y[:,k] .= y1
   end
-  hpf = fir(127, cutoff; fs=fs)
+  maxflen = length(y)÷4
+  mod(maxflen, 2) == 0 && (maxflen += 1)
+  hpf = fir(min(127, maxflen), cutoff; fs=fs)
   signal(filtfilt(hpf, y), fs)
+end
+
+function demon(x::AbstractVector{T}; fs=framerate(x), downsample=250, method=:rms, cutoff=1.0) where T
+  y = @view samples(x)[:,1:1]
+  z = demon(y, fs=fs, downsample=downsample, method=method, cutoff=cutoff)
+  @samerateas z dropdims(samples(z), dims=2)
 end
