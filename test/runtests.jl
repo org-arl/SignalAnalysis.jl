@@ -303,6 +303,12 @@ end
   y = demon(x)
   @test length(y) == 400
   @test meanfrequency(y) ≈ 50 atol=10
+  y = demon(x; method=:mean)
+  @test length(y) == 400
+  @test meanfrequency(y) ≈ 50 atol=10
+  y = demon(x; method=:fir)
+  @test length(y) == 400
+  @test meanfrequency(y) ≈ 50 atol=10
   y = demon(samples(x); fs=framerate(x))
   @test length(y) == 400
   @test meanfrequency(y) ≈ 50 atol=10
@@ -310,6 +316,12 @@ end
   x = randn(100000,2) .* (1 .+ sin.(2π*50 .* (1:100000)./44100))
   x = signal(x, 44.1kHz)
   y = demon(x)
+  @test size(y) == (400, 2)
+  @test meanfrequency(y) ≈ [50, 50] atol=10*√2
+  y = demon(x; method=:mean)
+  @test size(y) == (400, 2)
+  @test meanfrequency(y) ≈ [50, 50] atol=10*√2
+  y = demon(x; method=:fir)
   @test size(y) == (400, 2)
   @test meanfrequency(y) ≈ [50, 50] atol=10*√2
   y = demon(samples(x); fs=framerate(x))
@@ -354,11 +366,23 @@ end
   # for now we just test that the recipes don't die
   p = plot(x)
   @test p isa Plots.Plot
+  p = plot(real(x))
+  @test p isa Plots.Plot
   p = plot([x -x])
+  @test p isa Plots.Plot
+  p = plot(real([x -x]))
   @test p isa Plots.Plot
   p = psd(x)
   @test p isa Plots.Plot
+  p = psd(real(x))
+  @test p isa Plots.Plot
+  p = psd(real(x); xscale=:log10)
+  @test p isa Plots.Plot
   p = psd([x -x])
+  @test p isa Plots.Plot
+  p = psd(real([x -x]))
+  @test p isa Plots.Plot
+  p = psd(real([x -x]); xscale=:log10)
   @test p isa Plots.Plot
   p = psd(samples(x); fs=framerate(x))
   @test p isa Plots.Plot
@@ -366,7 +390,16 @@ end
   @test p isa Plots.Plot
   p = specgram(x)
   @test p isa Plots.Plot
+  p = specgram(x; pooling=nothing)
+  @test p isa Plots.Plot
   p = specgram(samples(x); fs=framerate(x))
+  @test p isa Plots.Plot
+  f = fir(127, 15kHz; fs=44.1kHz)
+  p = freqresp(f)
+  @test p isa Plots.Plot
+  p = freqresp(f; xscale=:log10)
+  @test p isa Plots.Plot
+  p = freqresp(f, [1])
   @test p isa Plots.Plot
 
   # interactive plots are hard to test
