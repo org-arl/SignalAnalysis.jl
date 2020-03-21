@@ -180,8 +180,8 @@ end
   @test abs.(x) ≈ ones(4410)
 
   x1 = ifrequency(x1)
-  @test x1[2] ≈ 7000
-  @test x1[end-1] ≈ 5000
+  @test x1[3] ≈ 7000 atol=10
+  @test x1[end-2] ≈ 5000 atol=10
 
   x1 = chirp(5kHz, 7kHz, 100ms, 44.1kHz; shape=:hyperbolic, window=(tukey,0.05))
   @test nframes(x1) == 4410
@@ -193,9 +193,9 @@ end
   @test abs(x1[end]) < abs(x1[end-1]) < 1
 
   x2 = ifrequency(x1)
-  @test x2[2] ≈ 5000
+  @test x2[3] ≈ 5000 atol=10
   @test x2[2205] < x3[2205]
-  #@test x2[end-1] ≈ 7000     # FIXME
+  @test x2[end-2] ≈ 7000 atol=10
 
   x2 = chirp(5kHz, 7kHz, 100ms, 44.1kHz; phase=45°, window=hamming)
   @test nframes(x2) == 4410
@@ -273,7 +273,7 @@ end
 
 @testset "dsp" begin
 
-  x = 1 .+ randn(10000)
+  x = 1 .+ randn(100000)
 
   f = fir(127, 0, 5kHz; fs=44.1kHz)
   @test length(f) == 127
