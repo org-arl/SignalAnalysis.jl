@@ -20,3 +20,7 @@ makedocs(
     ]
   ]
 )
+
+deploydocs(
+  repo = "github.com/org-arl/SignalAnalysis.jl.git",
+)
