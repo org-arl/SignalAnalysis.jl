@@ -1,4 +1,4 @@
-using Test
+using Test, Plots
 using SignalAnalysis
 using SignalAnalysis.Units
 
@@ -343,5 +343,55 @@ end
     x2 += abs2(sum(x .* cis.(2π*(1000+j) .* (1:100000)./10000)))
   end
   @test 0 < log10(x1/x2) < 2
+
+end
+
+@testset "plots" begin
+
+  x = chirp(5kHz, 7kHz, 500ms, 44.1kHz)
+
+  # plots may perhaps be tested with VisualRegressionTests.jl
+  # for now we just test that the recipes don't die
+  p = plot(x)
+  @test p isa Plots.Plot
+  p = plot([x -x])
+  @test p isa Plots.Plot
+  p = psd(x)
+  @test p isa Plots.Plot
+  p = psd([x -x])
+  @test p isa Plots.Plot
+  p = psd(samples(x); fs=framerate(x))
+  @test p isa Plots.Plot
+  p = psd(samples([x -x]); fs=framerate(x))
+  @test p isa Plots.Plot
+  p = specgram(x)
+  @test p isa Plots.Plot
+  p = specgram(samples(x); fs=framerate(x))
+  @test p isa Plots.Plot
+
+  # interactive plots are hard to test
+  # we just test that the calls don't crash
+  iplot(x)
+  @test true
+  iplot(real(x))
+  @test true
+  iplot([x -x])
+  @test true
+  iplot(samples(x))
+  @test true
+  iplot(samples(x); fs=44100)
+  @test true
+  iplot(samples(x); fs=44.1kHz)
+  @test true
+  iplot(samples([x -x]); fs=44100)
+  @test true
+  ispecgram(x)
+  @test true
+  ispecgram(samples(x))
+  @test true
+  ispecgram(samples(x); fs=44100)
+  @test true
+  ispecgram(samples(x); fs=44.1kHz)
+  @test true
 
 end

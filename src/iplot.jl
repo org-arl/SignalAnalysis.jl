@@ -9,7 +9,11 @@ Plots interactive timeseries of the signal.
 function iplot(s; fs=framerate(s), t0=0.0, legend=false, size=(800,400), ylabel=nothing, kwargs...)
   fs = inHz(fs)
   s = samples(s)
-  siglen = length(s)/fs
+  if isanalytic(s)
+    @warn "Plotting only real part of complex signal"
+    s = real.(s)
+  end
+  siglen = Base.size(s, 1)/fs
   panback = button("<")
   panfwd = button(">")
   pan = widget((0:(length(s)-1))/fs; value=0.0, label="Pan:") |> onchange
@@ -63,12 +67,13 @@ function ispecgram(s; fs=framerate(s), nfft=min(div(length(s),8),256), noverlap=
   pooling = widget(OrderedDict("mean"=>mean, "median"=>median, "min"=>minimum, "max"=>maximum, "sample"=>nothing); label="Pooling:")
   f = (t, z) -> begin
     t = round(Int, t*fs)
-    z = round(Int, z*fs)
+    z = max(round(Int, z*fs), nfft)
     t1 = max(t - z÷2, 1)
     t2 = min(t1 + z, Base.size(s,1))
     t1 = max(t2 - z, 1)
     ds = ceil(Int, (t2-t1)/(10*size[1]))
-    specgram(@view s[t1:t2]; size=size, fs=fs, t0=t0+float(t1-1)/fs, downsample=ds, pooling=pooling[], nfft=nfft, noverlap=noverlap, window=window, kwargs...)
+    s1 = @view s[t1:t2]
+    specgram(s1; size=size, fs=fs, t0=t0+float(t1-1)/fs, downsample=ds, pooling=pooling[], nfft=nfft, noverlap=noverlap, window=window, kwargs...)
     #ds == 1 || annotate!(t0+(t1+t2)/2/fs, ymin+(ymax-ymin)/20, text("Downsampled by $ds", :red, 8))
     #ylims!(ymin, ymax)
   end

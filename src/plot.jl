@@ -64,7 +64,7 @@ Plots timeseries from a sample buffer.
   end
   @series begin
     seriestype := :line
-    t[1:length(s1)], s1
+    t[1:size(s1,1)], s1
   end
 end
 
