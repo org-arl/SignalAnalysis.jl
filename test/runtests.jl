@@ -372,6 +372,8 @@ end
   @test p isa Plots.Plot
   p = plot(real([x -x]))
   @test p isa Plots.Plot
+  p = plot(signal(randn(61040, 2), 1000))
+  @test p isa Plots.Plot
   p = psd(x)
   @test p isa Plots.Plot
   p = psd(real(x))

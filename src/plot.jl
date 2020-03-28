@@ -44,8 +44,11 @@ Plots timeseries from a sample buffer.
       end
       if ndims(s) == 1
         s1 = collect(Iterators.flatten(pooling.(Periodograms.arraysplit(s1, downsample, 0))))
-        downsample = round(Int, n/size(s1, 1))
+        m = fld(n, downsample)
+        rep, rem = fldmod(size(s1, 1), m)
+        rem == 0 || @error "Pooling function must sample the signal evenly"
         t = t[1:downsample:end]
+        rep > 1 && (t = repeat(t, inner=rep))
       else
         y = collect(Iterators.flatten(pooling.(Periodograms.arraysplit(s1[:,1], downsample, 0))))
         if size(s1, 2) > 1
@@ -57,8 +60,11 @@ Plots timeseries from a sample buffer.
           y[:,j] .= collect(Iterators.flatten(pooling.(Periodograms.arraysplit(s1[:,j], downsample, 0))))
         end
         s1 = y
-        downsample = round(Int, n/size(s1, 1))
+        m = fld(n, downsample)
+        rep, rem = fldmod(size(s1, 1), m)
+        rem == 0 || @error "Pooling function must sample the signal evenly"
         t = t[1:downsample:end]
+        rep > 1 && (t = repeat(t, inner=rep))
       end
     end
   end
