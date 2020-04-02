@@ -1,18 +1,7 @@
 module SignalAnalysis
 
 using Requires
-using PaddedViews
-using ProgressMeter
-using Distributions
-using Random
 using DocStringExtensions
-
-using Statistics
-export mean, median, std
-
-using DSP
-export pow2db, amp2db, db2amp, db2pow
-export filt, filtfilt
 
 using SignalBase
 using SignalBase.Units

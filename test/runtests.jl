@@ -1,4 +1,4 @@
-using Test, Plots
+using Test, Plots, Statistics, DSP, DSP.Util
 using SignalAnalysis
 using SignalAnalysis.Units
 

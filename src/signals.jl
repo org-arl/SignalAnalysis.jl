@@ -1,6 +1,10 @@
 import SampledSignals
 import SampledSignals: SampleBuf, domain
 
+using DSP, DSP.Filters
+using PaddedViews
+using ProgressMeter
+
 export signal, @rate, @samerateas, domain, analytic, isanalytic, samples
 export padded, slide, toframe
 
@@ -57,6 +61,7 @@ julia> x = @rate 44.1kHz randn(44100)
 44100-frame, 1-channel SampleBuf{Float64, 1}
 1.0s sampled at 44100.0Hz
 
+julia> using DSP
 julia> y = filt([1.0,0.5], x)     # frame rate stripped by DSP.filt
 44100-element Array{Float64,1}:
    ⋮
@@ -84,6 +89,7 @@ julia> y = @samerateas 1//2 x x[1:2:end]
 22050-frame, 1-channel SampleBuf{Float64, 1}
 1.0s sampled at 22050.0Hz
 
+julia> using DSP
 julia> y = @samerateas 2//3 x resample(x, 2//3)
 29400-frame, 1-channel SampleBuf{Float64, 1}
 1.0s sampled at 29400.0Hz

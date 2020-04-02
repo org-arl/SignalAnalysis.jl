@@ -1,3 +1,7 @@
+using Random
+using Distributions
+using DSP: filt
+
 export RedGaussian, PinkGaussian
 
 # TODO: doesn't handle rand(::RedGaussian, m) for m samples of n-vectors yet (see _rand!)

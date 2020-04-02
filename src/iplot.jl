@@ -1,4 +1,5 @@
 using Interact
+using Statistics
 
 export iplot, ispecgram
 
