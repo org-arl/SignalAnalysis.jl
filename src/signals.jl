@@ -103,8 +103,8 @@ end
 $(SIGNATURES)
 Converts a signal to analytic representation.
 """
-analytic(s::SampleBuf) = isanalytic(s) ? s : signal(hilbert(s), framerate(s))
-analytic(s) = isanalytic(s) ? s : hilbert(s)
+analytic(s::SampleBuf) = isanalytic(s) ? s : signal(hilbert(s)/√2.0, framerate(s))
+analytic(s) = isanalytic(s) ? s : hilbert(s)/√2.0
 
 """
 $(SIGNATURES)

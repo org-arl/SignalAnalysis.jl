@@ -56,7 +56,8 @@ using SignalAnalysis.Units
   @test nchannels(x1) == nchannels(x)
   @test framerate(x1) == framerate(x)
   @test isanalytic(x)
-  @test real(x) ≈ x1
+  @test √2*real(x) ≈ x1
+  @test rms(x) ≈ rms(x1) atol=0.001
   x2 = analytic(x)
   @test isanalytic(x2)
   @test x === x2
@@ -67,7 +68,8 @@ using SignalAnalysis.Units
   @test nchannels(x1) == nchannels(x)
   @test framerate(x1) == framerate(x)
   @test isanalytic(x)
-  @test real(x) ≈ x1
+  @test √2*real(x) ≈ x1
+  @test rms(x) ≈ rms(x1) atol=0.001
   x2 = analytic(x)
   @test isanalytic(x2)
   @test x === x2
