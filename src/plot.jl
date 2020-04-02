@@ -46,7 +46,7 @@ Plots timeseries from a sample buffer.
         s1 = collect(Iterators.flatten(pooling.(Periodograms.arraysplit(s1, downsample, 0))))
         m = fld(n, downsample)
         rep, rem = fldmod(size(s1, 1), m)
-        rem == 0 || @error "Pooling function must sample the signal evenly"
+        rem == 0 || throw(ArgumentError("Pooling function must sample the signal evenly"))
         t = t[1:downsample:end]
         rep > 1 && (t = repeat(t, inner=rep))
       else
@@ -62,7 +62,7 @@ Plots timeseries from a sample buffer.
         s1 = y
         m = fld(n, downsample)
         rep, rem = fldmod(size(s1, 1), m)
-        rem == 0 || @error "Pooling function must sample the signal evenly"
+        rem == 0 || throw(ArgumentError("Pooling function must sample the signal evenly"))
         t = t[1:downsample:end]
         rep > 1 && (t = repeat(t, inner=rep))
       end
@@ -91,7 +91,7 @@ Plots the power spectral density of data.
 @recipe function plot(s::PSD; fs=1.0, nfft=512, noverlap=div(nfft,2),
                       window=nothing, xscale=:auto)
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
-    error("psd should be provided timeseries data")
+    throw(ArgumentError("psd should be provided timeseries data"))
   end
   s.args[1] isa SampleBuf && (fs = framerate(s.args[1]))
   s = samples(s.args[1])
@@ -145,12 +145,12 @@ Plots a spectrogram of the data.
 @recipe function plot(s::Specgram; fs=1.0, nfft=256, noverlap=div(nfft,2),
                       window=nothing, t0=0.0, downsample=:auto, pooling=:mean)
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
-    error("specgram should be provided timeseries data")
+    throw(ArgumentError("specgram should be provided timeseries data"))
   end
   s.args[1] isa SampleBuf && (fs = framerate(s.args[1]))
   s1 = samples(s.args[1])
   if ndims(s1) > 1 && size(s1, 2) > 1
-    error("specgram does not support multichannel data")
+    throw(ArgumentError("specgram does not support multichannel data"))
   end
   nfft = nextfastfft(nfft)
   while nfft > size(s1, 1)
@@ -231,7 +231,7 @@ Plots frequency response of a digital filter.
 @userplot FreqResp
 @recipe function plot(s::FreqResp; fs=1.0, nfreq=256, xscale=:auto)
   if length(s.args) ∉ (1, 2)
-    error("freqresp should be provided filter details")
+    throw(ArgumentError("freqresp should be provided filter details"))
   end
   if s.args[1] isa FilterCoefficients
     filt = s.args[1]
