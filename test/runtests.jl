@@ -334,7 +334,7 @@ end
   y = upconvert(x, 10, 100)
   @test framerate(y) == 1000
   @test rms(y[100:end-100])*sqrt(10) ≈ 1.0 atol=0.01
-  @test meanfrequency(y) ≈ 100.0 atol=1.0
+  @test meanfrequency(y) ≈ 100.0 atol=5.0
   z = downconvert(y, 10, 100)[12:end-11]
   @test framerate(z) == 100
   @test amp2db(rms(x-z)/rms(z)) < -40.0
@@ -342,7 +342,7 @@ end
   y = upconvert(x, 10, 0)
   @test framerate(y) == 1000
   @test rms(y[100:end-100])*sqrt(10) ≈ 1.0 atol=0.01
-  @test meanfrequency(y) ≈ 0.0 atol=1.0
+  @test meanfrequency(y) ≈ 0.0 atol=5.0
   z = downconvert(y, 10, 0)[12:end-11]
   @test framerate(z) == 100
   @test amp2db(rms(x-z)/rms(z)) < -40.0
@@ -353,7 +353,7 @@ end
   @test framerate(y) == 1000
   @test rms(y[100:end-100,1])*sqrt(10) ≈ 1.0 atol=0.01
   @test rms(y[100:end-100,2])*sqrt(10) ≈ 1.0 atol=0.01
-  @test meanfrequency(y) ≈ [100.0, 100.0] atol=1.0
+  @test meanfrequency(y) ≈ [100.0, 100.0] atol=5.0
   z = downconvert(y, 10, 100)[12:end-11,:]
   @test nchannels(z) == 2
   @test framerate(z) == 100
