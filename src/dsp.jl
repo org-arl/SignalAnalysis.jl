@@ -112,7 +112,6 @@ function upconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); f
   pad = cld(length(pulseshape), 2*sps) - 1
   s = vcat(zeros(pad), analytic(s), zeros(pad))
   s = signal(resample(s, sps, pulseshape), sps*fs)
-  fc == 0 && (return s)
   √2 * real.(s .* cis.(2π * fc * domain(s)))
 end
 
