@@ -259,6 +259,14 @@ function upconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); f
   √2 * real.(s .* cis.(2π * fc * domain(s)))
 end
 
+function upconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
+  out = Any[]
+  for j in 1:nchannels(s)
+    push!(out, upconvert(s[:,j], sps, fc, pulseshape; fs=fs))
+  end
+  hcat(out...)
+end
+
 """
 $(SIGNATURES)
 Converts passband signal centered around carrier frequency `fc` to baseband,
@@ -271,6 +279,14 @@ function downconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps);
   sps == 1 && return signal(s, fs)
   pulseshape == nothing && return signal(s[1:sps:end,:], fs/sps)
   signal(resample(s, 1//sps, pulseshape), fs/sps)
+end
+
+function downconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
+  out = Any[]
+  for j in 1:nchannels(s)
+    push!(out, downconvert(s[:,j], sps, fc, pulseshape; fs=fs))
+  end
+  hcat(out...)
 end
 
 """
