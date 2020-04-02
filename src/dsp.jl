@@ -1,5 +1,6 @@
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
+export mseq, gmseq, circconv
 
 """
 $(SIGNATURES)
@@ -184,4 +185,127 @@ function rcosfir(β, sps, span = β < 0.68 ? 33-floor(Int, 44β) : 4)
     end
   end
   h / √sum(h.^2)
+end
+
+"""
+$(SIGNATURES)
+Generates an m-sequence of length `2^m-1` or tap specification `m`.
+
+m-sequences are sequences of `+1/-1` values with near-perfect discrete periodic
+auto-correlation properties. All non-zero lag periodic auto-correlations
+are -1. The zero-lag autocorrelation is `2^m-1`, where `m` is the shift register
+length.
+
+This function currently supports shift register lengths between 2 and 30.
+
+# Examples:
+```julia-repl
+julia> x = mseq(3)                  # generate regular m-sequence
+7-element Array{Float64,1}:
+  1.0
+  1.0
+  1.0
+ -1.0
+  1.0
+ -1.0
+ -1.0
+
+julia> x = mseq((1,3))              # generate m-sequence with specification (1,3)
+7-element Array{Float64,1}:
+  1.0
+  1.0
+  1.0
+ -1.0
+  1.0
+ -1.0
+ -1.0
+```
+"""
+function mseq(m, θ=π/2)
+  knownspecs = Dict(  # known m-sequences are specified as base 1 taps
+       2 => (1,2),          3 => (1,3),          4 => (1,4),          5 => (2,5),
+       6 => (1,6),          7 => (1,7),          8 => (1,2,7,8),      9 => (4,9),
+      10 => (3,10),        11 => (9,11),        12 => (6,8,11,12),   13 => (9,10,12,13),
+      14 => (4,8,13,14),   15 => (14,15),       16 => (4,13,15,16),  17 => (14,17),
+      18 => (11,18),       19 => (14,17,18,19), 20 => (17,20),       21 => (19,21),
+      22 => (21,22),       23 => (18,23),       24 => (17,22,23,24), 25 => (22,25),
+      26 => (20,24,25,26), 27 => (22,25,26,27), 28 => (25,28),       29 => (27,29),
+      30 => (7,28,29,30)
+  )
+  if m ∈ keys(knownspecs)
+    spec = collect(knownspecs[m])
+  else
+    spec = collect(m)
+    m = maximum(spec)
+  end
+  n = 2^m - 1
+  reg = ones(UInt8, m)
+  x = zeros(Float64, n)
+  for j ∈ 1:n
+    b = ⊻(reg[spec]...)
+    reg = circshift(reg, 1)
+    x[j] = 2.0*reg[1] - 1.0
+    reg[1] = b
+  end
+  return x
+end
+
+"""
+$(SIGNATURES)
+Generates an generalized m-sequence of length `2^m-1` or tap specification `m`.
+
+Generalized m-sequences are related to m-sequences but have an additional parameter
+`θ`. When `θ = π/2`, generalized m-sequences become normal m-sequences. When
+`θ < π/2`, generalized m-sequences contain a DC-component that leads to an exalted
+carrier after modulation. When `θ` is `atan(√(2^m-1))`, the m-sequence
+is considered to be _period matched_. Period matched m-sequences are complex sequences
+with perfect discrete periodic auto-correlation properties, i.e., all non-zero lag
+periodic auto-correlations are zero. The zero-lag autocorrelation is `2^m-1`,
+where `m` is the shift register length.
+
+This function currently supports shift register lengths between 2 and 30.
+
+# Examples:
+```julia-repl
+julia> x = gmseq(3)         # generate period matched m-sequence
+7-element Array{Complex{Float64},1}:
+ 0.3535533905932738 + 0.9354143466934853im
+ 0.3535533905932738 + 0.9354143466934853im
+ 0.3535533905932738 + 0.9354143466934853im
+ 0.3535533905932738 - 0.9354143466934853im
+ 0.3535533905932738 + 0.9354143466934853im
+ 0.3535533905932738 - 0.9354143466934853im
+ 0.3535533905932738 - 0.9354143466934853im
+
+julia> x = gmseq(3, π/4)    # generate m-sequence with exalted carrier
+7-element Array{Complex{Float64},1}:
+ 0.7071067811865476 + 0.7071067811865475im
+ 0.7071067811865476 + 0.7071067811865475im
+ 0.7071067811865476 + 0.7071067811865475im
+ 0.7071067811865476 - 0.7071067811865475im
+ 0.7071067811865476 + 0.7071067811865475im
+ 0.7071067811865476 - 0.7071067811865475im
+ 0.7071067811865476 - 0.7071067811865475im
+```
+"""
+function gmseq(m, θ=atan(√(2^maximum(m)-1)))
+  x = mseq(m) .+ 0im
+  cos(θ) .+ 1im * sin(θ) .* x
+end
+
+"""
+$(SIGNATURES)
+Computes the circular convolution of `x` and `y`. Both vectors must be the same
+length.
+"""
+function circconv(x::AbstractVector, y::AbstractVector=x)
+  if length(x) != length(y)
+    throw(ArgumentError("x and y must be of equal length"))
+  end
+  n = length(x)
+  z = similar(x)
+  for j ∈ 1:n
+    z[j] = circshift(x, j-1)' * y
+  end
+  return z
 end
