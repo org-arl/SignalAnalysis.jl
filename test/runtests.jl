@@ -117,46 +117,6 @@ using SignalAnalysis.Units
   t = toframe(0:0.1:1, x)
   @test t == 1:100:1001
 
-  x = signal(2*round.(Int,rand(1000)).-1 + 1im*(2*round.(Int,rand(1000)).-1), 100)/√2
-  y = upconvert(x, 10, 100)
-  @test framerate(y) == 1000
-  @test rms(y[100:end-100])*sqrt(10) ≈ 1.0 atol=0.01
-  @test meanfrequency(y) ≈ 100.0 atol=1.0
-  z = downconvert(y, 10, 100)[12:end-11]
-  @test framerate(z) == 100
-  @test amp2db(rms(x-z)/rms(z)) < -40.0
-
-  y = upconvert(x, 10, 0)
-  @test framerate(y) == 1000
-  @test rms(y[100:end-100])*sqrt(10) ≈ 1.0 atol=0.01
-  @test meanfrequency(y) ≈ 0.0 atol=1.0
-  z = downconvert(y, 10, 0)[12:end-11]
-  @test framerate(z) == 100
-  @test amp2db(rms(x-z)/rms(z)) < -40.0
-
-  x = signal(2*round.(Int,rand(1000,2)).-1 + 1im*(2*round.(Int,rand(1000,2)).-1), 100)/√2
-  y = upconvert(x, 10, 100)
-  @test nchannels(y) == 2
-  @test framerate(y) == 1000
-  @test rms(y[100:end-100,1])*sqrt(10) ≈ 1.0 atol=0.01
-  @test rms(y[100:end-100,2])*sqrt(10) ≈ 1.0 atol=0.01
-  @test meanfrequency(y) ≈ [100.0, 100.0] atol=1.0
-  z = downconvert(y, 10, 100)[12:end-11,:]
-  @test nchannels(z) == 2
-  @test framerate(z) == 100
-  @test amp2db(rms(x-z)/rms(z)) < -40.0
-
-  x = rcosfir(0.25, 10)
-  @test length(x) == 221
-  @test x[1:10:end] ≈ vcat(zeros(11), 0.326598866403003, zeros(11))
-  @test sum(x.^2) ≈ 1.0
-
-  x = rrcosfir(0.25, 10)
-  @test length(x) == 221
-  y = conv(x, x)[1:10:end]
-  @test y ≈ vcat(zeros(22), 1.0, zeros(22)) atol=0.01
-  @test sum(x.^2) ≈ 1.0
-
 end
 
 @testset "generate" begin
@@ -369,6 +329,46 @@ end
   y = demon(samples(x); fs=framerate(x))
   @test size(y) == (400, 2)
   @test meanfrequency(y) ≈ [50, 50] atol=10*√2
+
+  x = signal(2*round.(Int,rand(1000)).-1 + 1im*(2*round.(Int,rand(1000)).-1), 100)/√2
+  y = upconvert(x, 10, 100)
+  @test framerate(y) == 1000
+  @test rms(y[100:end-100])*sqrt(10) ≈ 1.0 atol=0.01
+  @test meanfrequency(y) ≈ 100.0 atol=1.0
+  z = downconvert(y, 10, 100)[12:end-11]
+  @test framerate(z) == 100
+  @test amp2db(rms(x-z)/rms(z)) < -40.0
+
+  y = upconvert(x, 10, 0)
+  @test framerate(y) == 1000
+  @test rms(y[100:end-100])*sqrt(10) ≈ 1.0 atol=0.01
+  @test meanfrequency(y) ≈ 0.0 atol=1.0
+  z = downconvert(y, 10, 0)[12:end-11]
+  @test framerate(z) == 100
+  @test amp2db(rms(x-z)/rms(z)) < -40.0
+
+  x = signal(2*round.(Int,rand(1000,2)).-1 + 1im*(2*round.(Int,rand(1000,2)).-1), 100)/√2
+  y = upconvert(x, 10, 100)
+  @test nchannels(y) == 2
+  @test framerate(y) == 1000
+  @test rms(y[100:end-100,1])*sqrt(10) ≈ 1.0 atol=0.01
+  @test rms(y[100:end-100,2])*sqrt(10) ≈ 1.0 atol=0.01
+  @test meanfrequency(y) ≈ [100.0, 100.0] atol=1.0
+  z = downconvert(y, 10, 100)[12:end-11,:]
+  @test nchannels(z) == 2
+  @test framerate(z) == 100
+  @test amp2db(rms(x-z)/rms(z)) < -40.0
+
+  x = rcosfir(0.25, 10)
+  @test length(x) == 221
+  @test x[1:10:end] ≈ vcat(zeros(11), 0.326598866403003, zeros(11))
+  @test sum(x.^2) ≈ 1.0
+
+  x = rrcosfir(0.25, 10)
+  @test length(x) == 221
+  y = conv(x, x)[1:10:end]
+  @test y ≈ vcat(zeros(22), 1.0, zeros(22)) atol=0.01
+  @test sum(x.^2) ≈ 1.0
 
 end
 

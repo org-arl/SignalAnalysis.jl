@@ -1,4 +1,5 @@
 export fir, removedc, removedc!, demon
+export upconvert, downconvert, rrcosfir, rcosfir
 
 """
 $(SIGNATURES)
@@ -100,4 +101,88 @@ function demon(x::AbstractVector{T}; fs=framerate(x), downsample=250, method=:rm
   y = @view samples(x)[:,1:1]
   z = demon(y, fs=fs, downsample=downsample, method=method, cutoff=cutoff)
   @samerateas z dropdims(samples(z), dims=2)
+end
+
+"""
+$(SIGNATURES)
+Converts baseband signal with `sps` symbols per passband sample to a real
+passband signal centered around carrier frequency `fc`.
+"""
+function upconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
+  pad = cld(length(pulseshape), 2*sps) - 1
+  s = vcat(zeros(pad), analytic(s), zeros(pad))
+  s = signal(resample(s, sps, pulseshape), sps*fs)
+  fc == 0 && (return s)
+  √2 * real.(s .* cis.(2π * fc * domain(s)))
+end
+
+function upconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
+  out = Any[]
+  for j in 1:nchannels(s)
+    push!(out, upconvert(s[:,j], sps, fc, pulseshape; fs=fs))
+  end
+  hcat(out...)
+end
+
+"""
+$(SIGNATURES)
+Converts passband signal centered around carrier frequency `fc` to baseband,
+and downsamples it by a factor of `sps`. If the `pulseshape` is specified to
+be `nothing`, downsampling is performed without filtering.
+"""
+function downconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
+  s = signal(analytic(s), fs)
+  s .*= cis.(-2π * fc * domain(s))
+  sps == 1 && return signal(s, fs)
+  pulseshape == nothing && return signal(s[1:sps:end,:], fs/sps)
+  signal(resample(s, 1//sps, pulseshape), fs/sps)
+end
+
+function downconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
+  out = Any[]
+  for j in 1:nchannels(s)
+    push!(out, downconvert(s[:,j], sps, fc, pulseshape; fs=fs))
+  end
+  hcat(out...)
+end
+
+"""
+$(SIGNATURES)
+Root-raised cosine filter.
+"""
+function rrcosfir(β, sps, span = β < 0.68 ? 33-floor(Int, 44β) : 4)
+  # default span based on http://www.commsys.isy.liu.se/TSKS04/lectures/3/MichaelZoltowski_SquareRootRaisedCosine.pdf
+  delay = fld(span*sps, 2)
+  t = collect(-delay:delay)/sps
+  h = Array{Float64}(undef, size(t))
+  for i ∈ 1:length(t)
+    if t[i] == 0
+      h[i] = (1 + β*(4/π - 1))/sps
+    elseif abs(t[i]) == 1/(4β)
+      h[i] = β/(√2*sps) * ((1+2/pi)*sin(π/(4β)) + (1-2/pi)*cos(π/(4β)))
+    else
+      h[i] = (sin(π*t[i]*(1-β)) + 4β*t[i]*cos(π*t[i]*(1+β))) / (π*t[i]*(1 - (4β*t[i])^2)) / sps
+    end
+  end
+  h / √sum(h.^2)
+end
+
+"""
+$(SIGNATURES)
+Raised cosine filter.
+"""
+function rcosfir(β, sps, span = β < 0.68 ? 33-floor(Int, 44β) : 4)
+  # default span based on http://www.commsys.isy.liu.se/TSKS04/lectures/3/MichaelZoltowski_SquareRootRaisedCosine.pdf
+  # since the span is for rrcosfir, for rcosfir, it is very conservative
+  delay = fld(span*sps, 2)
+  t = collect(-delay:delay)/sps
+  h = Array{Float64}(undef, size(t))
+  for i ∈ 1:length(t)
+    if abs(t[i]) == 1/(2β)
+      h[i] = π/(4sps) * sinc(1/(2β))
+    else
+      h[i] = sinc(t[i]) * cos(π * β * t[i]) / (1-(2β * t[i])^2) / sps
+    end
+  end
+  h / √sum(h.^2)
 end
