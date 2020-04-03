@@ -1,6 +1,6 @@
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
-export mseq, gmseq, circconv, goertzel
+export mseq, gmseq, circconv, goertzel, pll
 
 """
 $(SIGNATURES)
@@ -357,4 +357,23 @@ function goertzel(x::AbstractMatrix, f, n; fs=framerate(x))
     out[:,j] = goertzel(x[:,j], f, n; fs=fs)
   end
   out
+end
+
+"""
+$(SIGNATURES)
+Phased-lock loop to track dominant carrier frequency in input signal.
+"""
+function pll(x::AbstractVecOrMat, bandwidth=1e-3; fs=framerate(x))
+  β = √bandwidth
+  n = nchannels(x)
+  ϕ = zeros(1,n)
+  ω = zeros(1,n)
+  y = similar(x, ComplexF64)
+  for j ∈ 1:nframes(x)
+    y[j,:] = cis.(ϕ)
+    Δϕ = angle.(x[j,:] .* conj.(y[j,:])) .* abs.(x[j,:])
+    ω .+= bandwidth * Δϕ
+    ϕ .+= β*Δϕ .+ ω
+  end
+  signal(y, fs)
 end

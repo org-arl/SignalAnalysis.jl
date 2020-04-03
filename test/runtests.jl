@@ -417,6 +417,14 @@ end
   @test abs.(goertzel(x, 9kHz)) ≈ [0, 0] atol=1e-6
   @test abs.(goertzel(x, 11kHz)) ≈ [0, size(x,1)] atol=1e-6
 
+  x = cw(1kHz, 1s, 80kHz)
+  x2 = x .+ 0.25*rand(size(x)...) .+ 0.25im*rand(size(x)...)
+  e2 = √mean(abs2.(x[800:end] .- x2[800:end]))
+  x3 = pll(x2)
+  @test meanfrequency(x3[800:end]) ≈ meanfrequency(x[800:end]) atol=0.1
+  e3 = √mean(abs2.(x[800:end] .- x3[800:end]))
+  @test e2/e3 > 3
+
 end
 
 @testset "rand" begin
