@@ -406,6 +406,17 @@ end
   @test mseq((1,3)) == mseq(3)
   @test all(gmseq(3, 0) .== 1.0)
 
+  x = cw(10kHz, 0.1s, 80kHz)
+  @test abs(goertzel(x, 10kHz)) ≈ length(x) atol=1e-6
+  @test abs(goertzel(x, 9kHz)) ≈ 0 atol=1e-6
+  @test abs(goertzel(x, 11kHz)) ≈ 0 atol=1e-6
+  @test abs.(goertzel(x, 10kHz, 512)) ≈ repeat([512.0], 15) atol=1e-6
+  @test abs.(goertzel(x, 9375, 512)) ≈ repeat([0.0], 15) atol=1e-6
+  x = hcat(cw(10kHz, 0.1s, 80kHz), cw(11kHz, 0.1s, 80kHz))
+  @test abs.(goertzel(x, 10kHz)) ≈ [size(x,1), 0] atol=1e-6
+  @test abs.(goertzel(x, 9kHz)) ≈ [0, 0] atol=1e-6
+  @test abs.(goertzel(x, 11kHz)) ≈ [0, size(x,1)] atol=1e-6
+
 end
 
 @testset "rand" begin

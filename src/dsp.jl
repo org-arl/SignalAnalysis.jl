@@ -1,6 +1,6 @@
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
-export mseq, gmseq, circconv
+export mseq, gmseq, circconv, goertzel
 
 """
 $(SIGNATURES)
@@ -308,4 +308,53 @@ function circconv(x::AbstractVector, y::AbstractVector=x)
     z[j] = circshift(x, j-1)' * y
   end
   return z
+end
+
+"""
+$(SIGNATURES)
+Detects frequency `f` in input signal using the Goertzel algorithm.
+
+The detection metric returned by this function is the complex output
+of the Goertzel filter at the end of the input block. Typically, you
+would want to compare the magnitude of this output with a threshold to
+detect a frequency.
+
+When a block size `n` is specified, the Goertzel algorithm in applied to
+blocks of data from the original time series.
+"""
+function goertzel(x::AbstractVector, f; fs=framerate(x))
+  n = length(x)
+  m = inHz(f)/(inHz(fs)/n)
+  w1 = 0
+  w2 = 0
+  for j ∈ 1:n
+    w0 = 2 * cos(2π * m/n) * w1 - w2 + x[j]
+    w2 = w1
+    w1 = w0
+  end
+  w0 = 2 * cos(2π * m/n) * w1 - w2
+  w0 - cis(-2π * m/n) * w1
+end
+
+function goertzel(x::AbstractVector, f, n; fs=framerate(x))
+  slide(ComplexF64, x, n) do x1, b, j
+    goertzel(x1, f; fs=fs)
+  end
+end
+
+function goertzel(x::AbstractMatrix, f; fs=framerate(x))
+  out = Array{ComplexF64}(undef, nchannels(x))
+  for j ∈ 1:nchannels(x)
+    out[j] = goertzel(x[:,j], f; fs=fs)
+  end
+  out
+end
+
+function goertzel(x::AbstractMatrix, f, n; fs=framerate(x))
+  count = fld(size(x,1), n)
+  out = Array{ComplexF64}(undef, (count, nchannels(x)))
+  for j ∈ 1:nchannels(x)
+    out[:,j] = goertzel(x[:,j], f, n; fs=fs)
+  end
+  out
 end
