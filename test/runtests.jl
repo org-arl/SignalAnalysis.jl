@@ -96,17 +96,34 @@ using SignalAnalysis.Units
 
   x = signal(ones(1000), 8kHz)
   x2 = slide(Float32, x, 250) do x1, blknum, firstframe
+    @test size(x1) == (250,)
     sum(x1)*blknum
   end
   @test x2 == [250.0, 500.0, 750.0, 1000.0]
   x2 = slide(Tuple{Int,Float64}, x, 250) do x1, blknum, firstframe
+    @test size(x1) == (250,)
     (blknum, sum(x1)*blknum)
   end
   @test x2 == [(1, 250.0), (2, 500.0), (3, 750.0), (4, 1000.0)]
+  x2 = slide(Array{Float64}, 2, x, 250) do x1, blknum, firstframe
+    @test size(x1) == (250,)
+    [sum(x1), prod(x1)]
+  end
+  @test x2 == [250.0 1.0; 250.0 1.0; 250.0 1.0; 250.0 1.0;]
   slide(x, 250) do x1, blknum, firstframe
     x1 .= blknum
   end
   @test (x[1], x[251], x[501], x[751]) == (1.0, 2.0, 3.0, 4.0)
+
+  x = signal(ones(1000,2), 8kHz)
+  x2 = slide(Float32, x, 250) do x1, blknum, firstframe
+    @test size(x1) == (250,2)
+    sum(x1)*blknum
+  end
+  @test x2 == [2*250.0, 2*500.0, 2*750.0, 2*1000.0]
+  slide(x, 250) do x1, blknum, firstframe
+    @test size(x1) == (250,2)
+  end
 
   x = signal(randn(2000), 8kHz)
   @test toframe(0.2s, x) == 1601
@@ -116,6 +133,12 @@ using SignalAnalysis.Units
   x = signal(randn(8000), 1000)
   t = toframe(0:0.1:1, x)
   @test t == 1:100:1001
+
+  x = signal(randn(1000), 1000)
+  @test rowview(x, 100:500) === @view x[100:500]
+
+  x = signal(randn(1000,2), 1000)
+  @test rowview(x, 100:500) === @view x[100:500,:]
 
 end
 

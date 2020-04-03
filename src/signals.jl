@@ -6,7 +6,7 @@ using PaddedViews
 using ProgressMeter
 
 export signal, @rate, @samerateas, domain, analytic, isanalytic, samples
-export padded, slide, toframe
+export padded, slide, toframe, rowview
 
 SignalBase.nframes(x::SampleBuf) = SampledSignals.nframes(x)
 SignalBase.framerate(x::SampleBuf) = SampledSignals.samplerate(x)
@@ -135,6 +135,13 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, 
 end
 
 """
+$(SIGNATURES)
+Generates a view of specified row range of a vector or matrix.
+"""
+rowview(s::AbstractVector, range) = @view s[range]
+rowview(s::AbstractMatrix, range) = @view s[range,:]
+
+"""
     slide(f::Function, s::AbstractVector, nframes, overlap=0, args...; showprogress=true)
 
 Slides a window over a signal, processing each window. If the total number of frames
@@ -163,14 +170,14 @@ julia> x[1], x[251], x[501], x[751]
 (1.0, 2.0, 3.0, 4.0)
 ```
 """
-function slide(f::Function, s::AbstractVector, nframes, overlap=0, args...; showprogress=true)
+function slide(f::Function, s::AbstractVecOrMat, nframes, overlap=0, args...; showprogress=true)
   @assert overlap < nframes "overlap must be less than nframes"
   n = size(s,1)
   m = nframes - overlap
   mmax = (n-nframes)÷m
   showprogress && (p = Progress(mmax+1, 1, "Processing: "))
   for j = 0:mmax
-    s1 = @view s[j*m+1:j*m+nframes]
+    s1 = rowview(s, j*m+1:j*m+nframes)
     f(s1, j+1, j*m+1, args...)
     showprogress && next!(p)
   end
@@ -205,7 +212,7 @@ julia> slide(Tuple{Int,Float64}, x, 250) do x1, blknum, firstframe
   (4, 1000.0)
 ```
 """
-function slide(f::Function, ::Type{T}, s::AbstractVector, nframes, overlap=0, args...; showprogress=true) where {T}
+function slide(f::Function, ::Type{T}, s::AbstractVecOrMat, nframes, overlap=0, args...; showprogress=true) where {T}
   @assert overlap < nframes "overlap must be less than nframes"
   n = size(s,1)
   m = nframes - overlap
@@ -213,8 +220,43 @@ function slide(f::Function, ::Type{T}, s::AbstractVector, nframes, overlap=0, ar
   out = Array{T,1}(undef, 1+mmax)
   showprogress && (p = Progress(mmax+1, 1, "Processing: "))
   for j = 0:mmax
-    s1 = @view s[j*m+1:j*m+nframes]
+    s1 = rowview(s, j*m+1:j*m+nframes)
     out[j+1] = f(s1, j+1, j*m+1, args...)
+    showprogress && next!(p)
+  end
+  return out
+end
+
+"""
+    slide(f::Function, ::Type{Array{T}}, noutput::Int, s::AbstractVector, nframes, overlap=0, args...; showprogress=true) where T
+
+Slides a window over a signal, processing each window, and collecting the results
+of type `Array{T}` of length `noutput`. If the total number of frames in the signal is
+not an integral multiple of `nframes`, the last incomplete block of samples remains unprocessed.
+
+# Examples:
+```julia-repl
+julia> x = signal(ones(1000), 8kHz);
+julia> slide(Array{Float64}, 2, x, 250) do x1, blknum, firstframe
+          [sum(x1), prod(x1)]
+       end
+4×2 Array{Float64,2}:
+ 250.0  1.0
+ 250.0  1.0
+ 250.0  1.0
+ 250.0  1.0
+```
+"""
+function slide(f::Function, ::Type{Array{T}}, noutput::Int, s::AbstractVecOrMat, nframes, overlap=0, args...; showprogress=true) where {T}
+  @assert overlap < nframes "overlap must be less than nframes"
+  n = size(s,1)
+  m = nframes - overlap
+  mmax = (n-nframes)÷m
+  out = Array{T,2}(undef, (1+mmax, noutput))
+  showprogress && (p = Progress(mmax+1, 1, "Processing: "))
+  for j = 0:mmax
+    s1 = rowview(s, j*m+1:j*m+nframes)
+    out[j+1,:] = f(s1, j+1, j*m+1, args...)
     showprogress && next!(p)
   end
   return out
