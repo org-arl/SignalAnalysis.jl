@@ -113,7 +113,7 @@ function upconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); f
   pad = cld(length(pulseshape), 2*sps) - 1
   s = vcat(zeros(pad), analytic(s), zeros(pad))
   s = signal(resample(s, sps, pulseshape), sps*fs)
-  √2 * real.(s .* cis.(2π * fc * domain(s)))
+  √2 * real.(s .* cis.(2π * inHz(fc) * domain(s)))
 end
 
 function upconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
@@ -132,7 +132,7 @@ be `nothing`, downsampling is performed without filtering.
 """
 function downconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
   s = signal(analytic(s), fs)
-  s .*= cis.(-2π * fc * domain(s))
+  s .*= cis.(-2π * inHz(fc) * domain(s))
   sps == 1 && return signal(s, fs)
   pulseshape == nothing && return signal(s[1:sps:end,:], fs/sps)
   signal(resample(s, 1//sps, pulseshape), fs/sps)
