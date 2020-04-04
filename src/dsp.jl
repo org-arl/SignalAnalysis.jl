@@ -337,9 +337,10 @@ function goertzel(x::AbstractVector, f; fs=framerate(x))
 end
 
 function goertzel(x::AbstractVector, f, n; fs=framerate(x))
-  slide(ComplexF64, x, n) do x1, b, j
+  out = slide(ComplexF64, x, n) do x1, b, j
     goertzel(x1, f; fs=fs)
   end
+  signal(out, fs/n)
 end
 
 function goertzel(x::AbstractMatrix, f; fs=framerate(x))
@@ -356,7 +357,7 @@ function goertzel(x::AbstractMatrix, f, n; fs=framerate(x))
   for j ∈ 1:nchannels(x)
     out[:,j] = goertzel(x[:,j], f, n; fs=fs)
   end
-  out
+  signal(out, fs/n)
 end
 
 """
