@@ -135,11 +135,11 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, 
 end
 
 """
-$(SIGNATURES)
-Generates a view of specified row range of a vector or matrix.
+    x[a:b,∘]
+Generates a view of specified row range `a:b` of a vector or matrix `x`.
 """
-rowview(s::AbstractVector, range) = @view s[range]
-rowview(s::AbstractMatrix, range) = @view s[range,:]
+Base.getindex(a::AbstractVector, i, ::typeof(∘)) = @view a[i]
+Base.getindex(a::AbstractMatrix, i, ::typeof(∘)) = @view a[i,:]
 
 """
     slide(f::Function, s::AbstractVector, nframes, overlap=0, args...; showprogress=true)
@@ -177,7 +177,7 @@ function slide(f::Function, s::AbstractVecOrMat, nframes, overlap=0, args...; sh
   mmax = (n-nframes)÷m
   showprogress && (p = Progress(mmax+1, 1, "Processing: "))
   for j = 0:mmax
-    s1 = rowview(s, j*m+1:j*m+nframes)
+    s1 = s[j*m+1:j*m+nframes,∘]
     f(s1, j+1, j*m+1, args...)
     showprogress && next!(p)
   end
@@ -220,7 +220,7 @@ function slide(f::Function, ::Type{T}, s::AbstractVecOrMat, nframes, overlap=0, 
   out = Array{T,1}(undef, 1+mmax)
   showprogress && (p = Progress(mmax+1, 1, "Processing: "))
   for j = 0:mmax
-    s1 = rowview(s, j*m+1:j*m+nframes)
+    s1 = s[j*m+1:j*m+nframes,∘]
     out[j+1] = f(s1, j+1, j*m+1, args...)
     showprogress && next!(p)
   end
@@ -255,7 +255,7 @@ function slide(f::Function, ::Type{Array{T}}, noutput::Int, s::AbstractVecOrMat,
   out = Array{T,2}(undef, (1+mmax, noutput))
   showprogress && (p = Progress(mmax+1, 1, "Processing: "))
   for j = 0:mmax
-    s1 = rowview(s, j*m+1:j*m+nframes)
+    s1 = s[j*m+1:j*m+nframes,∘]
     out[j+1,:] = f(s1, j+1, j*m+1, args...)
     showprogress && next!(p)
   end

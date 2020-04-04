@@ -135,10 +135,10 @@ using SignalAnalysis.Units
   @test t == 1:100:1001
 
   x = signal(randn(1000), 1000)
-  @test rowview(x, 100:500) === @view x[100:500]
+  @test x[100:500,∘] === @view x[100:500]
 
   x = signal(randn(1000,2), 1000)
-  @test rowview(x, 100:500) === @view x[100:500,:]
+  @test x[100:500,∘] === @view x[100:500,:]
 
 end
 
