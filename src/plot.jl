@@ -1,4 +1,5 @@
 using Plots
+using DSP.Windows
 
 """
     plot(data::SampleBuf; kwargs...)
@@ -83,13 +84,13 @@ Plots the power spectral density of data.
 - `fs=1.0`: derived from the data if a `SampleBuf` is provided as input
 - `nfft=512`: size of FFT window
 - `noverlap=nfft÷2`: window overlap size
-- `window=nothing`: accepts any window from [`DSP.jl`](https://juliadsp.github.io/DSP.jl/stable/windows/)
+- `window=hamming(nfft)`: accepts any window from [`DSP.jl`](https://juliadsp.github.io/DSP.jl/stable/windows/)
 - `xscale=:auto`: one of `:auto`, `:identity` or `:log10`
 - other `kwargs` are passed on to `plot`
 """
 @userplot PSD
 @recipe function plot(s::PSD; fs=1.0, nfft=512, noverlap=div(nfft,2),
-                      window=nothing, xscale=:auto)
+                      window=hamming(nfft), xscale=:auto)
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
     throw(ArgumentError("psd should be provided timeseries data"))
   end
@@ -135,7 +136,7 @@ Plots a spectrogram of the data.
 - `fs=1.0`: derived from the data if a `SampleBuf` is provided as input
 - `nfft=256`: size of FFT window
 - `noverlap=nfft÷2`: window overlap size
-- `window=nothing`: accepts any window from [`DSP.jl`](https://juliadsp.github.io/DSP.jl/stable/windows/)
+- `window=hamming(nfft)`: accepts any window from [`DSP.jl`](https://juliadsp.github.io/DSP.jl/stable/windows/)
 - `t0=0.0`: start time
 - `downsample=:auto`: downsampling factor (integer) for time axis
 - `pooling=:mean`: pooling mode (`:min`, `:max`, `:mean`, `nothing` or function)
@@ -143,7 +144,7 @@ Plots a spectrogram of the data.
 """
 @userplot Specgram
 @recipe function plot(s::Specgram; fs=1.0, nfft=256, noverlap=div(nfft,2),
-                      window=nothing, t0=0.0, downsample=:auto, pooling=:mean)
+                      window=hamming(nfft), t0=0.0, downsample=:auto, pooling=:mean)
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
     throw(ArgumentError("specgram should be provided timeseries data"))
   end
@@ -206,8 +207,8 @@ Plots a spectrogram of the data.
   xguide --> "Time ("*tunit*")"
   yguide --> "Frequency ("*funit*")"
   z = pow2db.(z)
-  cmax = ceil(Int, maximum(z)/5)*5
-  cmin = max(cmax-50, floor(Int, minimum(z)/5)*5)
+  cmax = ceil(maximum(z)/5)*5
+  cmin = max(cmax-50, floor(minimum(z)/5)*5)
   clims --> (cmin, cmax)
   @series begin
     seriestype := :heatmap
