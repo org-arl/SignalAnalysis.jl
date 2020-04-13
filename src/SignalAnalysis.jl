@@ -17,6 +17,8 @@ include("rand.jl")
 function __init__()
   @require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" begin
     include("plot.jl")
+  end
+  @require InteractiveViz="d14badfc-0adb-4d57-980e-37858d990fa5" begin
     include("iplot.jl")
   end
 end
