@@ -11,16 +11,16 @@ Frequency-domain Bartlett beamformer.
 """
 struct Bartlett <: Beamformer end
 
-"""
+@doc """
 Frequency-domain Capon beamformer with diagonal loading factor `γ`.
-"""
+""" Capon
 @kwdef struct Capon <: Beamformer
   γ = 0.0
 end
 
-"""
+@doc """
 Frequency-domain MUSIC beamformer with `nsignals` signals.
-"""
+""" Music
 @kwdef struct Music <: Beamformer
   nsignals = 1
 end
@@ -122,9 +122,9 @@ about 5/T, where T is the maximum time taken for a signal to propagate through
 the array.
 
 Several beamforming methods are available:
-- [`Bartlett`](@ref)
-- [`Capon`](@ref)
-- [`Music`](@ref)
+- [`Bartlett`](@ref)`()`
+- [`Capon`](@ref)`(γ)`
+- [`Music`](@ref)`(nsignals)`
 
 Custom beamformers can be implemented by creating a subtype of
 `SignalAnalysis.Beamformer` and implementing the `SignalAnalysis.beamformer()`

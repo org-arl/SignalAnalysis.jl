@@ -15,6 +15,7 @@ While this package works with most array-like data types, it uses the [`SignalBa
 - [Generating signals](@ref)
 - [Basic signal analysis](@ref)
 - [Signal processing](@ref)
+- [Array signal processing](@ref)
 - [Random noise generation](@ref)
 - [Plot recipes](@ref)
 - [Interactive plotting](@ref)
