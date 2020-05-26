@@ -80,7 +80,7 @@ steering(rxpos::AbstractVector, c, θ) = steering(collect(rxpos'), c, θ)
 
 Broadband time-domain delay-and-sum beamformer. Takes in passband or baseband
 signals `s` and produces beamformer output for all directions specified by the
-steering distances `sd`. The beamformer output is a timeseries signal for each
+steering delays `sd`. The beamformer output is a timeseries signal for each
 steering direction.
 
 # Example:
@@ -110,7 +110,7 @@ end
 
 Narrowband frequency-domain beamformer. Takes in passband signals `s` and
 produces beamformer output for all directions specified by the steering
-distances `sd`. The beamformer output is an energy estimate (or equivalent)
+delays `sd`. The beamformer output is an energy estimate (or equivalent)
 for each steering direction. The beamforming only uses a narrowband signal
 cenetered at frequency `f` with a bandwidth of about `fs/n`.
 
