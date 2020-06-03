@@ -17,6 +17,7 @@ While this package works with most array-like data types, it uses the [`SignalBa
 - [Generating signals](https://org-arl.github.io/SignalAnalysis.jl/dev/generate.html)
 - [Basic signal analysis](https://org-arl.github.io/SignalAnalysis.jl/dev/basic.html)
 - [Signal processing](https://org-arl.github.io/SignalAnalysis.jl/dev/dsp.html)
+- [Array processing](https://org-arl.github.io/SignalAnalysis.jl/dev/array.html)
 - [Random noise generation](https://org-arl.github.io/SignalAnalysis.jl/dev/random.html)
 - [Plot recipes](https://org-arl.github.io/SignalAnalysis.jl/dev/plot.html)
 - [Interactive plotting](https://org-arl.github.io/SignalAnalysis.jl/dev/iplot.html)
