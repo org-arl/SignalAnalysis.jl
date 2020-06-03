@@ -14,6 +14,7 @@ makedocs(
       "generate.md",
       "basic.md",
       "dsp.md",
+      "array.md",
       "rand.md",
       "plot.md",
       "iplot.md"
@@ -23,4 +24,8 @@ makedocs(
 
 deploydocs(
   repo = "github.com/org-arl/SignalAnalysis.jl.git",
+  branch = "gh-pages",
+  devbranch = "master",
+  devurl = "dev",
+  versions = ["stable" => "v^", "v#.#", "dev" => "dev"]
 )
