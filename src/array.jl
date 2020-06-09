@@ -54,27 +54,44 @@ julia> steering(rxpos, 1500.0, range(0.0, π; length=181))
  -0.000333333  -0.000333283      0.000333283   0.000333333
  -0.001        -0.000999848      0.000999848   0.001
  -0.00166667   -0.00166641   …   0.00166641    0.00166667
+
+julia> rxpos = [  # can be 2D or 3D coordinates
+  0.0  0.0  0.5  0.5
+  0.0  0.5  0.0  0.5
+  0.0  0.0  0.0  0.0
+];
+julia> steering(rxpos, 1500.0, deg2rad.(LinRange2D(-20, 20, 41, -10, 10, 21)))
+4×861 Array{Float64,2}:
+  9.80987e-5    9.83857e-5    9.86427e-5  …   0.00021154   0.000210989   0.000210373
+  0.000210373   0.000210989   0.00021154      9.86427e-5   9.83857e-5    9.80987e-5
+ -0.000210373  -0.000210989  -0.00021154     -9.86427e-5  -9.83857e-5   -9.80987e-5
+ -9.80987e-5   -9.83857e-5   -9.86427e-5     -0.00021154  -0.000210989  -0.000210373
 ```
 """
 function steering(rxpos::AbstractMatrix, c, θ)
-  # TODO: add support for 2D steering
   nsensors = size(rxpos, 2)
-  ndir = length(θ)
+  ndims(θ) == 1 ? ndir = length(θ) : ndir = size(θ, 1)
   pos0 = sum(rxpos; dims=2) / nsensors
   rxpos = rxpos .- pos0
-  size(rxpos, 1) == 1 && (rxpos = vcat(rxpos, zeros(1, nsensors)))
-  size(rxpos, 1) > 2 && (rxpos = rxpos[1:2,:])
+  size(rxpos, 1) == 1 && (rxpos = vcat(rxpos, zeros(2, nsensors)))
+  size(rxpos, 1) == 2 && (rxpos = vcat(rxpos, zeros(1, nsensors)))
+  if ndims(θ) == 2
+    γ = θ[:,1]
+    ϕ = θ[:,2]
+  else
+    γ = θ
+    ϕ = zeros(size(θ, 1))
+  end
   sd = zeros(nsensors, ndir)
   for k ∈ 1:ndir
     for j ∈ 1:nsensors
-      sd[j,k] = -rxpos[:,j]' * [cos(θ[k]), sin(θ[k])] / c
+      sd[j,k] = -rxpos[:,j]' * [cos(ϕ[k])*cos(γ[k]), cos(ϕ[k])*sin(γ[k]), sin(ϕ[k])] / c
     end
   end
   sd
 end
 
 steering(rxpos::AbstractVector, c, θ) = steering(collect(rxpos'), c, θ)
-
 """
     beamform(s, sd; fs=framerate(s))
 
@@ -178,3 +195,18 @@ function beamformer(opt::Music, R, sv)
   Q = Q * Q'
   [1 ./ abs.(sv[:,j]' * Q * sv[:,j]) for j ∈ 1:size(sv,2)]
 end
+
+function LinRange2D(start0, stop0, num0, start1, stop1, num1)
+    x = LinRange(start0, stop0, num0)
+    y = LinRange(start1, stop1, num1)
+    z = meshgrid(x, y)
+    [reshape(z[1], :, 1) reshape(z[2], :, 1)]
+end
+
+function meshgrid(x::AbstractVector, y::AbstractVector)
+    m, n = length(y), length(x)
+    x = reshape(x, 1, n)
+    y = reshape(y, m, 1)
+    (repeat(x, m, 1), repeat(y, 1, n))
+end
+
