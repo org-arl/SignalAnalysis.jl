@@ -28,7 +28,8 @@ end
 """
 $(SIGNATURES)
 Computes steering delays for specified receiver positions `rxpos`, signal
-propagation speed `c`, and angles `θ`. The delays are computed with a far-field
+propagation speed `c`, and angles `θ`. Angles `θ` can be a 2D array with
+(azimuth, elevation) pair in each row. The delays are computed with a far-field
 assumption, i.e., for plane incoming waves.
 
 # Examples:
@@ -55,12 +56,13 @@ julia> steering(rxpos, 1500.0, range(0.0, π; length=181))
  -0.001        -0.000999848      0.000999848   0.001
  -0.00166667   -0.00166641   …   0.00166641    0.00166667
 
-julia> rxpos = [  # can be 2D or 3D coordinates
+julia> rxpos = [
   0.0  0.0  0.5  0.5
   0.0  0.5  0.0  0.5
   0.0  0.0  0.0  0.0
 ];
-julia> steering(rxpos, 1500.0, deg2rad.(LinRange2D(-20, 20, 41, -10, 10, 21)))
+julia> θ = deg2rad.(reduce(vcat, hcat.(LinRange(-20,20,41)', LinRange(-10,10,21)))) # 2D array with (azimuth, elevation) in each row
+julia> steering(rxpos, 1500.0, θ)
 4×861 Array{Float64,2}:
   9.80987e-5    9.83857e-5    9.86427e-5  …   0.00021154   0.000210989   0.000210373
   0.000210373   0.000210989   0.00021154      9.86427e-5   9.83857e-5    9.80987e-5
@@ -195,18 +197,3 @@ function beamformer(opt::Music, R, sv)
   Q = Q * Q'
   [1 ./ abs.(sv[:,j]' * Q * sv[:,j]) for j ∈ 1:size(sv,2)]
 end
-
-function LinRange2D(start0, stop0, num0, start1, stop1, num1)
-    x = LinRange(start0, stop0, num0)
-    y = LinRange(start1, stop1, num1)
-    z = meshgrid(x, y)
-    [reshape(z[1], :, 1) reshape(z[2], :, 1)]
-end
-
-function meshgrid(x::AbstractVector, y::AbstractVector)
-    m, n = length(y), length(x)
-    x = reshape(x, 1, n)
-    y = reshape(y, m, 1)
-    (repeat(x, m, 1), repeat(y, 1, n))
-end
-
