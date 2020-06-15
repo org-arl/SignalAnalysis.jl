@@ -28,9 +28,9 @@ end
 """
 $(SIGNATURES)
 Computes steering delays for specified receiver positions `rxpos`, signal
-propagation speed `c`, and angles `θ`. Angles `θ` can be a 2D array with
-(azimuth, elevation) pair in each row. The delays are computed with a far-field
-assumption, i.e., for plane incoming waves.
+propagation speed `c`, and angles `θ`. Array `θ` can be a 1D array of angles or 
+2D array with (azimuth, elevation) pair in each row. The delays are computed with 
+a far-field assumption, i.e., for plane incoming waves.
 
 # Examples:
 ```julia-repl
