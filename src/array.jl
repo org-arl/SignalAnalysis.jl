@@ -70,21 +70,31 @@ julia> steering(rxpos, 1500.0, θ)
  -9.80987e-5   -9.83857e-5   -9.86427e-5     -0.00021154  -0.000210989  -0.000210373
 ```
 """
-function steering(rxpos::AbstractMatrix, c, θ)
-  ndims(rxpos) == 1 ? nsensors = length(rxpos) : nsensors = size(rxpos, 2)
-  ndims(θ) == 1 ? ndir = length(θ) : ndir = size(θ, 1)
+function steering(rxpos::AbstractMatrix, c, θ::AbstractVector)
+  nsensors = size(rxpos, 2)
+  ndir = length(θ)
   pos0 = sum(rxpos; dims=2) / nsensors
   rxpos = rxpos .- pos0
-  ndims(rxpos) == 1 && (rxpos = vcat(rxpos', zeros(2, nsensors)))
+  size(rxpos, 1) == 1 && (rxpos = vcat(rxpos, zeros(1, nsensors)))
+  size(rxpos, 1) > 2 && (rxpos = rxpos[1:2,:])
+  sd = zeros(nsensors, ndir)
+  for k ∈ 1:ndir
+    for j ∈ 1:nsensors
+      sd[j,k] = -rxpos[:,j]' * [cos(θ[k]), sin(θ[k])] / c
+    end
+  end
+  sd
+end
+
+function steering(rxpos::AbstractMatrix, c, θ::AbstractMatrix)
+  nsensors = size(rxpos, 2)
+  ndir = size(θ, 1)
+  pos0 = sum(rxpos; dims=2) / nsensors
+  rxpos = rxpos .- pos0
   size(rxpos, 1) == 1 && (rxpos = vcat(rxpos, zeros(2, nsensors)))
   size(rxpos, 1) == 2 && (rxpos = vcat(rxpos, zeros(1, nsensors)))
-  if ndims(θ) == 2
-    γ = θ[:,1]
-    ϕ = θ[:,2]
-  else
-    γ = θ
-    ϕ = zeros(size(θ, 1))
-  end
+  γ = θ[:,1]
+  ϕ = θ[:,2]
   sd = zeros(nsensors, ndir)
   for k ∈ 1:ndir
     for j ∈ 1:nsensors
@@ -95,6 +105,7 @@ function steering(rxpos::AbstractMatrix, c, θ)
 end
 
 steering(rxpos::AbstractVector, c, θ) = steering(collect(rxpos'), c, θ)
+
 """
     beamform(s, sd; fs=framerate(s))
 
