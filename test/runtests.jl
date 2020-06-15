@@ -555,10 +555,39 @@ end
   @test sd1[1,4] ≈ sd1[2,4] atol=1e-6
   @test sd1[3,4] ≈ sd1[4,4] atol=1e-6
   @test sd1[3,4]-sd1[2,4] ≈ √2/c atol=1e-6
+  
+  θ1 = deg2rad.(reduce(vcat, hcat.(LinRange(0.0, 180.0, 181)', LinRange(0.0,0.0,181))))
+  sd1 = steering(0.0:1.0:5.0, c, θ1)
+  @test size(sd1) == (6, 32761)
+  θ2 = range(0.0, π; length=181)
+  sd2 = steering(0.0:1.0:5.0, c, θ2)
+  @test sd1[:,1] == sd2[:,1]
+  @test sd1[:,16291] == sd2[:,91]
+  @test sd1[:,32761] == sd2[:,181]
+
+  θ1 = deg2rad.(reduce(vcat, hcat.(LinRange(0.0, 360.0, 9)', LinRange(0.0,0.0,9))))
+  rxpos = [-1.0 0.0 1.0 0.0; 0.0 1.0 0.0 -1.0]
+  sd1 = steering(rxpos, c, θ1)
+  @test size(sd1) == (4, 81)
+  θ2 = range(0.0, 2π; length=9)
+  sd2 = steering(rxpos, c, θ2)
+  @test sd1[:,1] == sd2[:,1]
+  @test sd1[:,19] == sd2[:,3]
+  @test sd1[:,37] == sd2[:,5]
+  @test sd1[:,55] == sd2[:,7]
+  @test sd1[1,36] ≈ sd1[2,36] atol=1e-6
+  @test sd1[3,36] ≈ sd1[4,36] atol=1e-6
+  @test sd1[3,36]-sd1[2,36] ≈ √2/c atol=1e-6
+
+  θ = deg2rad.(reduce(vcat, hcat.(LinRange(-20,20,41)', LinRange(-10,10,21))))
+  rxpos = [ 0.0  0.0  0.5  0.5; 0.0  0.5  0.0  0.5; 0.0  0.0  0.0  0.0]
+  sd1 = steering(rxpos, c, θ)
+  @test size(sd1) == (size(rxpos,2), size(θ,1))
 
   θ = deg2rad.(1:360)
   fc = 500.0
   fs = 44100.0
+  rxpos = [-1.0 0.0 1.0 0.0; 0.0 1.0 0.0 -1.0]
   sd1 = steering(rxpos, c, θ)
   @test size(sd1) == (4, 360)
   x = cw(fc, 1.0, fs)
