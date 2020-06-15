@@ -71,10 +71,11 @@ julia> steering(rxpos, 1500.0, θ)
 ```
 """
 function steering(rxpos::AbstractMatrix, c, θ)
-  nsensors = size(rxpos, 2)
+  ndims(rxpos) == 1 ? nsensors = length(rxpos) : nsensors = size(rxpos, 2)
   ndims(θ) == 1 ? ndir = length(θ) : ndir = size(θ, 1)
   pos0 = sum(rxpos; dims=2) / nsensors
   rxpos = rxpos .- pos0
+  ndims(rxpos) == 1 && (rxpos = vcat(rxpos', zeros(2, nsensors)))
   size(rxpos, 1) == 1 && (rxpos = vcat(rxpos, zeros(2, nsensors)))
   size(rxpos, 1) == 2 && (rxpos = vcat(rxpos, zeros(1, nsensors)))
   if ndims(θ) == 2
