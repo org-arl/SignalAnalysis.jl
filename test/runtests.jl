@@ -1,4 +1,4 @@
-using Test, Plots, Statistics, LinearAlgebra, DSP, DSP.Util
+using Test, Plots, InteractiveViz, Statistics, LinearAlgebra, DSP, DSP.Util
 using SignalAnalysis
 using SignalAnalysis.Units
 
@@ -507,23 +507,25 @@ end
   @test true
   iplot(real(x))
   @test true
-  iplot([x -x])
-  @test true
+  #iplot([x -x])
+  #@test true
   iplot(samples(x))
   @test true
   iplot(samples(x); fs=44100)
   @test true
   iplot(samples(x); fs=44.1kHz)
   @test true
-  iplot(samples([x -x]); fs=44100)
-  @test true
+  #iplot(samples([x -x]); fs=44100)
+  #@test true
   ispecgram(x)
   @test true
-  ispecgram(samples(x))
+  ispecgram(real(x))
   @test true
-  ispecgram(samples(x); fs=44100)
+  ispecgram(real(samples(x)))
   @test true
-  ispecgram(samples(x); fs=44.1kHz)
+  ispecgram(real(samples(x)); fs=44100)
+  @test true
+  ispecgram(real(samples(x)); fs=44.1kHz)
   @test true
 
 end

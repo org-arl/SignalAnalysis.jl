@@ -44,7 +44,12 @@ Plots interactive spectrogram of the signal.
 """
 function ispecgram(s; fs=framerate(s), nfft=min(div(length(s),8),256), noverlap=div(nfft,2), window=nothing, pooling=mean, kwargs...)
   @assert Base.size(s,2) == 1 "ispecgram only works with vectors"
-  p = spectrogram(samples(s)[:,1], nfft, noverlap; fs=inHz(fs), window=window)
+  s1 = samples(s)[:,1]
+  if isanalytic(s1)
+    @warn "Using only real part of complex signal"
+    s1 = real.(s1)
+  end
+  p = spectrogram(s1, nfft, noverlap; fs=inHz(fs), window=window)
   t = time(p)
   f = freq(p)
   tunit = "s"
