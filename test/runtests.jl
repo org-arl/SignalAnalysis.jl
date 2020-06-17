@@ -507,16 +507,8 @@ end
   @test true
   iplot(real(x))
   @test true
-  #iplot([x -x])
-  #@test true
-  iplot(samples(x))
+  iplot([x -x])
   @test true
-  iplot(samples(x); fs=44100)
-  @test true
-  iplot(samples(x); fs=44.1kHz)
-  @test true
-  #iplot(samples([x -x]); fs=44100)
-  #@test true
   ispecgram(x)
   @test true
   ispecgram(real(x))
