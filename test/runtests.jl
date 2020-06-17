@@ -1,4 +1,4 @@
-using Test, Plots, Statistics, LinearAlgebra, DSP, DSP.Util
+using Test, Plots, InteractiveViz, Statistics, LinearAlgebra, DSP, DSP.Util
 using SignalAnalysis
 using SignalAnalysis.Units
 
@@ -509,21 +509,15 @@ end
   @test true
   iplot([x -x])
   @test true
-  iplot(samples(x))
-  @test true
-  iplot(samples(x); fs=44100)
-  @test true
-  iplot(samples(x); fs=44.1kHz)
-  @test true
-  iplot(samples([x -x]); fs=44100)
-  @test true
   ispecgram(x)
   @test true
-  ispecgram(samples(x))
+  ispecgram(real(x))
   @test true
-  ispecgram(samples(x); fs=44100)
+  ispecgram(real(samples(x)))
   @test true
-  ispecgram(samples(x); fs=44.1kHz)
+  ispecgram(real(samples(x)); fs=44100)
+  @test true
+  ispecgram(real(samples(x)); fs=44.1kHz)
   @test true
 
 end
@@ -555,7 +549,70 @@ end
   @test sd1[1,4] ≈ sd1[2,4] atol=1e-6
   @test sd1[3,4] ≈ sd1[4,4] atol=1e-6
   @test sd1[3,4]-sd1[2,4] ≈ √2/c atol=1e-6
-  
+
+  θ = deg2rad.(1:360)
+  fc = 500.0
+  fs = 44100.0
+  sd1 = steering(rxpos, c, θ)
+  @test size(sd1) == (4, 360)
+  x = cw(fc, 1.0, fs)
+  x̄ = padded(x, 0; delay=round(Int, √2/c*fs))
+  x4 = [x x x̄ x̄]
+  bfo = beamform(x4, fc, 4096, sd1)
+  @test argmax(bfo) == 135
+  bfo = beamform(samples(x4), fc, 4096, sd1; fs=framerate(x4))
+  @test argmax(bfo) == 135
+  bfo = beamform(x4, fc, 4096, sd1; method=Bartlett())
+  @test argmax(bfo) == 135
+  @test_throws LinearAlgebra.SingularException beamform(x4, fc, 4096, sd1; method=Capon())
+  bfo = beamform(x4 .+ 0.001*randn(size(x4)), fc, 4096, sd1; method=Capon())
+  @test argmax(bfo) == 135
+  bfo = beamform(x4, fc, 4096, sd1; method=Capon(0.1))
+  @test argmax(bfo) == 135
+  bfo = beamform(x4, fc, 4096, sd1; method=Music())
+  @test argmax(bfo) == 135
+  bfo = beamform(x4, fc, 4096, sd1; method=Music(1))
+  @test argmax(bfo) == 135
+  y4 = goertzel(x4, fc, 4096)
+  bfo = beamform(y4, fc, sd1)
+  @test argmax(bfo) == 135
+  bfo = beamform(x4, sd1)
+  @test nchannels(bfo) == 360
+  e = energy(bfo)
+  @test argmax(e) == 135
+  @test maximum(e) ≈ 16.0 atol=0.1
+  @test meanfrequency(bfo[:,135]) ≈ fc atol=10.0
+
+end
+
+@testset "array" begin
+
+  c = 1500.0
+  θ = range(0.0, π; length=181)
+  sd1 = steering(0.0:1.0:5.0, c, θ)
+  @test size(sd1) == (6, 181)
+  @test sd1[:,1] ≈ (2.5:-1.0:-2.5)/c atol=1e-6
+  @test sd1[:,91] ≈ zeros(6) atol=1e-6
+  @test sd1[:,181] ≈ (-2.5:1.0:2.5)/c atol=1e-6
+  sd2 = steering(-2.0:1.0:3.0, c, θ)
+  @test sd1 == sd2
+  sd2 = steering(vcat((0.0:1.0:5.0)', zeros(1,6)), c, θ)
+  @test sd1 == sd2
+  sd2 = steering(vcat((0.0:1.0:5.0)', zeros(2,6)), c, θ)
+  @test sd1 == sd2
+
+  θ = range(0.0, 2π; length=9)
+  rxpos = [-1.0 0.0 1.0 0.0; 0.0 1.0 0.0 -1.0]
+  sd1 = steering(rxpos, c, θ)
+  @test size(sd1) == (4, 9)
+  @test sd1[:,1] ≈ [1.0, 0.0, -1.0, 0.0]/c atol=1e-6
+  @test sd1[:,3] ≈ [0.0, -1.0, 0.0, 1.0]/c atol=1e-6
+  @test sd1[:,5] ≈ -[1.0, 0.0, -1.0, 0.0]/c atol=1e-6
+  @test sd1[:,7] ≈ -[0.0, -1.0, 0.0, 1.0]/c atol=1e-6
+  @test sd1[1,4] ≈ sd1[2,4] atol=1e-6
+  @test sd1[3,4] ≈ sd1[4,4] atol=1e-6
+  @test sd1[3,4]-sd1[2,4] ≈ √2/c atol=1e-6
+
   θ1 = deg2rad.(reduce(vcat, hcat.(LinRange(0.0, 180.0, 181)', LinRange(0.0,0.0,181))))
   sd1 = steering(0.0:1.0:5.0, c, θ1)
   @test size(sd1) == (6, 32761)
