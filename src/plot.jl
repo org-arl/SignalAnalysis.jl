@@ -1,4 +1,5 @@
 using Plots
+using DSP
 using DSP.Windows
 
 """
@@ -74,6 +75,53 @@ Plots timeseries from a sample buffer.
     t[1:size(s1,1)], s1
   end
 end
+
+"""
+    plot(data::TFR; kwargs...)
+
+Displays time frequency representation.
+
+# Optional keyword arguments
+- `t0=0.0`: start time
+- `cscale=:log`: color scale type (`:log`, `:linear`)
+- `crange=:auto`: color scale dynamic range (`:auto`, number)
+- other `kwargs` are passed on to `plot`
+"""
+@recipe function plot(tfr::Periodograms.TFR; t0=0.0, cscale=:log, crange=:auto)
+  ticks --> :native
+  t = time(tfr) .+ t0
+  f = freq(tfr)
+  z = power(tfr)
+  if maximum(t) <= 1.0
+    t *= 1000.0
+    xguide --> "Time (ms)"
+  else
+    xguide --> "Time (seconds)"
+  end
+  if maximum(f) >= 5000.0
+    f /= 1000.0
+    yguide --> "Frequency (kHz)"
+  else
+    yguide --> "Frequency (Hz)"
+  end
+  z = abs.(z)
+  if cscale == :log
+    z = pow2db.(z)
+    cmax = ceil(maximum(z)/5)*5
+    crange == :auto && (crange = 30)
+    cmin = max(cmax-crange, floor(minimum(z)/5)*5)
+    clims --> (cmin, cmax)
+  elseif crange != :auto
+    cmax = maximum(z)
+    cmin = max(cmax-crange, minimum(z))
+    clims --> (cmin, cmax)
+  end
+  @series begin
+    seriestype := :heatmap
+    t, f, z
+  end
+end
+
 
 """
     psd(data; kwargs...)

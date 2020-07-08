@@ -11,6 +11,7 @@ include("signals.jl")
 
 include("basic.jl")
 include("dsp.jl")
+include("tfa.jl")
 include("generate.jl")
 include("array.jl")
 include("rand.jl")
