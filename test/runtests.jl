@@ -1,4 +1,4 @@
-using Test, Plots, InteractiveViz, Statistics, LinearAlgebra, DSP, DSP.Util
+using Test, Plots, Statistics, LinearAlgebra, DSP, DSP.Util
 using SignalAnalysis
 using SignalAnalysis.Units
 
@@ -503,22 +503,24 @@ end
 
   # interactive plots are hard to test
   # we just test that the calls don't crash
-  iplot(x)
-  @test true
-  iplot(real(x))
-  @test true
-  iplot([x -x])
-  @test true
-  ispecgram(x)
-  @test true
-  ispecgram(real(x))
-  @test true
-  ispecgram(real(samples(x)))
-  @test true
-  ispecgram(real(samples(x)); fs=44100)
-  @test true
-  ispecgram(real(samples(x)); fs=44.1kHz)
-  @test true
+  # disabling interactive plots tests as MakieGL errors out on CI
+
+  # iplot(x)
+  # @test true
+  # iplot(real(x))
+  # @test true
+  # iplot([x -x])
+  # @test true
+  # ispecgram(x)
+  # @test true
+  # ispecgram(real(x))
+  # @test true
+  # ispecgram(real(samples(x)))
+  # @test true
+  # ispecgram(real(samples(x)); fs=44100)
+  # @test true
+  # ispecgram(real(samples(x)); fs=44.1kHz)
+  # @test true
 
 end
 
