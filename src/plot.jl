@@ -108,7 +108,7 @@ Displays time frequency representation.
   if cscale == :log
     z = pow2db.(z)
     cmax = ceil(maximum(z)/5)*5
-    crange == :auto && (crange = 30)
+    crange == :auto && (crange = 50)
     cmin = max(cmax-crange, floor(minimum(z)/5)*5)
     clims --> (cmin, cmax)
   elseif crange != :auto
@@ -134,11 +134,12 @@ Plots the power spectral density of data.
 - `noverlap=nfft÷2`: window overlap size
 - `window=hamming(nfft)`: accepts any window from [`DSP.jl`](https://juliadsp.github.io/DSP.jl/stable/windows/)
 - `xscale=:auto`: one of `:auto`, `:identity` or `:log10`
+- `yrange=50`: y-scale dB range for automatic scaling
 - other `kwargs` are passed on to `plot`
 """
 @userplot PSD
 @recipe function plot(s::PSD; fs=1.0, nfft=512, noverlap=div(nfft,2),
-                      window=hamming(nfft), xscale=:auto)
+                      window=hamming(nfft), xscale=:auto, yrange=50)
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
     throw(ArgumentError("psd should be provided timeseries data"))
   end
@@ -166,7 +167,7 @@ Plots the power spectral density of data.
     end
     y = pow2db.(power(p))
     ymax = ceil(Int, maximum(y)/5)*5
-    ymin = max(ymax-50, floor(Int, minimum(y)/5)*5)
+    ymin = max(ymax-yrange, floor(Int, minimum(y)/5)*5)
     ylims --> (ymin, ymax)
     @series begin
       seriestype := :line
@@ -188,10 +189,11 @@ Plots a spectrogram of the data.
 - `t0=0.0`: start time
 - `downsample=:auto`: downsampling factor (integer) for time axis
 - `pooling=:mean`: pooling mode (`:min`, `:max`, `:mean`, `nothing` or function)
+- `crange=50`: color scale dB range for automatic scaling
 - other `kwargs` are passed on to `plot`
 """
 @userplot Specgram
-@recipe function plot(s::Specgram; fs=1.0, nfft=256, noverlap=div(nfft,2),
+@recipe function plot(s::Specgram; fs=1.0, nfft=256, noverlap=div(nfft,2), crange=50,
                       window=hamming(nfft), t0=0.0, downsample=:auto, pooling=:mean)
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
     throw(ArgumentError("specgram should be provided timeseries data"))
@@ -256,7 +258,7 @@ Plots a spectrogram of the data.
   yguide --> "Frequency ("*funit*")"
   z = pow2db.(z)
   cmax = ceil(maximum(z)/5)*5
-  cmin = max(cmax-50, floor(minimum(z)/5)*5)
+  cmin = max(cmax-crange, floor(minimum(z)/5)*5)
   clims --> (cmin, cmax)
   @series begin
     seriestype := :heatmap
