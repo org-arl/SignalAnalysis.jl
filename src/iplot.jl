@@ -8,7 +8,7 @@ export iplot, iplot!, ispecgram
 $(SIGNATURES)
 Plots interactive timeseries of the signal.
 """
-function InteractiveViz.iplot(s::SampleBuf, args...; kwargs...)
+function InteractiveViz.iplot(s::SampledSignal, args...; kwargs...)
   s1 = samples(s)
   if isanalytic(s1)
     @warn "Plotting only real part of complex signal"
@@ -28,7 +28,7 @@ end
 $(SIGNATURES)
 Plots interactive timeseries of the signal over a previous plot.
 """
-function InteractiveViz.iplot!(s::SampleBuf; kwargs...)
+function InteractiveViz.iplot!(s::SampledSignal; kwargs...)
   s1 = samples(s)
   if isanalytic(s1)
     @warn "Plotting only real part of complex signal"

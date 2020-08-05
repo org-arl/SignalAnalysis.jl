@@ -1,28 +1,45 @@
-import SampledSignals
-import SampledSignals: SampleBuf, domain
+using MetaArrays
+using Base.Iterators: partition, flatten
 
 using DSP, DSP.Filters
 using PaddedViews
 using ProgressMeter
 
-export signal, @rate, @samerateas, domain, analytic, isanalytic, samples
-export padded, slide, toframe, rowview
+export signal, analytic, isanalytic, samples
+export padded, toframe, domain
+export partition, flatten
 
-SignalBase.nframes(x::SampleBuf) = SampledSignals.nframes(x)
-SignalBase.framerate(x::SampleBuf) = SampledSignals.samplerate(x)
-SignalBase.nchannels(x::SampleBuf) = SampledSignals.nchannels(x)
-SignalBase.sampletype(x::SampleBuf) = eltype(x)
+struct SamplingInfo
+  fs::Float32
+end
 
-SignalBase.nframes(x::AbstractArray) = size(x,1)
+const SampledSignal = MetaArray{<:Any,SamplingInfo,T} where T
+const SampledSignalVector = MetaArray{<:AbstractVector,SamplingInfo,T} where T
+const SampledSignalMatrix = MetaArray{<:AbstractMatrix,SamplingInfo,T} where T
+
+SignalBase.nframes(x::AbstractArray) = size(x, 1)
+SignalBase.framerate(x::SampledSignal) = x.fs
 SignalBase.framerate(x::AbstractArray) = 1.0
-SignalBase.nchannels(x::AbstractArray) = size(x,2)
+SignalBase.nchannels(x::AbstractArray) = size(x, 2)
 SignalBase.sampletype(x::AbstractArray) = eltype(x)
+
+"""
+$(SIGNATURES)
+Returns the domain of the signal.
+"""
+domain(x) = (0:nframes(x)-1) ./ framerate(x)
+
+function Base.show(io::IO, mime::MIME"text/plain", s::SampledSignal{T}) where T
+  print(io, "SampledSignal @ ", framerate(s), " Hz, ")
+  show(io, mime, samples(s))
+end
 
 """
 $(SIGNATURES)
 Creates a signal with frame rate `fs`.
 """
-signal(x::AbstractArray, fs) = SampleBuf(x, inHz(fs))
+signal(x::AbstractArray, fs) = MetaArray(SamplingInfo(inHz(fs)), x)
+signal(x::Base.Iterators.Flatten, fs) = signal(collect(x), fs)
 
 """
 $(SIGNATURES)
@@ -31,79 +48,43 @@ the same as `fs`, this method simply returns the original signal. Otherwise, it
 creates a new signal with the specified frame rate and data from the original
 signal. Do note that this method does not resample the signal.
 """
-signal(x::SampleBuf, fs) = fs == framerate(x) ? x : SampleBuf(x.data, inHz(fs))
+signal(x::SampledSignal, fs) = fs == framerate(x) ? x : signal(samples(x), fs)
 
 """
-    @rate fs expr
-Creates a signal from `expr` with frame rate `fs`. It provides syntactic sugar
-on the [`signal`](@ref) method.
-
-# Example:
-```julia-repl
-julia> x = @rate 44.1kHz randn(44100)
-44100-frame, 1-channel SampleBuf{Float64, 1}
-1.0s sampled at 44100.0Hz
-```
+$(SIGNATURES)
+Creates an empty signal of length `n` samples, and frame rate `fs`.
 """
-macro rate(fs, expr)
-  :( signal($(esc(expr)), $(esc(fs))) )
-end
+signal(n::Int, fs) = signal(Array{Float64}(undef, n), fs)
 
 """
-    @samerateas x expr
-Creates a signal from `expr` with the same frame rate as signal `x`. This is
-useful to preserve frame rate metadata across functions that do not return a
-signal.
-
-# Examples:
-```julia-repl
-julia> x = @rate 44.1kHz randn(44100)
-44100-frame, 1-channel SampleBuf{Float64, 1}
-1.0s sampled at 44100.0Hz
-
-julia> using DSP
-julia> y = filt([1.0,0.5], x)     # frame rate stripped by DSP.filt
-44100-element Array{Float64,1}:
-   ⋮
-
-julia> y = @samerateas x filt([1.0,0.5], x)
-44100-frame, 1-channel SampleBuf{Float64, 1}
-1.0s sampled at 44100.0Hz
-```
+$(SIGNATURES)
+Creates an empty signal of length `n` samples, `ch` channels, and frame rate `fs`.
 """
-macro samerateas(x, expr)
-  :( signal($(esc(expr)), framerate($(esc(x)))))
-end
+signal(n::Int, ch::Int, fs) = signal(Array{Float64}(undef, n, ch), fs)
 
 """
-    @samerateas n x expr
-Creates a signal from `expr` with the a frame rate `n` times that of signal `x`.
-
-# Examples:
-```julia-repl
-julia> x = @rate 44.1kHz randn(44100)
-44100-frame, 1-channel SampleBuf{Float64, 1}
-1.0s sampled at 44100.0Hz
-
-julia> y = @samerateas 1//2 x x[1:2:end]
-22050-frame, 1-channel SampleBuf{Float64, 1}
-1.0s sampled at 22050.0Hz
-
-julia> using DSP
-julia> y = @samerateas 2//3 x resample(x, 2//3)
-29400-frame, 1-channel SampleBuf{Float64, 1}
-1.0s sampled at 29400.0Hz
-```
+$(SIGNATURES)
+Creates an empty signal of type `T`, length `n` samples, and frame rate `fs`.
 """
-macro samerateas(n, x, expr)
-  :( signal($(esc(expr)), $(esc(n))*framerate($(esc(x)))))
-end
+signal(T::Type, n::Int, fs) = signal(Array{T}(undef, n), fs)
+
+"""
+$(SIGNATURES)
+Creates an empty signal of type `T`, length `n` samples, `ch` channels, and frame rate `fs`.
+"""
+signal(T::Type, n::Int, ch::Int, fs) = signal(Array{T}(undef, n, ch), fs)
+
+"""
+$(SIGNATURES)
+Creates a curried function that takes in an array and creates a signal with sampling rate `fs`.
+"""
+signal(fs) = x -> signal(x, fs)
 
 """
 $(SIGNATURES)
 Converts a signal to analytic representation.
 """
-analytic(s::SampleBuf) = isanalytic(s) ? s : signal(hilbert(s)/√2.0, framerate(s))
+analytic(s::SampledSignal) = isanalytic(s) ? s : signal(hilbert(s)/√2.0, framerate(s))
 analytic(s) = isanalytic(s) ? s : hilbert(s)/√2.0
 
 """
@@ -116,14 +97,14 @@ isanalytic(s) = eltype(s) <: Complex
 $(SIGNATURES)
 Gets the underlying samples in the signal.
 """
-samples(s::SampleBuf) = s.data
+samples(s::SampledSignal) = getfield(s, :data)
 samples(s) = s
 
 """
 $(SIGNATURES)
 Generates a padded view of a signal with optional delay/advance.
 """
-function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, N}
+function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T}
   if length(padding) == 1
     left = padding
     right = padding
@@ -134,133 +115,61 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T, 
   PaddedView(fill, s, (1-left:length(s)+right,), (1+delay:delay+length(s),))
 end
 
-"""
-    x[a:b,∘]
-Generates a view of specified row range `a:b` of a vector or matrix `x`.
-"""
-Base.getindex(a::AbstractVector, i, ::typeof(∘)) = @view a[i]
-Base.getindex(a::AbstractMatrix, i, ::typeof(∘)) = @view a[i,:]
-
-"""
-    slide(f::Function, s::AbstractVector, nframes, overlap=0, args...; showprogress=true)
-
-Slides a window over a signal, processing each window. If the total number of frames
-in the signal is not an integral multiple of `nframes`, the last incomplete
-block of samples remains unprocessed.
-
-The processing function receives a view on the original signal, and therefore
-may modify the signal if desired.
-
-# Examples:
-```julia-repl
-julia> x = signal(ones(1000), 8kHz);
-julia> slide(x, 250) do x1, blknum, firstframe
-         println(size(x1), ", ", blknum, ", ", firstframe)
-       end
-(250,), 1, 1
-(250,), 2, 251
-(250,), 3, 501
-(250,), 4, 751
-
-julia> slide(x, 250) do x1, blknum, firstframe
-         x1 .= blknum
-       end
-
-julia> x[1], x[251], x[501], x[751]
-(1.0, 2.0, 3.0, 4.0)
-```
-"""
-function slide(f::Function, s::AbstractVecOrMat, nframes, overlap=0, args...; showprogress=true)
-  @assert overlap < nframes "overlap must be less than nframes"
-  n = size(s,1)
-  m = nframes - overlap
-  mmax = (n-nframes)÷m
-  showprogress && (p = Progress(mmax+1, 1, "Processing: "))
-  for j = 0:mmax
-    s1 = s[j*m+1:j*m+nframes,∘]
-    f(s1, j+1, j*m+1, args...)
-    showprogress && next!(p)
-  end
+function padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T
+  signal(padded(samples(s), padding; delay=delay, fill=fill), framerate(s))
 end
 
 """
-    slide(f::Function, ::Type{T}, s::AbstractVector, nframes, overlap=0, args...; showprogress=true) where T
+    partition(x, n, step)
 
-Slides a window over a signal, processing each window, and collecting the results of type `T`.
-If the total number of frames in the signal is not an integral multiple of
-`nframes`, the last incomplete block of samples remains unprocessed.
-
-# Examples:
-```julia-repl
-julia> x = signal(ones(1000), 8kHz);
-julia> slide(Float32, x, 250) do x1, blknum, firstframe
-         sum(x1)*blknum
-       end
-4-element Array{Float32,1}:
-  250.0
-  500.0
-  750.0
- 1000.0
-
-julia> slide(Tuple{Int,Float64}, x, 250) do x1, blknum, firstframe
-          (blknum, sum(x1)*blknum)
-        end
-4-element Array{Tuple{Int64,Float64},1}:
-  (1, 250.0)
-  (2, 500.0)
-  (3, 750.0)
-  (4, 1000.0)
-```
+Iterates over the signal `x`, `n` samples at a time, with a step size of `step`.
 """
-function slide(f::Function, ::Type{T}, s::AbstractVecOrMat, nframes, overlap=0, args...; showprogress=true) where {T}
-  @assert overlap < nframes "overlap must be less than nframes"
-  n = size(s,1)
-  m = nframes - overlap
-  mmax = (n-nframes)÷m
-  out = Array{T,1}(undef, 1+mmax)
-  showprogress && (p = Progress(mmax+1, 1, "Processing: "))
-  for j = 0:mmax
-    s1 = s[j*m+1:j*m+nframes,∘]
-    out[j+1] = f(s1, j+1, j*m+1, args...)
-    showprogress && next!(p)
-  end
-  return out
+function Base.Iterators.partition(s::SampledSignalVector, n::Integer, step::Integer)
+    n < 1 && throw(ArgumentError("cannot create partitions of length $n"))
+    step < 1 && throw(ArgumentError("cannot create partitions with step size $step"))
+    v = samples(s)
+    return StepPartitionIterator{typeof(v)}(v, Int(n), Int(step))
 end
 
-"""
-    slide(f::Function, ::Type{Array{T}}, noutput::Int, s::AbstractVector, nframes, overlap=0, args...; showprogress=true) where T
+## modified from Julia Iterators implementation
 
-Slides a window over a signal, processing each window, and collecting the results
-of type `Array{T}` of length `noutput`. If the total number of frames in the signal is
-not an integral multiple of `nframes`, the last incomplete block of samples remains unprocessed.
-
-# Examples:
-```julia-repl
-julia> x = signal(ones(1000), 8kHz);
-julia> slide(Array{Float64}, 2, x, 250) do x1, blknum, firstframe
-          [sum(x1), prod(x1)]
-       end
-4×2 Array{Float64,2}:
- 250.0  1.0
- 250.0  1.0
- 250.0  1.0
- 250.0  1.0
-```
-"""
-function slide(f::Function, ::Type{Array{T}}, noutput::Int, s::AbstractVecOrMat, nframes, overlap=0, args...; showprogress=true) where {T}
-  @assert overlap < nframes "overlap must be less than nframes"
-  n = size(s,1)
-  m = nframes - overlap
-  mmax = (n-nframes)÷m
-  out = Array{T,2}(undef, (1+mmax, noutput))
-  showprogress && (p = Progress(mmax+1, 1, "Processing: "))
-  for j = 0:mmax
-    s1 = s[j*m+1:j*m+nframes,∘]
-    out[j+1,:] = f(s1, j+1, j*m+1, args...)
-    showprogress && next!(p)
-  end
-  return out
+struct StepPartitionIterator{T <: AbstractVector}
+  c::T
+  n::Int
+  step::Int
 end
+
+Base.eltype(::Type{StepPartitionIterator{T}}) where {T<:AbstractVector} = AbstractVector{eltype(T)}
+Base.eltype(::Type{StepPartitionIterator{T}}) where {T<:Vector} = SubArray{eltype(T), 1, T, Tuple{UnitRange{Int}}, true}
+
+Base.IteratorEltype(::Type{<:StepPartitionIterator{T}}) where {T<:AbstractVector} = Base.EltypeUnknown()
+Base.IteratorEltype(::Type{<:StepPartitionIterator{T}}) where {T<:Vector} = Base.IteratorEltype(T)
+
+partition_iteratorsize(::Base.HasShape) = Base.HasLength()
+partition_iteratorsize(isz) = isz
+
+function Base.IteratorSize(::Type{StepPartitionIterator{T}}) where {T}
+  partition_iteratorsize(Base.IteratorSize(T))
+end
+
+function Base.length(itr::StepPartitionIterator)
+  l = length(itr.c)
+  return div(l, itr.step) + ((mod(l, itr.step) > 0) ? 1 : 0)
+end
+
+function Base.iterate(itr::StepPartitionIterator{<:AbstractRange}, state=1)
+  state > length(itr.c) && return nothing
+  r = min(state + itr.n - 1, length(itr.c))
+  return @inbounds itr.c[state:r], state + itr.step
+end
+
+function Base.iterate(itr::StepPartitionIterator{<:AbstractVector}, state=1)
+  state > length(itr.c) && return nothing
+  r = min(state + itr.n - 1, length(itr.c))
+  return @inbounds view(itr.c, state:r), state + itr.step
+end
+
+## end of Julia iterators implementation
 
 """
 $(SIGNATURES)
@@ -285,4 +194,33 @@ julia> toframe(0.2:0.01:0.3, x)
    ⋮
 ```
 """
-toframe(t, s::SampleBuf) = 1 .+ round.(Int, inseconds.(t)*framerate(s))
+toframe(t, s::SampledSignal) = 1 .+ round.(Int, inseconds.(t)*framerate(s))
+
+"""
+    (:)(start::Unitful.Time, stop::Unitful.Time)
+
+Generates a time range index for a signal.
+
+# Examples:
+```julia-repl
+julia> x = signal(randn(2000), 8kHz)
+julia> x[0.2𝓈:0.201𝓈]
+SampledSignal @ 8000.0 Hz, 9-element Array{Float64,1}:
+ -0.08671384898800058
+ -0.665143340284631
+ -0.3955367460364236
+  1.2386430598616671
+ -0.4882254309443194
+ -1.080437097803303
+  0.8209785486953832
+  1.3477512734963886
+ -0.27722340584395494
+```
+"""
+(::Colon)(t1::Units.Unitful.Time, t2::Units.Unitful.Time) = tuple(inseconds(t1), inseconds(t2))
+(::Colon)(t1::Real, t2::Units.Unitful.Time) = tuple(inseconds(t1), inseconds(t2))
+
+Base.getindex(s::SampledSignal, t::NTuple{2}) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s))
+Base.getindex(s::SampledSignal, t::NTuple{2}, ndx...) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s), ndx...)
+Base.setindex!(s::SampledSignal, v, t::NTuple{2}) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s))
+Base.setindex!(s::SampledSignal, v, t::NTuple{2}, ndx...) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s), ndx...)

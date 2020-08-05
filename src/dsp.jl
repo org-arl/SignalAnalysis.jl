@@ -101,7 +101,7 @@ end
 function demon(x::AbstractVector{T}; fs=framerate(x), downsample=250, method=:rms, cutoff=1.0) where T
   y = @view samples(x)[:,1:1]
   z = demon(y, fs=fs, downsample=downsample, method=method, cutoff=cutoff)
-  @samerateas z dropdims(samples(z), dims=2)
+  signal(dropdims(samples(z), dims=2), framerate(z))
 end
 
 """
@@ -323,10 +323,7 @@ When a block size `n` is specified, the Goertzel algorithm in applied to
 blocks of data from the original time series.
 """
 function goertzel(x::AbstractVector, f, n; fs=framerate(x))
-  out = slide(ComplexF64, x, n) do x1, b, j
-    goertzel(x1, f; fs=fs)
-  end
-  signal(out, fs/n)
+  signal(map(x1 -> goertzel(x1, f; fs=fs), partition(x, n)), fs/n)
 end
 
 function goertzel(x::AbstractVector, f; fs=framerate(x))
@@ -344,7 +341,7 @@ function goertzel(x::AbstractVector, f; fs=framerate(x))
 end
 
 function goertzel(x::AbstractMatrix, f, n; fs=framerate(x))
-  count = fld(size(x,1), n)
+  count = cld(size(x,1), n)
   out = Array{ComplexF64}(undef, (count, nchannels(x)))
   for j ∈ 1:nchannels(x)
     out[:,j] = goertzel(x[:,j], f, n; fs=fs)

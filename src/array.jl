@@ -119,8 +119,7 @@ steering direction.
 julia> x = cw(100.0, 1.0, 44100.0);
 julia> sd = steering(0.0:1.0:3.0, 1500.0, range(0.0, π; length=181));
 julia> bfo = beamform([x x x x], sd)
-44100-frame, 181-channel SampleBuf{Complex{Float64}, 2}
-1.0s sampled at 44100.0Hz
+SampledSignal @ 44100.0 Hz, 44100×181 Array{Complex{Float64},2}:
   ⋮
 ```
 """

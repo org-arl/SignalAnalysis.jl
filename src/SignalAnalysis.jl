@@ -6,6 +6,9 @@ using DocStringExtensions
 using SignalBase
 using SignalBase.Units
 export nframes, nchannels, sampletype, framerate, duration
+export 𝓈
+
+const 𝓈 = Units.s
 
 include("signals.jl")
 
