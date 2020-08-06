@@ -94,6 +94,16 @@ using SignalAnalysis.Units
   @test x1[-1] == x[1]
   @test x1[7998] == x[8000]
 
+  x = signal(collect(1:10), 1.0)
+  @test length(collect(partition(x, 5))) == 2
+  @test length(collect(partition(x, 4))) == 3
+  @test length(collect(partition(x, 5; flush=false))) == 2
+  @test length(collect(partition(x, 4; flush=false))) == 2
+  @test length(collect(partition(x, 5; step=2))) == 5
+  @test length(collect(partition(x, 4; step=2))) == 5
+  @test length(collect(partition(x, 5; step=2, flush=false))) == 3
+  @test length(collect(partition(x, 4; step=2, flush=false))) == 4
+
   x = signal(ones(1000), 8kHz)
   x2 = map(enumerate(partition(x, 250))) do (blknum, x1)
     @test size(x1) == (250,)

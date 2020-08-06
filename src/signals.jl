@@ -1,5 +1,5 @@
 using MetaArrays
-using Base.Iterators: partition, flatten
+using Base.Iterators: partition
 
 using DSP, DSP.Filters
 using PaddedViews
@@ -7,7 +7,7 @@ using ProgressMeter
 
 export signal, analytic, isanalytic, samples
 export padded, toframe, domain
-export partition, flatten
+export partition
 
 struct SamplingInfo
   fs::Float32
@@ -120,15 +120,17 @@ function padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T
 end
 
 """
-    partition(x, n, step)
+    partition(x, n; step=n, flush=true)
 
-Iterates over the signal `x`, `n` samples at a time, with a step size of `step`.
+Iterates over the signal `x`, `n` samples at a time, with a step size of `step`. If `flush` is
+enabled, the last partition may be smaller than `n` samples.
 """
-function Base.Iterators.partition(s::SampledSignalVector, n::Integer, step::Integer)
-    n < 1 && throw(ArgumentError("cannot create partitions of length $n"))
-    step < 1 && throw(ArgumentError("cannot create partitions with step size $step"))
-    v = samples(s)
-    return StepPartitionIterator{typeof(v)}(v, Int(n), Int(step))
+function Base.Iterators.partition(s::SampledSignalVector, n::Integer; step::Integer=n, flush::Bool=true)
+  n == step && flush && return Iterators.partition(samples(s), n)
+  n < 1 && throw(ArgumentError("cannot create partitions of length $n"))
+  step < 1 && throw(ArgumentError("cannot create partitions with step size $step"))
+  v = samples(s)
+  return StepPartitionIterator{typeof(v)}(v, Int(n), Int(step), flush)
 end
 
 ## modified from Julia Iterators implementation
@@ -137,6 +139,7 @@ struct StepPartitionIterator{T <: AbstractVector}
   c::T
   n::Int
   step::Int
+  flush::Bool
 end
 
 Base.eltype(::Type{StepPartitionIterator{T}}) where {T<:AbstractVector} = AbstractVector{eltype(T)}
@@ -154,17 +157,20 @@ end
 
 function Base.length(itr::StepPartitionIterator)
   l = length(itr.c)
+  itr.flush || (l -= itr.n-1)
   return div(l, itr.step) + ((mod(l, itr.step) > 0) ? 1 : 0)
 end
 
 function Base.iterate(itr::StepPartitionIterator{<:AbstractRange}, state=1)
   state > length(itr.c) && return nothing
+  itr.flush || state + itr.n - 1 <= length(itr.c) || return nothing
   r = min(state + itr.n - 1, length(itr.c))
   return @inbounds itr.c[state:r], state + itr.step
 end
 
 function Base.iterate(itr::StepPartitionIterator{<:AbstractVector}, state=1)
   state > length(itr.c) && return nothing
+  itr.flush || state + itr.n - 1 <= length(itr.c) || return nothing
   r = min(state + itr.n - 1, length(itr.c))
   return @inbounds view(itr.c, state:r), state + itr.step
 end
