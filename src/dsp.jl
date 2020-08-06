@@ -1,6 +1,9 @@
+import DSP: filt, filtfilt, resample
+
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll
+export sfilt, sfiltfilt, sresample, mfilter
 
 """
 $(SIGNATURES)
@@ -374,4 +377,38 @@ function pll(x::AbstractVecOrMat, bandwidth=1e-3; fs=framerate(x))
     ϕ .+= β*Δϕ .+ ω
   end
   signal(y, fs)
+end
+
+# TODO: write tests for sfilt, sfiltfilt, sresample, mfilter
+
+"""
+$(SIGNATURES)
+Same as [`filt`](https://docs.juliadsp.org/stable/filters/#DSP.filt),
+but retains sampling rate information.
+"""
+sfilt(f, x, args...) = signal(filt(f, samples(x), args...), framerate(x))
+sfilt(b, a, x, args...) = signal(filt(b, a, samples(x), args...), framerate(x))
+
+"""
+$(SIGNATURES)
+Same as [`filtfilt`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.filtfilt),
+but retains sampling rate information.
+"""
+sfiltfilt(coef, x) = signal(filtfilt(coef, samples(x)), framerate(x))
+
+"""
+$(SIGNATURES)
+Same as [`resample`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.resample),
+but correctly handles sampling rate conversion.
+"""
+sresample(x, rate, args...) = signal(resample(samples(x), rate, args...), rate * framerate(x))
+
+"""
+$(SIGNATURES)
+Matched filter looking for reference signal `r` in signal `s`.
+"""
+function mfilter(r, s)
+  f = conj.(reverse(samples(r)))
+  n = length(r) - 1
+  sfilt(f, padded(s, (0, n)))[n+1:end]
 end

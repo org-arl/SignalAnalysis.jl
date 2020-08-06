@@ -1,7 +1,7 @@
-export tfd, Wigner, Spectrogram
-
-using DSP.Periodograms
+using DSP, DSP.Periodograms
 using FFTW
+
+export tfd, Wigner, Spectrogram
 
 abstract type TFKernel end
 

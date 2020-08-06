@@ -1,9 +1,8 @@
-using MetaArrays
+using MetaArrays: MetaArray
 using Base.Iterators: partition
-
-using DSP, DSP.Filters
-using PaddedViews
-using ProgressMeter
+using WAV: wavread
+using DSP: hilbert
+using PaddedViews: PaddedView
 
 export signal, analytic, isanalytic, samples
 export padded, toframe, domain
@@ -35,14 +34,14 @@ function Base.show(io::IO, mime::MIME"text/plain", s::SampledSignal{T}) where T
 end
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Creates a signal with frame rate `fs`.
 """
 signal(x::AbstractArray, fs) = MetaArray(SamplingInfo(inHz(fs)), x)
 signal(x::Base.Iterators.Flatten, fs) = signal(collect(x), fs)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Creates a signal with frame rate `fs`. If the original signal's frame rate is
 the same as `fs`, this method simply returns the original signal. Otherwise, it
 creates a new signal with the specified frame rate and data from the original
@@ -51,31 +50,40 @@ signal. Do note that this method does not resample the signal.
 signal(x::SampledSignal, fs) = fs == framerate(x) ? x : signal(samples(x), fs)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
+Loads a signal from a WAV file.
+"""
+function signal(filename::AbstractString)
+  data, fs = wavread(filename)
+  signal(data, fs)
+end
+
+"""
+$(TYPEDSIGNATURES)
 Creates an empty signal of length `n` samples, and frame rate `fs`.
 """
 signal(n::Int, fs) = signal(Array{Float64}(undef, n), fs)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Creates an empty signal of length `n` samples, `ch` channels, and frame rate `fs`.
 """
 signal(n::Int, ch::Int, fs) = signal(Array{Float64}(undef, n, ch), fs)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Creates an empty signal of type `T`, length `n` samples, and frame rate `fs`.
 """
 signal(T::Type, n::Int, fs) = signal(Array{T}(undef, n), fs)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Creates an empty signal of type `T`, length `n` samples, `ch` channels, and frame rate `fs`.
 """
 signal(T::Type, n::Int, ch::Int, fs) = signal(Array{T}(undef, n, ch), fs)
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Creates a curried function that takes in an array and creates a signal with sampling rate `fs`.
 """
 signal(fs) = x -> signal(x, fs)
