@@ -124,6 +124,40 @@ end
 
 Iterates over the signal `x`, `n` samples at a time, with a step size of `step`. If `flush` is
 enabled, the last partition may be smaller than `n` samples.
+
+When applied to a multichannel signal `x`, each partition contains samples from all channels.
+
+# Examples:
+```julia-repl
+julia> x = signal(collect(1:10), 1.0);
+julia> collect(partition(x, 5))
+2-element Array{SubArray{Int64,1,Array{Int64,1},Tuple{UnitRange{Int64}},true},1}:
+ [1, 2, 3, 4, 5]
+ [6, 7, 8, 9, 10]
+
+julia> collect(partition(x, 5; step=2))
+5-element Array{SubArray{Int64,1,Array{Int64,1},Tuple{UnitRange{Int64}},true},1}:
+ [1, 2, 3, 4, 5]
+ [3, 4, 5, 6, 7]
+ [5, 6, 7, 8, 9]
+ [7, 8, 9, 10]
+ [9, 10]
+
+julia> collect(partition(x, 5; step=2, flush=false))
+3-element Array{SubArray{Int64,1,Array{Int64,1},Tuple{UnitRange{Int64}},true},1}:
+ [1, 2, 3, 4, 5]
+ [3, 4, 5, 6, 7]
+ [5, 6, 7, 8, 9]
+
+julia> x = signal(hcat(collect(1:10), collect(11:20)), 1.0);
+julia> collect(partition(x, 5))[1]
+5×2 view(::Array{Int64,2}, 1:5, :) with eltype Int64:
+ 1  11
+ 2  12
+ 3  13
+ 4  14
+ 5  15
+ ```
 """
 function Base.Iterators.partition(s::SampledSignal, n::Integer; step::Integer=n, flush::Bool=true)
   n < 1 && throw(ArgumentError("cannot create partitions of length $n"))
