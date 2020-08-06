@@ -125,16 +125,15 @@ using SignalAnalysis.Units
   end
   @test (x[1], x[251], x[501], x[751]) == (1.0, 2.0, 3.0, 4.0)
 
-  # FIXME: array partitions don't work
-  # x = signal(ones(1000, 2), 8kHz)
-  # x2 = map(enumerate(partition(x, 250))) do (blknum, x1)
-  #   @test size(x1) == (250, 2)
-  #   sum(x1)*blknum
-  # end
-  # @test x2 == [2*250.0, 2*500.0, 2*750.0, 2*1000.0]
-  # for x1 ∈ partition(x, 250)
-  #   @test size(x1) == (250, 2)
-  # end
+  x = signal(ones(1000, 2), 8kHz)
+  x2 = map(enumerate(partition(x, 250))) do (blknum, x1)
+    @test size(x1) == (250, 2)
+    sum(x1)*blknum
+  end
+  @test x2 == [2*250.0, 2*500.0, 2*750.0, 2*1000.0]
+  for x1 ∈ partition(x, 250)
+    @test size(x1) == (250, 2)
+  end
 
   x = signal(randn(2000), 8kHz)
   @test toframe(0.2s, x) == 1601

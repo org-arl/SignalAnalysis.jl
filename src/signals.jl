@@ -125,57 +125,57 @@ end
 Iterates over the signal `x`, `n` samples at a time, with a step size of `step`. If `flush` is
 enabled, the last partition may be smaller than `n` samples.
 """
-function Base.Iterators.partition(s::SampledSignalVector, n::Integer; step::Integer=n, flush::Bool=true)
-  n == step && flush && return Iterators.partition(samples(s), n)
+function Base.Iterators.partition(s::SampledSignal, n::Integer; step::Integer=n, flush::Bool=true)
   n < 1 && throw(ArgumentError("cannot create partitions of length $n"))
   step < 1 && throw(ArgumentError("cannot create partitions with step size $step"))
   v = samples(s)
-  return StepPartitionIterator{typeof(v)}(v, Int(n), Int(step), flush)
+  return SignalPartitionIterator{typeof(v)}(v, Int(n), Int(step), flush)
 end
 
-## modified from Julia Iterators implementation
-
-struct StepPartitionIterator{T <: AbstractVector}
+struct SignalPartitionIterator{T <: AbstractArray}
   c::T
   n::Int
   step::Int
   flush::Bool
 end
 
-Base.eltype(::Type{StepPartitionIterator{T}}) where {T<:AbstractVector} = AbstractVector{eltype(T)}
-Base.eltype(::Type{StepPartitionIterator{T}}) where {T<:Vector} = SubArray{eltype(T), 1, T, Tuple{UnitRange{Int}}, true}
+Base.IteratorEltype(::Type{SignalPartitionIterator}) = Base.HasEltype()
+Base.IteratorSize(::Type{SignalPartitionIterator}) = Base.HasLength()
 
-Base.IteratorEltype(::Type{<:StepPartitionIterator{T}}) where {T<:AbstractVector} = Base.EltypeUnknown()
-Base.IteratorEltype(::Type{<:StepPartitionIterator{T}}) where {T<:Vector} = Base.IteratorEltype(T)
+Base.eltype(::Type{SignalPartitionIterator{T}}) where {T<:AbstractVector} = AbstractVector{eltype(T)}
+Base.eltype(::Type{SignalPartitionIterator{T}}) where {T<:AbstractMatrix} = AbstractMatrix{eltype(T)}
+Base.eltype(::Type{SignalPartitionIterator{T}}) where {T<:Vector} = SubArray{eltype(T), 1, T, Tuple{UnitRange{Int}}, true}
+Base.eltype(::Type{SignalPartitionIterator{T}}) where {T<:Matrix} = SubArray{eltype(T), 2, T, Tuple{UnitRange{Int},Base.Slice{Base.OneTo{Int64}}}, false}
 
-partition_iteratorsize(::Base.HasShape) = Base.HasLength()
-partition_iteratorsize(isz) = isz
-
-function Base.IteratorSize(::Type{StepPartitionIterator{T}}) where {T}
-  partition_iteratorsize(Base.IteratorSize(T))
-end
-
-function Base.length(itr::StepPartitionIterator)
-  l = length(itr.c)
+function Base.length(itr::SignalPartitionIterator)
+  l = size(itr.c, 1)
   itr.flush || (l -= itr.n-1)
   return div(l, itr.step) + ((mod(l, itr.step) > 0) ? 1 : 0)
 end
 
-function Base.iterate(itr::StepPartitionIterator{<:AbstractRange}, state=1)
-  state > length(itr.c) && return nothing
-  itr.flush || state + itr.n - 1 <= length(itr.c) || return nothing
-  r = min(state + itr.n - 1, length(itr.c))
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=1)
+  l = length(itr.c)
+  state > l && return nothing
+  itr.flush || state + itr.n - 1 <= l || return nothing
+  r = min(state + itr.n - 1, l)
   return @inbounds itr.c[state:r], state + itr.step
 end
 
-function Base.iterate(itr::StepPartitionIterator{<:AbstractVector}, state=1)
-  state > length(itr.c) && return nothing
-  itr.flush || state + itr.n - 1 <= length(itr.c) || return nothing
-  r = min(state + itr.n - 1, length(itr.c))
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=1)
+  l = length(itr.c)
+  state > l && return nothing
+  itr.flush || state + itr.n - 1 <= l || return nothing
+  r = min(state + itr.n - 1, l)
   return @inbounds view(itr.c, state:r), state + itr.step
 end
 
-## end of Julia iterators implementation
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=1)
+  l = size(itr.c, 1)
+  state > l && return nothing
+  itr.flush || state + itr.n - 1 <= l || return nothing
+  r = min(state + itr.n - 1, l)
+  return @inbounds view(itr.c, state:r, :), state + itr.step
+end
 
 """
 $(SIGNATURES)
