@@ -22,7 +22,7 @@ Plots timeseries from a sample buffer.
     t *= 1000.0
     xguide --> "Time (ms)"
   else
-    xguide --> "Time (seconds)"
+    xguide --> "Time (s)"
   end
   n = size(s1, 1)
   if downsample == :auto
@@ -96,7 +96,7 @@ Displays time frequency representation.
     t *= 1000.0
     xguide --> "Time (ms)"
   else
-    xguide --> "Time (seconds)"
+    xguide --> "Time (s)"
   end
   if maximum(f) >= 5000.0
     f /= 1000.0

@@ -19,7 +19,7 @@ function InteractiveViz.iplot(s::SampleBuf, args...; kwargs...)
     t *= 1000.0
     xlabel = "Time (ms)"
   else
-    xlabel = "Time (seconds)"
+    xlabel = "Time (s)"
   end
   iplot(t, s1, args...; xlabel=xlabel, kwargs...)
 end
