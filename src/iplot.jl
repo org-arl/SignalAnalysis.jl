@@ -1,4 +1,4 @@
-using InteractiveViz
+using .InteractiveViz
 using Statistics
 using DSP.Periodograms
 

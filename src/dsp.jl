@@ -379,8 +379,6 @@ function pll(x::AbstractVecOrMat, bandwidth=1e-3; fs=framerate(x))
   signal(y, fs)
 end
 
-# TODO: write tests for sfilt, sfiltfilt, sresample, mfilter
-
 """
 $(SIGNATURES)
 Same as [`filt`](https://docs.juliadsp.org/stable/filters/#DSP.filt),
