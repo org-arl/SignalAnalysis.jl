@@ -11,14 +11,14 @@ energy(s::AbstractMatrix; fs=framerate(s)) = vec(sum(abs2, s; dims=1))./inHz(fs)
 $(SIGNATURES)
 Computes mean time of the signal.
 """
-meantime(s::SampleBuf) = wmean(domain(s), abs2.(samples(s)))
+meantime(s::SampledSignal) = wmean(domain(s), abs2.(samples(s)))
 meantime(s; fs) = wmean((0:size(s,1)-1)/fs, abs2.(s))
 
 """
 $(SIGNATURES)
 Computes RMS duration of the signal.
 """
-rmsduration(s::SampleBuf) = sqrt.(wmean(domain(s).^2, abs2.(samples(s))) .- meantime(s).^2)
+rmsduration(s::SampledSignal) = sqrt.(wmean(domain(s).^2, abs2.(samples(s))) .- meantime(s).^2)
 rmsduration(s; fs) = sqrt.(wmean(((0:size(s,1)-1)/fs).^2, abs2.(s)) .- meantime(s; fs=fs).^2)
 
 """

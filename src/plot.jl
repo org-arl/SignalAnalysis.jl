@@ -1,9 +1,9 @@
-using Plots
+using .Plots
 using DSP
 using DSP.Windows
 
 """
-    plot(data::SampleBuf; kwargs...)
+    plot(data::SampledSignal; kwargs...)
 
 Plots timeseries from a sample buffer.
 
@@ -13,10 +13,10 @@ Plots timeseries from a sample buffer.
 - `pooling=:auto`: pooling mode (`:min`, `:max`, `:mean`, `:minmax`, `nothing` or function)
 - other `kwargs` are passed on to `plot`
 """
-@recipe function plot(s::SampleBuf; t0=0.0, downsample=:auto, pooling=:auto)
+@recipe function plot(s::SampledSignal; t0=0.0, downsample=:auto, pooling=:auto)
   ticks --> :native
   legend --> ndims(s) > 1 && size(s, 2) > 1
-  s1 = s.data
+  s1 = samples(s)
   t = domain(s) .+ t0
   if maximum(t) <= 1.0
     t *= 1000.0
@@ -129,7 +129,7 @@ end
 Plots the power spectral density of data.
 
 # Optional keyword arguments
-- `fs=1.0`: derived from the data if a `SampleBuf` is provided as input
+- `fs=1.0`: derived from the data if a `SampledSignal` is provided as input
 - `nfft=512`: size of FFT window
 - `noverlap=nfft÷2`: window overlap size
 - `window=hamming(nfft)`: accepts any window from [`DSP.jl`](https://juliadsp.github.io/DSP.jl/stable/windows/)
@@ -143,7 +143,7 @@ Plots the power spectral density of data.
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
     throw(ArgumentError("psd should be provided timeseries data"))
   end
-  s.args[1] isa SampleBuf && (fs = framerate(s.args[1]))
+  s.args[1] isa SampledSignal && (fs = framerate(s.args[1]))
   s = samples(s.args[1])
   nfft = nextfastfft(nfft)
   while nfft > size(s, 1)
@@ -182,7 +182,7 @@ end
 Plots a spectrogram of the data.
 
 # Optional keyword arguments
-- `fs=1.0`: derived from the data if a `SampleBuf` is provided as input
+- `fs=1.0`: derived from the data if a `SampledSignal` is provided as input
 - `nfft=256`: size of FFT window
 - `noverlap=nfft÷2`: window overlap size
 - `window=hamming(nfft)`: accepts any window from [`DSP.jl`](https://juliadsp.github.io/DSP.jl/stable/windows/)
@@ -198,7 +198,7 @@ Plots a spectrogram of the data.
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
     throw(ArgumentError("specgram should be provided timeseries data"))
   end
-  s.args[1] isa SampleBuf && (fs = framerate(s.args[1]))
+  s.args[1] isa SampledSignal && (fs = framerate(s.args[1]))
   s1 = samples(s.args[1])
   if ndims(s1) > 1 && size(s1, 2) > 1
     throw(ArgumentError("specgram does not support multichannel data"))

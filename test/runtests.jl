@@ -1,4 +1,5 @@
-using Test, Plots, Statistics, LinearAlgebra, DSP, DSP.Util
+using Test, Statistics, LinearAlgebra, DSP, DSP.Util
+using Plots, InteractiveViz
 using SignalAnalysis
 using SignalAnalysis.Units
 
@@ -29,7 +30,7 @@ using SignalAnalysis.Units
   @test framerate(x) == 1000
   @test framerate(x1) == 8000
 
-  x = @rate 1000 randn(8000)
+  x = signal(randn(8000), 1000)
   @test x isa AbstractArray
   @test length(x) == 8000
   @test nframes(x) == 8000
@@ -38,13 +39,13 @@ using SignalAnalysis.Units
   @test !isanalytic(x)
   @test domain(x) ≈ 0:1/1000:7999/1000
 
-  x1 = @samerateas x randn(8000)
+  x1 = signal(randn(8000), framerate(x))
   @test x1 isa AbstractArray
   @test nframes(x1) == 8000
   @test nchannels(x1) == 1
   @test framerate(x1) == 1000
 
-  x1 = @samerateas 1//2 x randn(8000)
+  x1 = signal(randn(8000), framerate(x)/2)
   @test x1 isa AbstractArray
   @test nframes(x1) == 8000
   @test nchannels(x1) == 1
@@ -94,35 +95,45 @@ using SignalAnalysis.Units
   @test x1[-1] == x[1]
   @test x1[7998] == x[8000]
 
+  x = signal(collect(1:10), 1.0)
+  @test length(collect(partition(x, 5))) == 2
+  @test length(collect(partition(x, 4))) == 3
+  @test length(collect(partition(x, 5; flush=false))) == 2
+  @test length(collect(partition(x, 4; flush=false))) == 2
+  @test length(collect(partition(x, 5; step=2))) == 5
+  @test length(collect(partition(x, 4; step=2))) == 5
+  @test length(collect(partition(x, 5; step=2, flush=false))) == 3
+  @test length(collect(partition(x, 4; step=2, flush=false))) == 4
+
   x = signal(ones(1000), 8kHz)
-  x2 = slide(Float32, x, 250) do x1, blknum, firstframe
+  x2 = map(enumerate(partition(x, 250))) do (blknum, x1)
     @test size(x1) == (250,)
     sum(x1)*blknum
   end
   @test x2 == [250.0, 500.0, 750.0, 1000.0]
-  x2 = slide(Tuple{Int,Float64}, x, 250) do x1, blknum, firstframe
+  x2 = map(enumerate(partition(x, 250))) do (blknum, x1)
     @test size(x1) == (250,)
     (blknum, sum(x1)*blknum)
   end
   @test x2 == [(1, 250.0), (2, 500.0), (3, 750.0), (4, 1000.0)]
-  x2 = slide(Array{Float64}, 2, x, 250) do x1, blknum, firstframe
+  x2 = hcat(map(partition(x, 250)) do x1
     @test size(x1) == (250,)
     [sum(x1), prod(x1)]
-  end
+  end...)'
   @test x2 == [250.0 1.0; 250.0 1.0; 250.0 1.0; 250.0 1.0;]
-  slide(x, 250) do x1, blknum, firstframe
+  for (blknum, x1) ∈ enumerate(partition(x, 250))
     x1 .= blknum
   end
   @test (x[1], x[251], x[501], x[751]) == (1.0, 2.0, 3.0, 4.0)
 
-  x = signal(ones(1000,2), 8kHz)
-  x2 = slide(Float32, x, 250) do x1, blknum, firstframe
-    @test size(x1) == (250,2)
+  x = signal(ones(1000, 2), 8kHz)
+  x2 = map(enumerate(partition(x, 250))) do (blknum, x1)
+    @test size(x1) == (250, 2)
     sum(x1)*blknum
   end
   @test x2 == [2*250.0, 2*500.0, 2*750.0, 2*1000.0]
-  slide(x, 250) do x1, blknum, firstframe
-    @test size(x1) == (250,2)
+  for x1 ∈ partition(x, 250)
+    @test size(x1) == (250, 2)
   end
 
   x = signal(randn(2000), 8kHz)
@@ -133,12 +144,6 @@ using SignalAnalysis.Units
   x = signal(randn(8000), 1000)
   t = toframe(0:0.1:1, x)
   @test t == 1:100:1001
-
-  x = signal(randn(1000), 1000)
-  @test x[100:500,∘] === @view x[100:500]
-
-  x = signal(randn(1000,2), 1000)
-  @test x[100:500,∘] === @view x[100:500,:]
 
 end
 
@@ -410,8 +415,8 @@ end
   @test abs(goertzel(x, 10kHz)) ≈ length(x) atol=1e-6
   @test abs(goertzel(x, 9kHz)) ≈ 0 atol=1e-6
   @test abs(goertzel(x, 11kHz)) ≈ 0 atol=1e-6
-  @test abs.(goertzel(x, 10kHz, 512)) ≈ repeat([512.0], 15) atol=1e-6
-  @test abs.(goertzel(x, 9375, 512)) ≈ repeat([0.0], 15) atol=1e-6
+  @test abs.(goertzel(x, 10kHz, 512))[1:end-1] ≈ repeat([512.0], 15) atol=1e-6
+  @test abs.(goertzel(x, 9375, 512))[1:end-1] ≈ repeat([0.0], 15) atol=1e-6
   x = hcat(cw(10kHz, 0.1s, 80kHz), cw(11kHz, 0.1s, 80kHz))
   @test abs.(goertzel(x, 10kHz)) ≈ [size(x,1), 0] atol=1e-6
   @test abs.(goertzel(x, 9kHz)) ≈ [0, 0] atol=1e-6
@@ -424,6 +429,27 @@ end
   @test meanfrequency(x3[800:end]) ≈ meanfrequency(x[800:end]) atol=0.1
   e3 = √mean(abs2.(x[800:end] .- x3[800:end]))
   @test e2/e3 > 3
+
+  x = cw(7kHz, 1s, 44.1kHz)
+  f = fir(127, 5kHz, 10kHz; fs=44.1kHz)
+  x1 = sfilt(f, x)
+  @test framerate(x1) == framerate(x)
+  x1 = sfilt(f, 1, x)
+  @test framerate(x1) == framerate(x)
+  x1 = sfiltfilt(f, x)
+  @test framerate(x1) == framerate(x)
+  x1 = sresample(x, 3//2)
+  @test framerate(x1) == 3 * framerate(x) / 2
+
+  x = signal(randn(100), 10kHz)
+  x1 = signal(vcat(zeros(1000), x/2, zeros(1000)), 10kHz)
+  x2 = mfilter(x, x1)
+  @test argmax(abs.(x2)) == 1001
+
+  x = analytic(signal(randn(100), 10kHz))
+  x1 = signal(vcat(zeros(1000), x/2, zeros(1000)), 10kHz)
+  x2 = mfilter(x, x1)
+  @test argmax(abs.(x2)) == 1001
 
 end
 
@@ -503,24 +529,23 @@ end
 
   # interactive plots are hard to test
   # we just test that the calls don't crash
-  # disabling interactive plots tests as MakieGL errors out on CI
 
-  # iplot(x)
-  # @test true
-  # iplot(real(x))
-  # @test true
-  # iplot([x -x])
-  # @test true
-  # ispecgram(x)
-  # @test true
-  # ispecgram(real(x))
-  # @test true
-  # ispecgram(real(samples(x)))
-  # @test true
-  # ispecgram(real(samples(x)); fs=44100)
-  # @test true
-  # ispecgram(real(samples(x)); fs=44.1kHz)
-  # @test true
+  iplot(x)
+  @test true
+  iplot(real(x))
+  @test true
+  iplot([x -x])
+  @test true
+  ispecgram(x)
+  @test true
+  ispecgram(real(x))
+  @test true
+  ispecgram(real(samples(x)))
+  @test true
+  ispecgram(real(samples(x)); fs=44100)
+  @test true
+  ispecgram(real(samples(x)); fs=44.1kHz)
+  @test true
 
 end
 
@@ -566,7 +591,6 @@ end
   @test argmax(bfo) == 135
   bfo = beamform(x4, fc, 4096, sd1; method=Bartlett())
   @test argmax(bfo) == 135
-  @test_throws LinearAlgebra.SingularException beamform(x4, fc, 4096, sd1; method=Capon())
   bfo = beamform(x4 .+ 0.001*randn(size(x4)), fc, 4096, sd1; method=Capon())
   @test argmax(bfo) == 135
   bfo = beamform(x4, fc, 4096, sd1; method=Capon(0.1))
@@ -587,94 +611,38 @@ end
 
 end
 
-@testset "array" begin
+@testset "tfa" begin
 
-  c = 1500.0
-  θ = range(0.0, π; length=181)
-  sd1 = steering(0.0:1.0:5.0, c, θ)
-  @test size(sd1) == (6, 181)
-  @test sd1[:,1] ≈ (2.5:-1.0:-2.5)/c atol=1e-6
-  @test sd1[:,91] ≈ zeros(6) atol=1e-6
-  @test sd1[:,181] ≈ (-2.5:1.0:2.5)/c atol=1e-6
-  sd2 = steering(-2.0:1.0:3.0, c, θ)
-  @test sd1 == sd2
-  sd2 = steering(vcat((0.0:1.0:5.0)', zeros(1,6)), c, θ)
-  @test sd1 == sd2
-  sd2 = steering(vcat((0.0:1.0:5.0)', zeros(2,6)), c, θ)
-  @test sd1 == sd2
+  x = real.(chirp(5kHz, 10kHz, 1s, 44.1kHz))
+  y = tfd(x, Spectrogram())
+  @test y isa SignalAnalysis.TFD
+  @test time(y) ≈ 0.0029024943310657597:0.005804988662131519:0.9955555555555555
+  @test freq(y) ≈ range(0.0, 22050.0; length=129)
+  @test power(y) isa AbstractMatrix
+  @test size(power(y)) == (129, 172)
+  @test freq(y)[argmax(power(y)[:,86])] ≈ 7500.0 atol=100.0
+  y = tfd(x, Spectrogram(nfft=512, noverlap=256, window=hamming))
+  @test y isa SignalAnalysis.TFD
+  @test time(y) ≈ 0.005804988662131519:0.005804988662131519:0.9926530612244898
+  @test freq(y) ≈ range(0.0, 22050.0; length=257)
+  @test power(y) isa AbstractMatrix
+  @test size(power(y)) == (257, 171)
+  @test freq(y)[argmax(power(y)[:,86])] ≈ 7500.0 atol=10.0
 
-  θ = range(0.0, 2π; length=9)
-  rxpos = [-1.0 0.0 1.0 0.0; 0.0 1.0 0.0 -1.0]
-  sd1 = steering(rxpos, c, θ)
-  @test size(sd1) == (4, 9)
-  @test sd1[:,1] ≈ [1.0, 0.0, -1.0, 0.0]/c atol=1e-6
-  @test sd1[:,3] ≈ [0.0, -1.0, 0.0, 1.0]/c atol=1e-6
-  @test sd1[:,5] ≈ -[1.0, 0.0, -1.0, 0.0]/c atol=1e-6
-  @test sd1[:,7] ≈ -[0.0, -1.0, 0.0, 1.0]/c atol=1e-6
-  @test sd1[1,4] ≈ sd1[2,4] atol=1e-6
-  @test sd1[3,4] ≈ sd1[4,4] atol=1e-6
-  @test sd1[3,4]-sd1[2,4] ≈ √2/c atol=1e-6
-
-  θ1 = deg2rad.(reduce(vcat, hcat.(LinRange(0.0, 180.0, 181)', LinRange(0.0,0.0,181))))
-  sd1 = steering(0.0:1.0:5.0, c, θ1)
-  @test size(sd1) == (6, 32761)
-  θ2 = range(0.0, π; length=181)
-  sd2 = steering(0.0:1.0:5.0, c, θ2)
-  @test sd1[:,1] == sd2[:,1]
-  @test sd1[:,16291] == sd2[:,91]
-  @test sd1[:,32761] == sd2[:,181]
-
-  θ1 = deg2rad.(reduce(vcat, hcat.(LinRange(0.0, 360.0, 9)', LinRange(0.0,0.0,9))))
-  rxpos = [-1.0 0.0 1.0 0.0; 0.0 1.0 0.0 -1.0]
-  sd1 = steering(rxpos, c, θ1)
-  @test size(sd1) == (4, 81)
-  θ2 = range(0.0, 2π; length=9)
-  sd2 = steering(rxpos, c, θ2)
-  @test sd1[:,1] == sd2[:,1]
-  @test sd1[:,19] == sd2[:,3]
-  @test sd1[:,37] == sd2[:,5]
-  @test sd1[:,55] == sd2[:,7]
-  @test sd1[1,36] ≈ sd1[2,36] atol=1e-6
-  @test sd1[3,36] ≈ sd1[4,36] atol=1e-6
-  @test sd1[3,36]-sd1[2,36] ≈ √2/c atol=1e-6
-
-  θ = deg2rad.(reduce(vcat, hcat.(LinRange(-20,20,41)', LinRange(-10,10,21))))
-  rxpos = [ 0.0  0.0  0.5  0.5; 0.0  0.5  0.0  0.5; 0.0  0.0  0.0  0.0]
-  sd1 = steering(rxpos, c, θ)
-  @test size(sd1) == (size(rxpos,2), size(θ,1))
-
-  θ = deg2rad.(1:360)
-  fc = 500.0
-  fs = 44100.0
-  rxpos = [-1.0 0.0 1.0 0.0; 0.0 1.0 0.0 -1.0]
-  sd1 = steering(rxpos, c, θ)
-  @test size(sd1) == (4, 360)
-  x = cw(fc, 1.0, fs)
-  x̄ = padded(x, 0; delay=round(Int, √2/c*fs))
-  x4 = [x x x̄ x̄]
-  bfo = beamform(x4, fc, 4096, sd1)
-  @test argmax(bfo) == 135
-  bfo = beamform(samples(x4), fc, 4096, sd1; fs=framerate(x4))
-  @test argmax(bfo) == 135
-  bfo = beamform(x4, fc, 4096, sd1; method=Bartlett())
-  @test argmax(bfo) == 135
-  @test_throws LinearAlgebra.SingularException beamform(x4, fc, 4096, sd1; method=Capon())
-  bfo = beamform(x4 .+ 0.001*randn(size(x4)), fc, 4096, sd1; method=Capon())
-  @test argmax(bfo) == 135
-  bfo = beamform(x4, fc, 4096, sd1; method=Capon(0.1))
-  @test argmax(bfo) == 135
-  bfo = beamform(x4, fc, 4096, sd1; method=Music())
-  @test argmax(bfo) == 135
-  bfo = beamform(x4, fc, 4096, sd1; method=Music(1))
-  @test argmax(bfo) == 135
-  y4 = goertzel(x4, fc, 4096)
-  bfo = beamform(y4, fc, sd1)
-  @test argmax(bfo) == 135
-  bfo = beamform(x4, sd1)
-  @test nchannels(bfo) == 360
-  e = energy(bfo)
-  @test argmax(e) == 135
-  @test maximum(e) ≈ 16.0 atol=0.1
-  @test meanfrequency(bfo[:,135]) ≈ fc atol=10.0
+  x = real.(chirp(5kHz, 10kHz, 0.01s, 44.1kHz))
+  y = tfd(x, Wigner())
+  @test y isa SignalAnalysis.TFD
+  @test time(y) ≈ range(0.0, 0.00998; length=441)
+  @test freq(y) ≈ range(0.0, 22050.0, length=442)
+  @test power(y) isa AbstractMatrix
+  @test size(power(y)) == (442, 441)
+  @test freq(y)[argmax(power(y)[:,220])] ≈ 7500.0 atol=1.0
+  y = tfd(x, Wigner(nfft=512, smooth=10, method=:CM1980, window=hamming))
+  @test y isa SignalAnalysis.TFD
+  @test time(y) ≈ range(0.0, 0.00998; length=441)
+  @test freq(y) ≈ range(0.0, 22050.0, length=257)
+  @test power(y) isa AbstractMatrix
+  @test size(power(y)) == (257, 441)
+  @test freq(y)[argmax(power(y)[:,220])] ≈ 7500.0 atol=100.0
 
 end

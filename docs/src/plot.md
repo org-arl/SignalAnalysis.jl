@@ -7,7 +7,7 @@ using Plots
 
 We provide a plot recipe to display signals:
 ```julia
-plot(data::SampleBuf; t0=0.0, downsample=:auto, pooling=:auto, kwargs...)
+plot(data::SampledSignal; t0=0.0, downsample=:auto, pooling=:auto, kwargs...)
 ```
 **Optional arguments**:
 - `t0=0.0`: start time (for labeling only)

@@ -9,16 +9,16 @@ rate `fs`. The starting `phase` and `window` type may be optionally specified.
 # Examples:
 ```julia-repl
 julia> x = cw(5kHz, 200ms, 44.1kHz)
-8820-frame, 1-channel SampleBuf{Complex{Float64}, 1}
-0.2s sampled at 44100.0Hz
+SampledSignal @ 44100.0 Hz, 8820-element Array{Complex{Float64},1}:
+  ⋮
 
 julia> x = cw(5kHz, 200ms, 44.1kHz; window=hamming)
-8820-frame, 1-channel SampleBuf{Complex{Float64}, 1}
-0.2s sampled at 44100.0Hz
+SampledSignal @ 44100.0 Hz, 8820-element Array{Complex{Float64},1}:
+  ⋮
 
 julia> x = cw(-5kHz, 200ms, 44.1kHz; phase=45°, window=(tukey, 0.05))
-8820-frame, 1-channel SampleBuf{Complex{Float64}, 1}
-0.2s sampled at 44100.0Hz
+SampledSignal @ 44100.0 Hz, 8820-element Array{Complex{Float64},1}:
+  ⋮
 ```
 """
 function cw(freq, duration, fs; phase=0.0, window=nothing)
@@ -41,16 +41,16 @@ starting `phase` and `window` type may be optionally specified.
 # Examples:
 ```julia-repl
 julia> x = chirp(5kHz, 7kHz, 100ms, 44.1kHz)
-4410-frame, 1-channel SampleBuf{Complex{Float64}, 1}
-0.1s sampled at 44100.0Hz
+SampledSignal @ 44100.0 Hz, 4410-element Array{Complex{Float64},1}:
+  ⋮
 
 julia> x = chirp(5kHz, 7kHz, 100ms, 44.1kHz; phase=45°, window=hamming)
-4410-frame, 1-channel SampleBuf{Complex{Float64}, 1}
-0.1s sampled at 44100.0Hz
+SampledSignal @ 44100.0 Hz, 4410-element Array{Complex{Float64},1}:
+  ⋮
 
 julia> x = chirp(5kHz, 7kHz, 100ms, 44.1kHz; shape=:hyperbolic, window=(tukey,0.05))
-4410-frame, 1-channel SampleBuf{Complex{Float64}, 1}
-0.1s sampled at 44100.0Hz
+SampledSignal @ 44100.0 Hz, 4410-element Array{Complex{Float64},1}:
+  ⋮
 ```
 """
 function chirp(freq1, freq2, duration, fs=2.0; shape=:linear, phase=0.0, window=nothing)

@@ -1,6 +1,9 @@
+import DSP: filt, filtfilt, resample
+
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll
+export sfilt, sfiltfilt, sresample, mfilter
 
 """
 $(SIGNATURES)
@@ -101,7 +104,7 @@ end
 function demon(x::AbstractVector{T}; fs=framerate(x), downsample=250, method=:rms, cutoff=1.0) where T
   y = @view samples(x)[:,1:1]
   z = demon(y, fs=fs, downsample=downsample, method=method, cutoff=cutoff)
-  @samerateas z dropdims(samples(z), dims=2)
+  signal(dropdims(samples(z), dims=2), framerate(z))
 end
 
 """
@@ -323,10 +326,7 @@ When a block size `n` is specified, the Goertzel algorithm in applied to
 blocks of data from the original time series.
 """
 function goertzel(x::AbstractVector, f, n; fs=framerate(x))
-  out = slide(ComplexF64, x, n) do x1, b, j
-    goertzel(x1, f; fs=fs)
-  end
-  signal(out, fs/n)
+  signal(map(x1 -> goertzel(x1, f; fs=fs), partition(x, n)), fs/n)
 end
 
 function goertzel(x::AbstractVector, f; fs=framerate(x))
@@ -344,7 +344,7 @@ function goertzel(x::AbstractVector, f; fs=framerate(x))
 end
 
 function goertzel(x::AbstractMatrix, f, n; fs=framerate(x))
-  count = fld(size(x,1), n)
+  count = cld(size(x,1), n)
   out = Array{ComplexF64}(undef, (count, nchannels(x)))
   for j ∈ 1:nchannels(x)
     out[:,j] = goertzel(x[:,j], f, n; fs=fs)
@@ -377,4 +377,36 @@ function pll(x::AbstractVecOrMat, bandwidth=1e-3; fs=framerate(x))
     ϕ .+= β*Δϕ .+ ω
   end
   signal(y, fs)
+end
+
+"""
+$(SIGNATURES)
+Same as [`filt`](https://docs.juliadsp.org/stable/filters/#DSP.filt),
+but retains sampling rate information.
+"""
+sfilt(f, x, args...) = signal(filt(f, samples(x), args...), framerate(x))
+sfilt(b, a, x, args...) = signal(filt(b, a, samples(x), args...), framerate(x))
+
+"""
+$(SIGNATURES)
+Same as [`filtfilt`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.filtfilt),
+but retains sampling rate information.
+"""
+sfiltfilt(coef, x) = signal(filtfilt(coef, samples(x)), framerate(x))
+
+"""
+$(SIGNATURES)
+Same as [`resample`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.resample),
+but correctly handles sampling rate conversion.
+"""
+sresample(x, rate, args...) = signal(resample(samples(x), rate, args...), rate * framerate(x))
+
+"""
+$(SIGNATURES)
+Matched filter looking for reference signal `r` in signal `s`.
+"""
+function mfilter(r, s)
+  f = conj.(reverse(samples(r)))
+  n = length(r) - 1
+  sfilt(f, padded(s, (0, n)))[n+1:end]
 end

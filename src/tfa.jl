@@ -1,7 +1,7 @@
-export tfd, Wigner, Spectrogram
-
-using DSP.Periodograms
+using DSP, DSP.Periodograms
 using FFTW
+
+export tfd, Wigner, Spectrogram
 
 abstract type TFKernel end
 
@@ -26,6 +26,19 @@ end
 
 DSP.Periodograms.time(tfr::TFD) = tfr.time
 
+"""
+$(TYPEDSIGNATURES)
+Computes a spectrogram time-frequency distribution of signal `s` sampled as sampling rate `fs`.
+
+# Examples:
+```julia-repl
+julia> x = real.(chirp(1kHz, 10kHz, 1s, 44.1kHz));
+julia> y = tfd(x, Spectrogram());
+julia> plot(y)
+julia> y = tfd(x, Spectrogram(nfft=512, noverlap=256, window=hamming));
+julia> plot(y)
+```
+"""
 function tfd(s, kernel::Spectrogram; onesided=eltype(s)<:Real, fs=framerate(s))
   onesided && ((eltype(s) <: Real) || (s = real.(s)))
   tfr = spectrogram(samples(s), kernel.nfft, kernel.noverlap; onesided=onesided, fs=fs, window=kernel.window)
@@ -38,6 +51,19 @@ function tfd(s, kernel::Spectrogram; onesided=eltype(s)<:Real, fs=framerate(s))
   TFD(w, f, time(tfr))
 end
 
+"""
+$(TYPEDSIGNATURES)
+Computes a Wigner-Ville time-frequency distribution of signal `s` sampled as sampling rate `fs`.
+
+# Examples:
+```julia-repl
+julia> x = real.(chirp(1kHz, 10kHz, 0.01s, 44.1kHz));
+julia> y = tfd(x, Wigner());
+julia> plot(y; clim=(0,20))
+julia> y = tfd(x, Wigner(nfft=512, smooth=10, method=:CM1980, window=hamming));
+julia> plot(y; clim=(0,20))
+```
+"""
 function tfd(s, kernel::Wigner; onesided=eltype(s)<:Real, fs=framerate(s))
   N = nframes(s)
   nfft = kernel.nfft <= 0 ? 2N : min(kernel.nfft, 2N)
