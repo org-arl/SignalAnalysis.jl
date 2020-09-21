@@ -1,6 +1,8 @@
-using Documenter, Plots
+using Documenter
+using Plots
+using InteractiveViz
 
-push!(LOAD_PATH,"../../src/")
+push!(LOAD_PATH,"../src/")
 using SignalAnalysis
 
 makedocs(
@@ -14,6 +16,7 @@ makedocs(
       "generate.md",
       "basic.md",
       "dsp.md",
+      "tfa.md",
       "array.md",
       "rand.md",
       "plot.md",
