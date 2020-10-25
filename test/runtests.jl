@@ -451,6 +451,36 @@ end
   x2 = mfilter(x, x1)
   @test argmax(abs.(x2)) == 1001
 
+  onesideds = [true, false]
+  n = 256
+  windows = [nothing, rect, tukey(n, 0.5), hanning, hamming]
+  noverlaps = [0, 0, (15*n)÷16, (5*n)÷6, (5*n)÷6]
+  for onesided in onesideds
+    if onesided === true
+      x = randn(96000)
+    else
+      x = randn(96000) + im .* randn(96000)
+    end    
+    for (window, noverlap) in zip(windows, noverlaps)  
+      xstft = stft(x, n, noverlap; window=window, onesided=onesided)
+      x̂ = istft(xstft, n, noverlap; window=window, onesided=onesided)
+      @test rms(x[n:length(x̂)-n]-x̂[n:end-n]) / rms(x[n:length(x̂)-n]) ≈ 0. atol=0.001
+    end
+  end
+
+  fs = 9600
+  hpf = fir(9, 1000; fs=fs)
+  x = filtfilt(hpf, randn(96000))
+  y = 0.1 .* real(chirp(500, 1000, 1.0, fs))
+  x[9600+1:2*9600] .+= y
+  n = 256
+  noverlap = 0
+  x̃ = spectralwhitening(x, n, noverlap; window=nothing)
+  ỹ = x̃[9600+1:2*9600]
+  @test cor(y, ỹ) > 0.3
+  x̃ = spectralwhitening(x, n, noverlap; window=nothing, γ=0.)
+  @test rms(x[1:length(x̃)] - x̃) / rms(x[1:length(x̃)]) ≈ 0. atol=0.0001
+
 end
 
 @testset "rand" begin
