@@ -4,6 +4,7 @@ export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll
 export sfilt, sfiltfilt, sresample, mfilter
+export istft, spectralwhitening
 
 """
 $(SIGNATURES)
@@ -409,4 +410,65 @@ function mfilter(r, s)
   f = conj.(reverse(samples(r)))
   n = length(r) - 1
   sfilt(f, padded(s, (0, n)))[n+1:end]
+end
+
+"""
+$(SIGNATURES)
+Inverse Short Time Fourier Transform (ISTFT). 
+
+The signal windowing must obey the constraint of "nonzero overlap add" (NOLA). 
+Implementation based on Hristo (2019, 2020) and `istft` in `scipy`. 
+
+H. Zhivomirov. On the Development of STFT-analysis and ISTFT-synthesis Routines 
+and their Practical Implementation. TEM Journal, ISSN: 2217-8309, DOI: 10.18421/TEM81-07, 
+Vol. 8, No. 1, pp. 56-64, Feb. 2019. 
+(http://www.temjournal.com/content/81/TEMJournalFebruary2019_56_64.pdf)
+
+Hristo Zhivomirov (2020). Inverse Short-Time Fourier Transform (ISTFT) with Matlab 
+(https://www.mathworks.com/matlabcentral/fileexchange/45577-inverse-short-time-fourier-transform-istft-with-matlab), 
+MATLAB Central File Exchange. Retrieved October 21, 2020. 
+"""
+function istft(X::AbstractMatrix{Complex{T}}, 
+               n::Int, 
+               noverlap::Int; 
+               onesided::Bool=true, 
+               window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
+  (window === nothing) && (window = rect)
+  win, norm2 = Periodograms.compute_window(window, n)
+
+  nstep = n - noverlap
+  nseg = size(X, 2)
+  outputlength = n + (nseg-1) * nstep
+
+  iX = onesided ? irfft(X, n, 1) : ifft(X, 1)
+  iX .*= win
+  x = zeros(eltype(iX), outputlength)
+  normw = zeros(T, outputlength)
+  for i = 1:nseg
+      x[1+(i-1)*nstep:n+(i-1)*nstep] += iX[:,i]
+      normw[1+(i-1)*nstep:n+(i-1)*nstep] += win .^ 2
+  end
+
+  (sum(normw[n÷2:end-n÷2] .> 1e-10) != length(normw[n÷2:end-n÷2])) && (
+      @warn "NOLA condition failed, STFT may not be invertible")
+  x .*= nstep/norm2
+  x
+end
+
+"""
+$(SIGNATURES)
+Spectral whitening/flattening in the frequency domain.
+
+M. W. Lee, Spectral whitening in the frequency domain, 1986.
+"""
+function spectralwhitening(x::AbstractVector, 
+                           n::Int, 
+                           noverlap::Int; 
+                           window::Union{Function,AbstractVector,Nothing}=nothing,
+                           γ=1)
+  xstft = stft(x, n, noverlap; window=window)
+  mag = abs.(xstft)
+  logmag = log.(mag .+ eps(eltype(mag)))
+  logmag .-= γ * mean(logmag; dims=2)
+  istft(exp.(logmag) .* exp.(im .* angle.(xstft)), n, noverlap; window=window) 
 end
