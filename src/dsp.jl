@@ -477,7 +477,6 @@ function istft(X::AbstractMatrix{Complex{T}},
   (sum(normw[n÷2:end-n÷2] .> 1e-10) != length(normw[n÷2:end-n÷2])) && (
       @warn "NOLA condition failed, STFT may not be invertible")
   x .*= nstep/norm2
-  x
 end
 
 """
