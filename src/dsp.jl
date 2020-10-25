@@ -414,19 +414,44 @@ end
 
 """
 $(SIGNATURES)
-Inverse Short Time Fourier Transform (ISTFT). 
+Compute the inverse short time Fourier transform (ISTFT) of STFT coefficients `X` which is based
+on segments with `n` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram` 
+for description of optional keyword arguments.
 
-The signal windowing must obey the constraint of "nonzero overlap add" (NOLA). 
-Implementation based on Hristo (2019, 2020) and `istft` in `scipy`. 
+For perfect reconstruction, the parameters `n`, `noverlap` and `window` in `stft` and 
+`istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).  
+Implementation based on Hristo 2019 and `istft` in `scipy`. 
 
 H. Zhivomirov. On the Development of STFT-analysis and ISTFT-synthesis Routines 
 and their Practical Implementation. TEM Journal, ISSN: 2217-8309, DOI: 10.18421/TEM81-07, 
 Vol. 8, No. 1, pp. 56-64, Feb. 2019. 
 (http://www.temjournal.com/content/81/TEMJournalFebruary2019_56_64.pdf)
 
-Hristo Zhivomirov (2020). Inverse Short-Time Fourier Transform (ISTFT) with Matlab 
-(https://www.mathworks.com/matlabcentral/fileexchange/45577-inverse-short-time-fourier-transform-istft-with-matlab), 
-MATLAB Central File Exchange. Retrieved October 21, 2020. 
+# Examples:
+```julia-repl
+julia> x = randn(1024)
+1024-element Array{Float64,1}:
+ -0.7903319156212055
+ -0.564789077302601
+  0.8621044972211616
+  0.9351928359709288
+  ⋮
+  2.6158861993992533
+  1.2980813993011973
+ -0.010592954871694647
+julia> X = stft(x, 64, 0)
+33×31 Array{Complex{Float64},2}:
+  ⋮
+julia> x̂ = istft(X, 64, 0)
+1024-element Array{Float64,1}:
+ -0.7903319156212054
+ -0.5647890773026012
+  0.8621044972211612
+  0.9351928359709288
+  ⋮
+  2.6158861993992537
+  1.2980813993011973
+ -0.010592954871694371
 """
 function istft(X::AbstractMatrix{Complex{T}}, 
                n::Int, 
