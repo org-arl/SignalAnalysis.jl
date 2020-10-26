@@ -420,7 +420,7 @@ for description of optional keyword arguments.
 
 For perfect reconstruction, the parameters `n`, `noverlap` and `window` in `stft` and 
 `istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).  
-Implementation based on Hristo 2019 and `istft` in `scipy`. 
+Implementation based on Zhivomirov 2019 and `istft` in `scipy`. 
 
 H. Zhivomirov. On the Development of STFT-analysis and ISTFT-synthesis Routines 
 and their Practical Implementation. TEM Journal, ISSN: 2217-8309, DOI: 10.18421/TEM81-07, 
@@ -481,15 +481,18 @@ end
 
 """
 $(SIGNATURES)
-Spectral whitening/flattening in the frequency domain.
+Spectral whitening of input signal `x`. The parameters `n`, `noverlap` and 
+`window` are required for the computation of STFT coefficients of `x`. Refer to 
+`DSP.Periodograms.spectrogram` for description of the parameters. `γ` is a scaling 
+or degree-of-flattening factor. The algorithm is based on Lee 1986.
 
 M. W. Lee, Spectral whitening in the frequency domain, 1986.
 """
-function spectralwhitening(x::AbstractVector, 
-                           n::Int, 
-                           noverlap::Int; 
-                           window::Union{Function,AbstractVector,Nothing}=nothing,
-                           γ=1)
+function whiten(x::AbstractVector, 
+                n::Int, 
+                noverlap::Int; 
+                window::Union{Function,AbstractVector,Nothing}=nothing,
+                γ=1)
   xstft = stft(x, n, noverlap; window=window)
   mag = abs.(xstft)
   logmag = log.(mag .+ eps(eltype(mag)))
