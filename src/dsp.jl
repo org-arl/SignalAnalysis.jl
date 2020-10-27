@@ -422,11 +422,6 @@ For perfect reconstruction, the parameters `nfft`, `noverlap` and `window` in `s
 `istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).  
 Implementation based on Zhivomirov 2019 and `istft` in `scipy`. 
 
-H. Zhivomirov. On the Development of STFT-analysis and ISTFT-synthesis Routines 
-and their Practical Implementation. TEM Journal, ISSN: 2217-8309, DOI: 10.18421/TEM81-07, 
-Vol. 8, No. 1, pp. 56-64, Feb. 2019. 
-(http://www.temjournal.com/content/81/TEMJournalFebruary2019_56_64.pdf)
-
 # Examples:
 ```julia-repl
 julia> x = randn(1024)
@@ -458,6 +453,7 @@ function istft(X::AbstractMatrix{Complex{T}};
                noverlap::Int, 
                onesided::Bool=true, 
                window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
+  # H. Zhivomirov, TEM Journal, Vol. 8, No. 1, pp. 56-64, 2019. 
   (window === nothing) && (window = rect)
   win, norm2 = Periodograms.compute_window(window, nfft)
 
@@ -481,18 +477,17 @@ end
 
 """
 $(SIGNATURES)
-Spectral whitening of input signal `x`. The parameters `nfft`, `noverlap` and 
-`window` are required for the computation of STFT coefficients of `x`. Refer to 
-`DSP.Periodograms.spectrogram` for description of the parameters. `γ` is a scaling 
-or degree-of-flattening factor. The algorithm is based on Lee 1986.
-
-M. W. Lee, Spectral whitening in the frequency domain, 1986.
+Spectral whitening of input signal `x` in the frequency domain. The parameters `nfft`, 
+`noverlap` and `window` are required for the computation of STFT coefficients of `x`. 
+Refer to `DSP.Periodograms.spectrogram` for description of the parameters. `γ` is a 
+scaling or degree-of-flattening factor. The algorithm is based on Lee 1986.
 """
 function whiten(x::AbstractVector; 
                 nfft::Int, 
                 noverlap::Int,
                 window::Union{Function,AbstractVector,Nothing}=nothing,
                 γ=1)
+  # M. W. Lee, Open-File Report 86-108, 1986.
   xstft = stft(x, nfft, noverlap; window=window)
   mag = abs.(xstft)
   logmag = log.(mag .+ eps(eltype(mag)))
