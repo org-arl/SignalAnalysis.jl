@@ -434,7 +434,7 @@ julia> x = randn(1024)
   2.6158861993992533
   1.2980813993011973
  -0.010592954871694647
-julia> X = stft(x, nfft, 0)
+julia> X = stft(x, 64, 0)
 33×31 Array{Complex{Float64},2}:
   ⋮
 julia> x̂ = istft(X; nfft=64, noverlap=0)
