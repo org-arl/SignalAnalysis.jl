@@ -4,7 +4,7 @@ export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll
 export sfilt, sfiltfilt, sresample, mfilter
-export istft, spectralwhitening
+export istft, whiten
 
 """
 $(SIGNATURES)
@@ -415,10 +415,10 @@ end
 """
 $(SIGNATURES)
 Compute the inverse short time Fourier transform (ISTFT) of STFT coefficients `X` which is based
-on segments with `n` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram` 
-for description of optional keyword arguments.
+on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram` 
+for description of the parameters.
 
-For perfect reconstruction, the parameters `n`, `noverlap` and `window` in `stft` and 
+For perfect reconstruction, the parameters `nfft`, `noverlap` and `window` in `stft` and 
 `istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).  
 Implementation based on Zhivomirov 2019 and `istft` in `scipy`. 
 
@@ -439,10 +439,10 @@ julia> x = randn(1024)
   2.6158861993992533
   1.2980813993011973
  -0.010592954871694647
-julia> X = stft(x, 64, 0)
+julia> X = stft(x, nfft, 0)
 33×31 Array{Complex{Float64},2}:
   ⋮
-julia> x̂ = istft(X, 64, 0)
+julia> x̂ = istft(X; nfft=64, noverlap=0)
 1024-element Array{Float64,1}:
  -0.7903319156212054
  -0.5647890773026012
@@ -453,49 +453,49 @@ julia> x̂ = istft(X, 64, 0)
   1.2980813993011973
  -0.010592954871694371
 """
-function istft(X::AbstractMatrix{Complex{T}}, 
-               n::Int, 
-               noverlap::Int; 
+function istft(X::AbstractMatrix{Complex{T}}; 
+               nfft::Int, 
+               noverlap::Int, 
                onesided::Bool=true, 
                window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
   (window === nothing) && (window = rect)
-  win, norm2 = Periodograms.compute_window(window, n)
+  win, norm2 = Periodograms.compute_window(window, nfft)
 
-  nstep = n - noverlap
+  nstep = nfft - noverlap
   nseg = size(X, 2)
-  outputlength = n + (nseg-1) * nstep
+  outputlength = nfft + (nseg-1) * nstep
 
-  iX = onesided ? irfft(X, n, 1) : ifft(X, 1)
+  iX = onesided ? irfft(X, nfft, 1) : ifft(X, 1)
   iX .*= win
   x = zeros(eltype(iX), outputlength)
   normw = zeros(T, outputlength)
   for i = 1:nseg
-      x[1+(i-1)*nstep:n+(i-1)*nstep] += iX[:,i]
-      normw[1+(i-1)*nstep:n+(i-1)*nstep] += win .^ 2
+      x[1+(i-1)*nstep:nfft+(i-1)*nstep] += iX[:,i]
+      normw[1+(i-1)*nstep:nfft+(i-1)*nstep] += win .^ 2
   end
 
-  (sum(normw[n÷2:end-n÷2] .> 1e-10) != length(normw[n÷2:end-n÷2])) && (
+  (sum(normw[nfft÷2:end-nfft÷2] .> 1e-10) != length(normw[nfft÷2:end-nfft÷2])) && (
       @warn "NOLA condition failed, STFT may not be invertible")
   x .*= nstep/norm2
 end
 
 """
 $(SIGNATURES)
-Spectral whitening of input signal `x`. The parameters `n`, `noverlap` and 
+Spectral whitening of input signal `x`. The parameters `nfft`, `noverlap` and 
 `window` are required for the computation of STFT coefficients of `x`. Refer to 
 `DSP.Periodograms.spectrogram` for description of the parameters. `γ` is a scaling 
 or degree-of-flattening factor. The algorithm is based on Lee 1986.
 
 M. W. Lee, Spectral whitening in the frequency domain, 1986.
 """
-function whiten(x::AbstractVector, 
-                n::Int, 
-                noverlap::Int; 
+function whiten(x::AbstractVector; 
+                nfft::Int, 
+                noverlap::Int,
                 window::Union{Function,AbstractVector,Nothing}=nothing,
                 γ=1)
-  xstft = stft(x, n, noverlap; window=window)
+  xstft = stft(x, nfft, noverlap; window=window)
   mag = abs.(xstft)
   logmag = log.(mag .+ eps(eltype(mag)))
   logmag .-= γ * mean(logmag; dims=2)
-  istft(exp.(logmag) .* exp.(im .* angle.(xstft)), n, noverlap; window=window) 
+  istft(exp.(logmag) .* exp.(im .* angle.(xstft)); nfft=nfft, noverlap=noverlap, window=window) 
 end
