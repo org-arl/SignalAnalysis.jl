@@ -13,12 +13,12 @@ The `SignalAnalysis.jl` works closely with, and complements other package like [
 While this package works with most array-like data types, it uses the [`SignalBase.jl`](https://github.com/haberdashPI/SignalBase.jl) API to represent multichannel 1D signals (time, frequency or spatial domain). While the package adopts a `SampledSignal` data type to carry sampling rate information with the sampled signal, the API design allows sampling rate to be provided as a keyword argument in most cases, enabling the user to pass in any array-like data.
 
 ### Various APIs:
-- [Creating & managing signals](https://org-arl.github.io/SignalAnalysis.jl/dev/signals.html)
-- [Generating signals](https://org-arl.github.io/SignalAnalysis.jl/dev/generate.html)
-- [Basic signal analysis](https://org-arl.github.io/SignalAnalysis.jl/dev/basic.html)
-- [Signal processing](https://org-arl.github.io/SignalAnalysis.jl/dev/dsp.html)
-- [Time-frequency analysis](https://org-arl.github.io/SignalAnalysis.jl/dev/tfa.html)
-- [Array processing](https://org-arl.github.io/SignalAnalysis.jl/dev/array.html)
-- [Random noise generation](https://org-arl.github.io/SignalAnalysis.jl/dev/random.html)
-- [Plot recipes](https://org-arl.github.io/SignalAnalysis.jl/dev/plot.html)
-- [Interactive plotting](https://org-arl.github.io/SignalAnalysis.jl/dev/iplot.html)
+- [Creating & managing signals](https://org-arl.github.io/SignalAnalysis.jl/stable/signals.html)
+- [Generating signals](https://org-arl.github.io/SignalAnalysis.jl/stable/generate.html)
+- [Basic signal analysis](https://org-arl.github.io/SignalAnalysis.jl/stable/basic.html)
+- [Signal processing](https://org-arl.github.io/SignalAnalysis.jl/stable/dsp.html)
+- [Time-frequency analysis](https://org-arl.github.io/SignalAnalysis.jl/stable/tfa.html)
+- [Array processing](https://org-arl.github.io/SignalAnalysis.jl/stable/array.html)
+- [Random noise generation](https://org-arl.github.io/SignalAnalysis.jl/stable/random.html)
+- [Plot recipes](https://org-arl.github.io/SignalAnalysis.jl/stable/plot.html)
+- [Interactive plotting](https://org-arl.github.io/SignalAnalysis.jl/stable/iplot.html)
