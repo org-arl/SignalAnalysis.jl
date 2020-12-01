@@ -447,6 +447,7 @@ julia> x̂ = istft(X; nfft=64, noverlap=0)
   2.6158861993992537
   1.2980813993011973
  -0.010592954871694371
+```
 """
 function istft(X::AbstractMatrix{Complex{T}}; 
                nfft::Int, 
