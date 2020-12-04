@@ -414,7 +414,7 @@ end
 
 """
 $(SIGNATURES)
-Compute the inverse short time Fourier transform (ISTFT) of STFT coefficients `X` which is based
+Compute the inverse short time Fourier transform (ISTFT) of one-sided STFT coefficients `X` which is based
 on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram` 
 for description of the parameters.
 
@@ -434,10 +434,12 @@ julia> x = randn(1024)
   2.6158861993992533
   1.2980813993011973
  -0.010592954871694647
+
 julia> X = stft(x, 64, 0)
 33×31 Array{Complex{Float64},2}:
   ⋮
-julia> x̂ = istft(X; nfft=64, noverlap=0)
+
+julia> x̂ = istft(Real, X; nfft=64, noverlap=0)
 1024-element Array{Float64,1}:
  -0.7903319156212054
  -0.5647890773026012
@@ -449,23 +451,72 @@ julia> x̂ = istft(X; nfft=64, noverlap=0)
  -0.010592954871694371
 ```
 """
-function istft(X::AbstractMatrix{Complex{T}}; 
+function istft(::Type{<:Real}, 
+               X::AbstractMatrix{Complex{T}}; 
                nfft::Int, 
                noverlap::Int, 
-               onesided::Bool=true, 
                window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
+  iX = irfft(X, nfft, 1)
+  _istft(iX, nfft, noverlap, window)
+end
+
+"""
+$(SIGNATURES)
+Compute the inverse short time Fourier transform (ISTFT) of two-sided STFT coefficients `X` which is based
+on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram` 
+for description of the parameters. 
+
+For perfect reconstruction, the parameters `nfft`, `noverlap` and `window` in `stft` and 
+`istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).  
+Implementation based on Zhivomirov 2019 and `istft` in `scipy`. 
+
+# Examples:
+```julia-repl
+julia> x = randn(Complex{Float64}, 1024)
+1024-element Array{Complex{Float64},1}:
+  -0.5540372432417755 - 0.4286434695080883im
+  -0.4759024596520576 - 0.5609424987802376im
+                      ⋮
+ -0.26493959584225923 - 0.28333817822701457im
+  -0.5294529732365809 + 0.7345044619457456im
+
+julia> X = stft(x, 64, 0)
+64×16 Array{Complex{Float64},2}:
+  ⋮
+
+julia> x̂ = istft(Complex, X; nfft=64, noverlap=0)
+1024-element Array{Complex{Float64},1}:
+  -0.5540372432417755 - 0.4286434695080884im
+ -0.47590245965205774 - 0.5609424987802374im
+                      ⋮
+  -0.2649395958422591 - 0.28333817822701474im
+  -0.5294529732365809 + 0.7345044619457455im
+```
+"""
+function istft(::Type{<:Complex}, 
+               X::AbstractMatrix{Complex{T}}; 
+               nfft::Int, 
+               noverlap::Int, 
+               window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
+  iX = ifft(X, 1)
+  _istft(iX, nfft, noverlap, window)
+end
+
+function _istft(iX::AbstractMatrix{T}, 
+                nfft::Int, 
+                noverlap::Int, 
+                window::Union{Function,AbstractVector,Nothing}=nothing) where {T}
   # H. Zhivomirov, TEM Journal, Vol. 8, No. 1, pp. 56-64, 2019. 
   (window === nothing) && (window = rect)
   win, norm2 = Periodograms.compute_window(window, nfft)
 
   nstep = nfft - noverlap
-  nseg = size(X, 2)
+  nseg = size(iX, 2)
   outputlength = nfft + (nseg-1) * nstep
 
-  iX = onesided ? irfft(X, nfft, 1) : ifft(X, 1)
   iX .*= win
-  x = zeros(eltype(iX), outputlength)
-  normw = zeros(T, outputlength)
+  x = zeros(T, outputlength)
+  normw = zeros(eltype(win), outputlength)
   for i = 1:nseg
       x[1+(i-1)*nstep:nfft+(i-1)*nstep] += iX[:,i]
       normw[1+(i-1)*nstep:nfft+(i-1)*nstep] += win .^ 2
@@ -493,5 +544,6 @@ function whiten(x::AbstractVector;
   mag = abs.(xstft)
   logmag = log.(mag .+ eps(eltype(mag)))
   logmag .-= γ * mean(logmag; dims=2)
-  istft(exp.(logmag) .* exp.(im .* angle.(xstft)); nfft=nfft, noverlap=noverlap, window=window) 
+  outputtype = isreal(x) ? Real : Complex
+  istft(outputtype, exp.(logmag) .* exp.(im .* angle.(xstft)); nfft=nfft, noverlap=noverlap, window=window) 
 end
