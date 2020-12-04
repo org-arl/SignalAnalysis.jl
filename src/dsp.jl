@@ -518,11 +518,11 @@ function _istft(iX::AbstractMatrix{T},
   x = zeros(T, outputlength)
   normw = zeros(eltype(win), outputlength)
   for i = 1:nseg
-      x[1+(i-1)*nstep:nfft+(i-1)*nstep] += iX[:,i]
-      normw[1+(i-1)*nstep:nfft+(i-1)*nstep] += win .^ 2
+      x[1+(i-1)*nstep:nfft+(i-1)*nstep] = @view(x[1+(i-1)*nstep:nfft+(i-1)*nstep]) + @view(iX[:,i])
+      normw[1+(i-1)*nstep:nfft+(i-1)*nstep] = @view(normw[1+(i-1)*nstep:nfft+(i-1)*nstep]) + win .^ 2
   end
 
-  (sum(normw[nfft÷2:end-nfft÷2] .> 1e-10) != length(normw[nfft÷2:end-nfft÷2])) && (
+  (sum(@view(normw[nfft÷2:end-nfft÷2]) .> 1e-10) != length(@view(normw[nfft÷2:end-nfft÷2]))) && (
       @warn "NOLA condition failed, STFT may not be invertible")
   x .*= nstep/norm2
 end
