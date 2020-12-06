@@ -66,32 +66,39 @@ julia> plot(y; clim=(0,20))
 """
 function tfd(s, kernel::Wigner; onesided=eltype(s)<:Real, fs=framerate(s))
   N = nframes(s)
+  T = eltype(s)
   nfft = kernel.nfft <= 0 ? 2N : min(kernel.nfft, 2N)
   win = kernel.window == nothing ? nothing : kernel.window isa Function ? kernel.window(nfft) : kernel.window
   x = samples(s)
-  if kernel.method == :CMP2005
+  if kernel.method === :CMP2005
     # Chassande-Mottin & Pai, IEEE Sig. Proc. Letters, 12(7), 2005.
     x̂ = repeat(s; inner=2)
-  elseif kernel.method == :CM1980
+  elseif kernel.method === :CM1980
     # Claasen & Mecklenbräuker, Philips J. Res., 35(4/5), p276–300, 1980.
     x̂ = resample(s, 2)
     length(x̂) < 2N && (x̂ = vcat(x̂, zeros(2N-length(x̂))))
   end
-  X = Array{Float64, 2}(undef, N, nfft)
-  for n ∈ 0:N-1
+  X = zeros(T, nfft, N)
+  @views for n ∈ 0:N-1
     kn = min(2n, 2N-1-2n, nfft÷2-1)
-    xx = x̂[1 .+ 2n .+ (-kn:kn)] .* conj(x̂[1 .+ 2n .- (-kn:kn)])
-    pad = nfft - length(xx)
-    pad > 0 && (xx = vcat(zeros(floor(Int, pad/2)+1), xx, zeros(ceil(Int, pad/2)-1)))
-    onesided && ((eltype(s) <: Real) || (xx = real.(xx)))
-    X[n+1,:] .= xx
+    pad = nfft - length(-kn:kn)
+    if pad > 0
+      xx = X[floor(Int, pad/2)+2 : end-(ceil(Int, pad/2)-1), n+1] # view
+    else
+      xx = X[:, n+1] # view 
+    end
+    xx .= x̂[1 .+ 2n .+ (-kn:kn)] .* conj.(x̂[1 .+ 2n .- (-kn:kn)])
   end
-  kernel.smooth > 0 && (X = filt(ones(kernel.smooth)./kernel.smooth, X))
-  win == nothing || (X = X .* win')
-  w = Array{Float64,2}(undef, onesided ? nfft÷2+1 : nfft, N)
-  P = onesided ? plan_rfft(zeros(Float64, nfft)) : plan_fft(zeros(ComplexF64, nfft))
-  for j ∈ 1:N
-    w[:,j] = real.(P * X[j,:]) / √(2π)
+  if kernel.smooth > 0
+    X = copy(filt(ones(kernel.smooth)./kernel.smooth, copy(X'))') # The copying helps with memory access performance
+  end
+  win === nothing || (X .*= win)
+  w = Array{T,2}(undef, onesided ? nfft÷2+1 : nfft, N)
+  P = onesided ? plan_rfft(zeros(T, nfft)) : plan_fft(zeros(complex(T), nfft))
+  wo = Array{complex(T),1}(undef, onesided ? nfft÷2+1 : nfft)
+  @views for j ∈ 1:N
+    mul!(wo, P, X[:,j])
+    w[:,j] .= real.(wo) ./ √(2π)
   end
   if onesided
     f = FFTW.rfftfreq(nfft, fs)
