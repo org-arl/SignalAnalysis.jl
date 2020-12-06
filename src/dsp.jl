@@ -501,6 +501,12 @@ function istft(::Type{<:Complex},
   iX = ifft(X, 1)
   _istft(iX, nfft, noverlap, window)
 end
+istft(X::AbstractMatrix{Complex{T}}; 
+      nfft::Int, 
+      noverlap::Int, 
+      window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat} = istft(
+        Complex, X; nfft=nfft, noverlap=noverlap, window=window)
+
 
 function _istft(iX::AbstractMatrix{T}, 
                 nfft::Int, 
@@ -518,12 +524,13 @@ function _istft(iX::AbstractMatrix{T},
   x = zeros(T, outputlength)
   normw = zeros(eltype(win), outputlength)
   for i = 1:nseg
-      x[1+(i-1)*nstep:nfft+(i-1)*nstep] = @view(x[1+(i-1)*nstep:nfft+(i-1)*nstep]) + @view(iX[:,i])
-      normw[1+(i-1)*nstep:nfft+(i-1)*nstep] = @view(normw[1+(i-1)*nstep:nfft+(i-1)*nstep]) + win .^ 2
+      @views x[1+(i-1)*nstep:nfft+(i-1)*nstep] .= x[1+(i-1)*nstep:nfft+(i-1)*nstep] .+ iX[:,i]
+      @views normw[1+(i-1)*nstep:nfft+(i-1)*nstep] .= normw[1+(i-1)*nstep:nfft+(i-1)*nstep] .+ win .^ 2
   end
 
-  (sum(@view(normw[nfft÷2:end-nfft÷2]) .> 1e-10) != length(@view(normw[nfft÷2:end-nfft÷2]))) && (
-      @warn "NOLA condition failed, STFT may not be invertible")
+  trimlength = nfft % 2 == 0 ? outputlength - nfft : outputlength - nfft + 1
+  (sum(@view(normw[1+nfft÷2:end-nfft÷2]) .> 1e-10) != trimlength) && (
+    @warn "NOLA condition failed, STFT may not be invertible")
   x .*= nstep/norm2
 end
 
