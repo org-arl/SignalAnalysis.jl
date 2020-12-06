@@ -465,6 +465,7 @@ end
       xstft = stft(x, nfft, noverlap; window=window, onesided=onesided)
       outputtype = isreal(x) ? Real : Complex
       x̂ = istft(outputtype, xstft; nfft=nfft, noverlap=noverlap, window=window)
+      outputtype === Complex && (@test x̂ == istft(xstft; nfft=nfft, noverlap=noverlap, window=window))
       @test rms(x[nfft:length(x̂)-nfft]-x̂[nfft:end-nfft]) / rms(x[nfft:length(x̂)-nfft]) ≈ 0. atol=0.001
     end
   end
