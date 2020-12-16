@@ -175,7 +175,7 @@ julia> collect(partition(x, 5))[1]
  3  13
  4  14
  5  15
- ```
+```
 """
 function Base.Iterators.partition(s::SampledSignal, n::Integer; step::Integer=n, flush::Bool=true)
   n < 1 && throw(ArgumentError("cannot create partitions of length $n"))

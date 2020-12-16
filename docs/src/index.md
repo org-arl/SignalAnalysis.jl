@@ -25,7 +25,6 @@ While this package works with most array-like data types, it uses the [`SignalBa
 
 - [`SignalAnalysis.jl`](https://github.com/org-arl/SignalAnalysis.jl)
 - [`SignalBase.jl`](https://github.com/haberdashPI/SignalBase.jl)
-- [`SampledSignals.jl`](https://github.com/JuliaAudio/SampledSignals.jl)
 - [`DSP.jl`](https://github.com/JuliaDSP/DSP.jl)
 - [`Plots.jl`](https://github.com/JuliaPlots/Plots.jl)
 - [`Unitful.jl`](https://github.com/PainterQubits/Unitful.jl)
