@@ -451,6 +451,38 @@ end
   x2 = mfilter(x, x1)
   @test argmax(abs.(x2)) == 1001
 
+  onesideds = [true, false]
+  nfft = 256
+  windows = [nothing, rect, tukey(nfft, 0.5), hanning, hamming]
+  noverlaps = [0, 0, (15*nfft)÷16, (5*nfft)÷6, (5*nfft)÷6]
+  for onesided in onesideds
+    if onesided === true
+      x = randn(96000)
+    else
+      x = randn(96000) + im .* randn(96000)
+    end    
+    for (window, noverlap) in zip(windows, noverlaps)  
+      xstft = stft(x, nfft, noverlap; window=window, onesided=onesided)
+      outputtype = isreal(x) ? Real : Complex
+      x̂ = istft(outputtype, xstft; nfft=nfft, noverlap=noverlap, window=window)
+      outputtype === Complex && (@test x̂ == istft(xstft; nfft=nfft, noverlap=noverlap, window=window))
+      @test rms(x[nfft:length(x̂)-nfft]-x̂[nfft:end-nfft]) / rms(x[nfft:length(x̂)-nfft]) ≈ 0. atol=0.001
+    end
+  end
+
+  fs = 9600
+  hpf = fir(9, 1000; fs=fs)
+  x = filtfilt(hpf, randn(96000))
+  y = 0.1 .* real(chirp(500, 1000, 1.0, fs))
+  x[9600+1:2*9600] .+= y
+  nfft = 256
+  noverlap = 0
+  x̃ = whiten(x; nfft=nfft, noverlap=noverlap, window=nothing)
+  ỹ = x̃[9600+1:2*9600]
+  @test cor(y, ỹ) > 0.3
+  x̃ = whiten(x; nfft=nfft, noverlap=noverlap, window=nothing, γ=0.)
+  @test rms(x[1:length(x̃)] - x̃) / rms(x[1:length(x̃)]) ≈ 0. atol=0.0001
+
 end
 
 @testset "rand" begin
