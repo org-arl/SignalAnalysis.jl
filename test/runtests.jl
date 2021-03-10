@@ -511,6 +511,12 @@ end
   end
   @test 0 < log10(x1/x2) < 2
 
+  types = [Float16, Float32, Float64]
+  for t ∈ types
+    @test eltype(rand(RedGaussian(1000, convert(t, 1.0)))) == t
+    @test eltype(rand(PinkGaussian(1000, convert(t, 1.0)))) == t
+  end
+
 end
 
 @testset "plots" begin
