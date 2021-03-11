@@ -513,8 +513,8 @@ end
 
   types = [Float16, Float32, Float64]
   for t ∈ types
-    @test eltype(rand(RedGaussian(1000, convert(t, 1.0)))) == t
-    @test eltype(rand(PinkGaussian(1000, convert(t, 1.0)))) == t
+    @test eltype(rand(RedGaussian(1000, one(t)))) == t
+    @test eltype(rand(PinkGaussian(1000, one(t)))) == t
   end
 
 end
