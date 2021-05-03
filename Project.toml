@@ -19,7 +19,7 @@ WAV = "8149f6b0-98f6-5db9-b78f-408fbbb8ef88"
 
 [compat]
 DSP = "0.6"
-Distributions = "0.23, 0.24"
+Distributions = "0.23, 0.24, 0.25"
 DocStringExtensions = "0.8"
 FFTW = "1.2"
 MetaArrays = "0.2"
