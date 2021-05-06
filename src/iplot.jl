@@ -35,6 +35,7 @@ function InteractiveViz.iplot!(s::SampledSignal; kwargs...)
     s1 = real.(s1)
   end
   t = domain(s)
+  maximum(t) <= 1.0 && (t *= 1000.0)
   iplot!(t, s1; kwargs...)
 end
 
