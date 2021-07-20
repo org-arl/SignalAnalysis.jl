@@ -267,9 +267,9 @@ Plots a spectrogram of the data.
 end
 
 """
-    freqresp(filter; kwargs...)
-    freqresp(num; kwargs...)
-    freqresp(num, den; kwargs...)
+    plotfreqresp(filter; kwargs...)
+    plotfreqresp(num; kwargs...)
+    plotfreqresp(num, den; kwargs...)
 
 Plots frequency response of a digital filter.
 
@@ -279,10 +279,10 @@ Plots frequency response of a digital filter.
 - `xscale=:auto`: one of `:auto`, `:identity` or `:log10`
 - other `kwargs` are passed on to `plot`
 """
-@userplot FreqResp
-@recipe function plot(s::FreqResp; fs=1.0, nfreq=256, xscale=:auto)
+@userplot PlotFreqResp
+@recipe function plot(s::PlotFreqResp; fs=1.0, nfreq=256, xscale=:auto)
   if length(s.args) ∉ (1, 2)
-    throw(ArgumentError("freqresp should be provided filter details"))
+    throw(ArgumentError("plotfreqresp should be provided filter details"))
   end
   if s.args[1] isa FilterCoefficients
     filt = s.args[1]
@@ -297,7 +297,7 @@ Plots frequency response of a digital filter.
   end
   fs = inHz(fs)
   f = collect(range(0, stop=fs/2, length=nfreq))
-  z = Filters.freqz(filt, f, fs)
+  z = Filters.freqresp(filt, 2π * f/fs)
   funit = "Hz"
   if xscale == :auto
     xscale := :identity
