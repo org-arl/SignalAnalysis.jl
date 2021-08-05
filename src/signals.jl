@@ -12,6 +12,8 @@ struct SamplingInfo
   fs::Float32
 end
 
+Base.keys(x::SamplingInfo) = fieldnames(typeof(x))
+
 const SampledSignal = MetaArray{<:Any,SamplingInfo,T} where T
 const SampledSignalVector = MetaArray{<:AbstractVector,SamplingInfo,T} where T
 const SampledSignalMatrix = MetaArray{<:AbstractMatrix,SamplingInfo,T} where T
