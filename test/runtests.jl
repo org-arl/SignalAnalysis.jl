@@ -460,8 +460,8 @@ end
       x = randn(96000)
     else
       x = randn(96000) + im .* randn(96000)
-    end    
-    for (window, noverlap) in zip(windows, noverlaps)  
+    end
+    for (window, noverlap) in zip(windows, noverlaps)
       xstft = stft(x, nfft, noverlap; window=window, onesided=onesided)
       outputtype = isreal(x) ? Real : Complex
       x̂ = istft(outputtype, xstft; nfft=nfft, noverlap=noverlap, window=window)
@@ -558,11 +558,11 @@ end
   p = specgram(samples(x); fs=framerate(x))
   @test p isa Plots.Plot
   f = fir(127, 15kHz; fs=44.1kHz)
-  p = freqresp(f)
+  p = plotfreqresp(f)
   @test p isa Plots.Plot
-  p = freqresp(f; xscale=:log10)
+  p = plotfreqresp(f; xscale=:log10)
   @test p isa Plots.Plot
-  p = freqresp(f, [1])
+  p = plotfreqresp(f, [1])
   @test p isa Plots.Plot
 
   # interactive plots are hard to test
