@@ -1,6 +1,6 @@
 using Documenter
 using Plots
-using InteractiveViz
+#using InteractiveViz
 
 push!(LOAD_PATH,"../src/")
 using SignalAnalysis
@@ -20,7 +20,7 @@ makedocs(
       "array.md",
       "rand.md",
       "plot.md",
-      "iplot.md"
+      #"iplot.md"
     ]
   ]
 )
