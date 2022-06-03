@@ -128,7 +128,7 @@ function beamform(s, sd; fs=framerate(s))
   bfo = zeros(eltype(s), (nframes(s), ndir))
   for k ∈ 1:ndir
     for j ∈ 1:nchannels(s)
-      bfo[:,k] .+= padded(s[:,j], 0; delay=round(Int, -sd[j,k]*fs))
+      @views bfo[:,k] .+= padded(s[:,j], 0; delay=round(Int, -sd[j,k]*fs))
     end
   end
   signal(bfo, fs)
