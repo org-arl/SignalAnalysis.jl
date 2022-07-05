@@ -400,7 +400,7 @@ $(SIGNATURES)
 Same as [`resample`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.resample),
 but correctly handles sampling rate conversion.
 """
-sresample(x, rate, args...) = signal(resample(samples(x), rate, args...), rate * framerate(x))
+sresample(x, rate, args...; kwargs...) = signal(resample(samples(x), rate, args...; kwargs...), rate * framerate(x))
 
 """
 $(SIGNATURES)
