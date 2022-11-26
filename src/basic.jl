@@ -59,7 +59,7 @@ end
 $(SIGNATURES)
 Computes RMS bandwidth of a signal.
 """
-function rmsbandwidth(s::AbstractMatrix; fs=framerate(s), nfft=1024, window=nothing) where T
+function rmsbandwidth(s::AbstractMatrix; fs=framerate(s), nfft=1024, window=nothing)
   fs = inHz(fs)
   rv = mapslices(samples(s); dims=1) do s1
     p = welch_pgram(s1, min(nfft, length(s1)); fs=fs, window=window)
@@ -70,7 +70,7 @@ function rmsbandwidth(s::AbstractMatrix; fs=framerate(s), nfft=1024, window=noth
   dropdims(rv, dims=1)
 end
 
-function rmsbandwidth(s::AbstractVector; fs=framerate(s), nfft=1024, window=nothing) where T
+function rmsbandwidth(s::AbstractVector; fs=framerate(s), nfft=1024, window=nothing)
   p = welch_pgram(s, min(nfft, length(s)); fs=inHz(fs), window=window)
   f = freq(p)
   f0 = wmean(f, power(p))
