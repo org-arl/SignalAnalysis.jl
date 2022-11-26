@@ -17,6 +17,7 @@ Plots timeseries from a sample buffer.
   ticks --> :native
   legend --> ndims(s) > 1 && size(s, 2) > 1
   s1 = samples(s)
+  eltype(s1) <: Complex && (s1 = abs.(s1))
   t = domain(s) .+ t0
   if maximum(t) <= 1.0
     t *= 1000.0
