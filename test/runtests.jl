@@ -667,6 +667,9 @@ end
 
 @testset "doatoa" begin
 
+  x = randn(10000)
+  @test SignalAnalysis.envelope(x) == abs.(hilbert(x))
+
   numtest = 10
   numsensors = 4
   numsamples = 10000
@@ -706,6 +709,17 @@ end
     @test isapprox(coarse_doatoas[1][1], θ1[1]; atol = deg2rad(0.5))
     @test isapprox(coarse_doatoas[1][2], θ1[2]; atol = deg2rad(0.5))
     @test isapprox(coarse_doatoas[1][3], Γ₀; atol = 0.5)
+
+    doatoa = SignalAnalysis.refineDoAToA(coarse_doatoas[1], snaps, rxpos, fs, c)
+    @test isapprox(doatoa[1], θ1[1]; atol = deg2rad(0.5))
+    @test isapprox(doatoa[2], θ1[2]; atol = deg2rad(0.5))
+    @test isapprox(doatoa[3], Γ₀; atol = 0.5)
+
+    doatoas = SignalAnalysis.refineDoAToAs(coarse_doatoas, snaps, rxpos, fs, c)
+    @test length(doatoas) == 1
+    @test isapprox(doatoas[1][1], θ1[1]; atol = deg2rad(0.5))
+    @test isapprox(doatoas[1][2], θ1[2]; atol = deg2rad(0.5))
+    @test isapprox(doatoas[1][3], Γ₀; atol = 0.5)
 
     doatoas = snapdoatoa(data, fs, rxpos, θ, c; p = p, tdist = tdist, minvotes = minvotes)
     @test length(doatoas) == 1
