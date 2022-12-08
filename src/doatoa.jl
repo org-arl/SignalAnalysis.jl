@@ -11,15 +11,17 @@ envelope(x) = abs.(hilbert(x))
 
 """
 $(SIGNATURES)
-Detect snaps from an array of acoustic recordngs `data` with sampling rate `fs`. 
-Threshold `p`, minimum time distance (sec) between two snaps `tdist`, minimum time length (sec)
-of a snap `twidth` are defined for the peak detection on each sensor recording.
+Detect snaps from an array of acoustic recordings `data` with sampling rate `fs`. 
+Percentile `p` as a threshold, minimum time distance between two snaps `tdist` (in seconds), 
+minimum time length of a snap `twidth` (in seconds) are defined for the peak detection of each 
+sensor recording.
 """
 function snapdetect(data::AbstractMatrix{T}, 
                     fs::Real; 
                     p::Real = 99.5, 
                     tdist::Real = 2e-3, 
                     twidth::Union{Nothing,Real} = nothing) where {T}
+  # M. Chitre, S. Kuselan, and V. Pallayil, The Journal of the Acoustical Society of America 838–847, 2012. 
   snaps = Vector{Int}[]
   for i ∈ axes(data, 2)
     @views x = data[:,i]
@@ -55,7 +57,7 @@ end
 
 """
 $(SIGNATURES)
-Estimate coarse DoA-ToA of impulses using Hough transform.
+Estimate coarse DoA-ToA based on the detected snaps using Hough transform.
 """
 function coarseDoAToAs(snaps, rxpos, θ, fs, c; minvotes::Union{Nothing,Int} = nothing)
   votes, Γs = houghtransform(snaps, rxpos, θ, fs, c)
@@ -82,9 +84,9 @@ function coarseDoAToAs(snaps, rxpos, θ, fs, c; minvotes::Union{Nothing,Int} = n
 end
 
 """
-Get ToAs of snaps of each sensor, which are associated with the DoA-Toa `doatoa`. 
-If the smallest discrepancy between the detected ToAs and steering delay is
-larger than 5 samples, ToA = -1 and it will be omitted for DoA-ToA refinement.
+Return snap ToA of each sensor, which is associated with the coarse DoA-Toa `doatoa`. 
+If the smallest discrepancy between the coarse ToAs and steering delay is
+larger than 5 samples, ToA = -1 which will be omitted for DoA-ToA refinement.
 """
 function get_associatedsnap(doatoa::Tuple{T,T,Int}, snaps, rxpos, fs, c) where {T}
   numsensors = size(rxpos, 2)
@@ -147,14 +149,14 @@ end
 """
 $(SIGNATURES)
 Detect and estimate direction of arrivals and time of arrivals (DoA-ToA) of snaps from an array of acoustic 
-recordngs `data` with sampling rate `fs`. The DoA-ToAs output is an Vector of Tuple (azimuth, elevation, ToA).
-Sensor positions `rxpos` and coarse direction of arrivals `θ` are required for DoA-Toa estimation. 
+recordngs `data` with sampling rate `fs`. The DoA-ToAs output is a Vector of Tuple (azimuth, elevation, ToA).
+Sensor positions `rxpos` and all the possible coarse direction of arrivals `θ` are required for DoA-Toa estimation. 
 By default, the sound speed `c` is 1540.
 
-Threshold in percentile `p`, minimum time distance (sec) between two snaps `tdist`, minimum time length (sec)
-of a snap `twidth` are defined for the peak detection on each sensor recording.
+Percentile `p` as a threshold, minimum time distance (sec) between two snaps `tdist`, minimum time length (sec)
+of a snap `twidth` are defined for the peak detection of each sensor recording.
 
-On the hough space, only DoAToAs with number of votes larger than or equal to `minvotes` are selected for the 
+On the hough space, only DoA-ToAs with number of votes larger than or equal to `minvotes` are selected for the 
 further processing.
 
 # Example
