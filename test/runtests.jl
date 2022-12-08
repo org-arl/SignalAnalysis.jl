@@ -664,3 +664,54 @@ end
   @test freq(y)[argmax(power(y)[:,220])] ≈ 7500.0 atol=100.0
 
 end
+
+@testset "doatoa" begin
+
+  numtest = 10
+  numsensors = 4
+  numsamples = 10000
+  fs = 200000
+  rxpos = [0.0 1.0 0.0 0.0; 
+           0.0 0.0 1.0 0.0;
+           0.0 0.0 0.0 1.0]
+  θ = deg2rad.(reduce(vcat, hcat.(LinRange(-180, 180, 181)', LinRange(-60, 0, 31)))) 
+  numbeams = size(θ, 1)
+  c = 1540.0
+  p = 99.999
+  tdist = 2e-3
+  minvotes = 4
+
+  for _ ∈ 1:numtest
+    data = randn(numsamples, numsensors)
+    θ_index = rand(1:numbeams)
+    θ1 = θ[θ_index,:]'
+    sd = steering(rxpos, c, θ1) |> vec
+    samplesd = round.(Int, sd * fs)
+
+    Γ₀ = rand(1000:numsamples-1000)
+    Γ = Γ₀ .+ samplesd
+    [data[Γ[i],i] += 100.0 for i ∈ 1:numsensors]
+
+    snaps = snapdetect(data, fs; p = p, tdist = tdist)
+    @test length.(snaps) == [1,1,1,1]
+    @test first.(snaps) == Γ
+
+    votes, Γs = SignalAnalysis.houghtransform(snaps, rxpos, θ, fs, c)
+    numvotes, indices = findmax(votes)
+    @test numvotes == numsensors
+    @test indices == CartesianIndex(θ_index, Γ₀ + 1)
+
+    coarse_doatoas = SignalAnalysis.coarseDoAToAs(snaps, rxpos, θ, fs, c; minvotes = minvotes) 
+    @test length(coarse_doatoas) == 1
+    @test isapprox(coarse_doatoas[1][1], θ1[1]; atol = deg2rad(0.5))
+    @test isapprox(coarse_doatoas[1][2], θ1[2]; atol = deg2rad(0.5))
+    @test isapprox(coarse_doatoas[1][3], Γ₀; atol = 0.5)
+
+    doatoas = snapdoatoa(data, fs, rxpos, θ, c; p = p, tdist = tdist, minvotes = minvotes)
+    @test length(doatoas) == 1
+    @test isapprox(doatoas[1][1], θ1[1]; atol = deg2rad(0.5))
+    @test isapprox(doatoas[1][2], θ1[2]; atol = deg2rad(0.5))
+    @test isapprox(doatoas[1][3], Γ₀; atol = 0.5)
+  end
+
+end
