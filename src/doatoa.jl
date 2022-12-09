@@ -51,7 +51,11 @@ function houghtransform(snaps::AbstractVector{Vector{Int}},
   samplesd = round.(Int, steering(rxpos, c, θ) .* fs)
   maxtimesamples = maximum(maximum.(snaps))
   vote_numtime = maxtimesamples + maximum(samplesd)
-  votes = zeros(Int16, numbeams, vote_numtime) # use Int16 to reduce the memory
+  votes = if numsensors < 127 # use Int8 or Int16 to reduce the memory
+    zeros(Int8, numbeams, vote_numtime)
+  else
+    zeros(Int16, numbeams, vote_numtime)
+  end
   Γs = (0:vote_numtime-1)
   for i ∈ 1:numbeams
       for j ∈ 1:numsensors
