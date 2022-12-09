@@ -145,8 +145,8 @@ function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}},
   m = length(doatoa)
   is1d = m == 2 ? true : false
   if is1d
-    lower = [doatoa[1] - anglebnd, Float64(doatoa[2] - 2)]
-    upper = [doatoa[1] + anglebnd, Float64(doatoa[2] + 2)]
+    lower = [doatoa[1] - anglebnd, T(doatoa[2] - 2)]
+    upper = [doatoa[1] + anglebnd, T(doatoa[2] + 2)]
     mse = mse1d
   else
     lower = [doatoa[1] - anglebnd, doatoa[2] - anglebnd, T(doatoa[3] - samplebnd)]
