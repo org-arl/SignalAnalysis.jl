@@ -16,11 +16,11 @@ Percentile `p` as a threshold, minimum time distance between two snaps `tdist` (
 minimum time length of a snap `twidth` (in seconds) are defined for the peak detection of each 
 sensor recording.
 """
-function snapdetect(data::AbstractMatrix{T}, 
+function snapdetect(data::AbstractMatrix, 
                     fs::Real; 
                     p::Real = 99.5, 
                     tdist::Real = 2e-3, 
-                    twidth::Union{Nothing,Real} = nothing) where {T}
+                    twidth::Union{Nothing,Real} = nothing)
   # M. Chitre, S. Kuselan, and V. Pallayil, The Journal of the Acoustical Society of America 838–847, 2012. 
   snaps = Vector{Int}[]
   for i ∈ axes(data, 2)
@@ -36,7 +36,15 @@ function snapdetect(data::AbstractMatrix{T},
 end
 snapdetect(data::SignalAnalysis.SampledSignal; kwargs...) = snapdetect(samples(data), framerate(data); kwargs...)
 
-function houghtransform(snaps, rxpos, θ::AbstractArray, fs::Real, c::Real)
+"""
+$(SIGNATURES)
+Return DoA-ToA hough space of the detected snaps.
+"""
+function houghtransform(snaps::AbstractVector{Vector{Int}}, 
+                        rxpos::AbstractArray, 
+                        θ::AbstractArray, 
+                        fs::Real, 
+                        c::Real)
   numsensors = size(rxpos, 2)
   numbeams = size(θ, 1)
   samplesd = round.(Int, steering(rxpos, c, θ) .* fs)
@@ -59,7 +67,12 @@ end
 $(SIGNATURES)
 Estimate coarse DoA-ToA based on the detected snaps using Hough transform.
 """
-function coarse_doatoas(snaps, rxpos, θ::AbstractArray{T}, fs::Real, c::Real; minvotes::Union{Nothing,Int} = nothing) where {T}
+function coarse_doatoas(snaps::AbstractVector{Vector{Int}}, 
+                        rxpos::AbstractArray, 
+                        θ::AbstractArray{T}, 
+                        fs::Real, 
+                        c::Real; 
+                        minvotes::Union{Nothing,Int} = nothing) where {T}
   numsensors = size(rxpos, 2)
   isnothing(minvotes) && (minvotes = numsensors * 2 ÷ 3)
   votes, Γs = houghtransform(snaps, rxpos, θ, fs, c)  # hough space
@@ -78,11 +91,16 @@ function coarse_doatoas(snaps, rxpos, θ::AbstractArray{T}, fs::Real, c::Real; m
 end
 
 """
+$(SIGNATURES)
 Return snap ToA of each sensor, which is associated with the coarse DoA-Toa `doatoa`. 
 If the smallest discrepancy between the coarse ToAs and steering delay is
 larger than 5 samples, ToA = -1 which will be omitted for DoA-ToA refinement.
 """
-function gather_snap(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, snaps, rxpos, fs::Real, c::Real) where {T}
+function gather_snap(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, 
+                     snaps::AbstractVector{Vector{Int}}, 
+                     rxpos::AbstractArray, 
+                     fs::Real, 
+                     c::Real) where {T}
   numsensors = size(rxpos, 2)
   m = length(doatoa)
   θ′, Γ′ = [doatoa[1:m-1]...], last(doatoa)
@@ -102,9 +120,14 @@ function gather_snap(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, snaps, rxpos, f
 end
 
 """
+$(SIGNATURES)
 Refine DoA-ToA of the coarse estimate `doatoa`.
 """
-function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, snaps, rxpos, fs::Real, c::Real) where {T}
+function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, 
+                       snaps::AbstractVector{Vector{Int}}, 
+                       rxpos::AbstractArray, 
+                       fs::Real, 
+                       c::Real) where {T}
   anglebnd = deg2rad(T(2))
   samplebnd = T(5)
   associated_snaps = gather_snap(doatoa, snaps, rxpos, fs, c)
@@ -139,6 +162,7 @@ function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, snaps, rxpos,
 end
 
 """
+$(SIGNATURES)
 Refine DoA-ToAs of the coarse estimates `doatoas`.
 """
 function refine_doatoas(doatoas::Union{Vector{Tuple{T,Int}},Vector{Tuple{T,T,Int}}}, 
@@ -229,9 +253,9 @@ julia> doatoas = snapdoatoa(data, fs, rxpos, θ, c; p = p, tdist = tdist, minvot
  (0.00336680173802057, 0.0033667826560101035, 999.7500000000016) 
 ```
 """
-function snapdoatoa(data, 
-                    fs, 
-                    rxpos, 
+function snapdoatoa(data::AbstractMatrix, 
+                    fs::Real, 
+                    rxpos::AbstractArray, 
                     θ::AbstractArray{T}, 
                     c::Real = 1540.0; 
                     p::Real = 99.5, 
@@ -247,4 +271,4 @@ function snapdoatoa(data,
   end
   refine_doatoas(doatoas, snaps, rxpos, fs, c)
 end
-snapdoatoa(data::SignalAnalysis.SampledSignal, args...; kwargs...) = detect_doatoa(samples(data), framerate(data), args...; kwargs...)
+snapdoatoa(data::SignalAnalysis.SampledSignal, args...; kwargs...) = snapdoatoa(samples(data), framerate(data), args...; kwargs...)
