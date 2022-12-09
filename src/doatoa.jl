@@ -34,6 +34,7 @@ function snapdetect(data::AbstractMatrix,
   end
   snaps
 end
+
 snapdetect(data::SignalAnalysis.SampledSignal; kwargs...) = snapdetect(samples(data), framerate(data); kwargs...)
 
 """
@@ -271,4 +272,5 @@ function snapdoatoa(data::AbstractMatrix,
   end
   refine_doatoas(doatoas, snaps, rxpos, fs, c)
 end
+
 snapdoatoa(data::SignalAnalysis.SampledSignal, args...; kwargs...) = snapdoatoa(samples(data), framerate(data), args...; kwargs...)
