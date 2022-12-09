@@ -677,55 +677,59 @@ end
   rxpos = [0.0 1.0 0.0 0.0; 
            0.0 0.0 1.0 0.0;
            0.0 0.0 0.0 1.0]
-  θ = deg2rad.(reduce(vcat, hcat.(LinRange(-180, 180, 181)', LinRange(-60, 0, 31)))) 
-  numbeams = size(θ, 1)
+  θ1d = LinRange(-180, 180, 181)
+  θ2d = deg2rad.(reduce(vcat, hcat.(LinRange(-180, 180, 181)', LinRange(-60, 0, 31)))) 
   c = 1540.0
   p = 99.999
   tdist = 2e-3
   minvotes = 4
 
-  for _ ∈ 1:numtest
-    data = randn(numsamples, numsensors)
-    θ_index = rand(1:numbeams)
-    θ1 = θ[θ_index,:]'
-    sd = steering(rxpos, c, θ1) |> vec
-    samplesd = round.(Int, sd * fs)
+  for θ ∈ [θ1d, θ2d]
+    numbeams = size(θ, 1)
+    is1d = size(θ, 2) == 1 ? true : false
+    for _ ∈ 1:numtest
+      data = randn(numsamples, numsensors)
+      θ_index = rand(1:numbeams)
+      θ1 = is1d ? θ[θ_index:θ_index] : θ[θ_index,:]'
+      sd = steering(rxpos, c, θ1) |> vec
+      samplesd = round.(Int, sd * fs)
 
-    Γ₀ = rand(1000:numsamples-1000)
-    Γ = Γ₀ .+ samplesd
-    [data[Γ[i],i] += 100.0 for i ∈ 1:numsensors]
+      Γ₀ = rand(1000:numsamples-1000)
+      Γ = Γ₀ .+ samplesd
+      [data[Γ[i],i] += 100.0 for i ∈ 1:numsensors]
 
-    snaps = snapdetect(data, fs; p = p, tdist = tdist)
-    @test length.(snaps) == [1,1,1,1]
-    @test first.(snaps) == Γ
+      snaps = snapdetect(data, fs; p = p, tdist = tdist)
+      @test length.(snaps) == [1,1,1,1]
+      @test first.(snaps) == Γ
 
-    votes, Γs = SignalAnalysis.houghtransform(snaps, rxpos, θ, fs, c)
-    numvotes, indices = findmax(votes)
-    @test numvotes == numsensors
-    @test indices == CartesianIndex(θ_index, Γ₀ + 1)
+      votes, Γs = SignalAnalysis.houghtransform(snaps, rxpos, θ, fs, c)
+      numvotes, indices = findmax(votes)
+      @test numvotes == numsensors
+      @test indices == CartesianIndex(θ_index, Γ₀ + 1)
 
-    coarse_doatoas = SignalAnalysis.coarseDoAToAs(snaps, rxpos, θ, fs, c; minvotes = minvotes) 
-    @test length(coarse_doatoas) == 1
-    @test isapprox(coarse_doatoas[1][1], θ1[1]; atol = deg2rad(0.5))
-    @test isapprox(coarse_doatoas[1][2], θ1[2]; atol = deg2rad(0.5))
-    @test isapprox(coarse_doatoas[1][3], Γ₀; atol = 0.5)
+      coarse_doatoas = SignalAnalysis.coarse_doatoas(snaps, rxpos, θ, fs, c; minvotes = minvotes) 
+      @test length(coarse_doatoas) == 1
+      @test isapprox(first(coarse_doatoas[1]), first(θ1); atol = deg2rad(0.5))
+      !is1d && (@test isapprox(coarse_doatoas[1][2], θ1[2]; atol = deg2rad(0.5)))
+      @test isapprox(last(coarse_doatoas[1]), Γ₀; atol = 0.5)
 
-    doatoa = SignalAnalysis.refineDoAToA(coarse_doatoas[1], snaps, rxpos, fs, c)
-    @test isapprox(doatoa[1], θ1[1]; atol = deg2rad(0.5))
-    @test isapprox(doatoa[2], θ1[2]; atol = deg2rad(0.5))
-    @test isapprox(doatoa[3], Γ₀; atol = 0.5)
+      doatoa = SignalAnalysis.refine_doatoa(coarse_doatoas[1], snaps, rxpos, fs, c)
+      @test isapprox(first(doatoa), first(θ1); atol = deg2rad(0.5))
+      !is1d && (@test isapprox(doatoa[2], θ1[2]; atol = deg2rad(0.5)))
+      @test isapprox(last(doatoa), Γ₀; atol = 0.5)
 
-    doatoas = SignalAnalysis.refineDoAToAs(coarse_doatoas, snaps, rxpos, fs, c)
-    @test length(doatoas) == 1
-    @test isapprox(doatoas[1][1], θ1[1]; atol = deg2rad(0.5))
-    @test isapprox(doatoas[1][2], θ1[2]; atol = deg2rad(0.5))
-    @test isapprox(doatoas[1][3], Γ₀; atol = 0.5)
+      doatoas = SignalAnalysis.refine_doatoas(coarse_doatoas, snaps, rxpos, fs, c)
+      @test length(doatoas) == 1
+      @test isapprox(first(doatoas[1]), first(θ1); atol = deg2rad(0.5))
+      !is1d && (@test isapprox(doatoas[1][2], θ1[2]; atol = deg2rad(0.5)))
+      @test isapprox(last(doatoas[1]), Γ₀; atol = 0.5)
 
-    doatoas = snapdoatoa(data, fs, rxpos, θ, c; p = p, tdist = tdist, minvotes = minvotes)
-    @test length(doatoas) == 1
-    @test isapprox(doatoas[1][1], θ1[1]; atol = deg2rad(0.5))
-    @test isapprox(doatoas[1][2], θ1[2]; atol = deg2rad(0.5))
-    @test isapprox(doatoas[1][3], Γ₀; atol = 0.5)
+      doatoas = snapdoatoa(data, fs, rxpos, θ, c; p = p, tdist = tdist, minvotes = minvotes)
+      @test length(doatoas) == 1
+      @test isapprox(first(doatoas[1]), first(θ1); atol = deg2rad(0.5))
+      !is1d && (@test isapprox(doatoas[1][2], θ1[2]; atol = deg2rad(0.5)))
+      @test isapprox(last(doatoas[1]), Γ₀; atol = 0.5)
+    end
   end
 
 end
