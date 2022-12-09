@@ -1,6 +1,7 @@
 using FindPeaks1D: findpeaks1d
 using ImageFiltering: findlocalmaxima
 using Optim
+using SparseArrays
 
 export snapdetect, snapdoatoa
 
@@ -51,7 +52,7 @@ function houghtransform(snaps::AbstractVector{Vector{Int}},
   samplesd = round.(Int, steering(rxpos, c, θ) .* fs)
   maxtimesamples = maximum(maximum.(snaps))
   vote_numtime = maxtimesamples + maximum(samplesd)
-  votes = zeros(Int16, numbeams, vote_numtime) # use Int16 to reduce the memory
+  votes = spzeros(Int16, numbeams, vote_numtime) # use SparseMatrixCSC{Int16, Int64} to reduce the memory
   Γs = (0:vote_numtime-1)
   for i ∈ 1:numbeams
       for j ∈ 1:numsensors
