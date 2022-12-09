@@ -11,7 +11,7 @@ envelope(x) = abs.(hilbert(x))
 
 """
 $(SIGNATURES)
-Detect snaps from an array of acoustic recordings `data` with sampling rate `fs`. 
+Detect time of arrivals (ToAs) of snaps at each sensor. The column vector of `data` is sensor data with sampling rate `fs`. 
 Percentile `p` as a threshold, minimum time distance between two snaps `tdist` (in seconds), 
 minimum time length of a snap `twidth` (in seconds) are defined for the peak detection of each 
 sensor recording.
@@ -36,7 +36,7 @@ function snapdetect(data::AbstractMatrix{T},
 end
 snapdetect(data::SignalAnalysis.SampledSignal; kwargs...) = snapdetect(samples(data), framerate(data); kwargs...)
 
-function houghtransform(snaps, rxpos, θ, fs, c)
+function houghtransform(snaps, rxpos, θ::AbstractArray, fs::Real, c::Real)
   numsensors = size(rxpos, 2)
   numbeams = size(θ, 1)
   samplesd = round.(Int, steering(rxpos, c, θ) .* fs)
@@ -59,25 +59,24 @@ end
 $(SIGNATURES)
 Estimate coarse DoA-ToA based on the detected snaps using Hough transform.
 """
-function coarseDoAToAs(snaps, rxpos, θ, fs, c; minvotes::Union{Nothing,Int} = nothing)
-  votes, Γs = houghtransform(snaps, rxpos, θ, fs, c)
+function coarse_doatoas(snaps, rxpos, θ::AbstractArray{T}, fs::Real, c::Real; minvotes::Union{Nothing,Int} = nothing) where {T}
   numsensors = size(rxpos, 2)
   isnothing(minvotes) && (minvotes = numsensors * 2 ÷ 3)
-
+  votes, Γs = houghtransform(snaps, rxpos, θ, fs, c)  # hough space
   pkindices = findlocalmaxima(votes)
   doatoas = if size(θ, 2) == 1
-    Tuple{Float64,Int}[]
+    Tuple{T,Int}[]
   else
-    Tuple{Float64,Float64,Int}[]
+    Tuple{T,T,Int}[]
   end
   for pkindex ∈ pkindices
     if votes[pkindex] ≥ minvotes
-      θ1 = if size(θ, 2) == 1
-        (θ[pkindex.I[1]], Γs[pkindex.I[2]])
-      else
-        (θ[pkindex.I[1],:]..., Γs[pkindex.I[2]])
-      end
-      push!(doatoas, θ1)
+      push!(doatoas, (θ[pkindex.I[1],:]..., Γs[pkindex.I[2]]))
+      # if size(θ, 2) == 1
+      #   push!(doatoas, (θ[pkindex.I[1]], Γs[pkindex.I[2]]))
+      # else
+      #   push!(doatoas, (θ[pkindex.I[1],:]..., Γs[pkindex.I[2]]))
+      # end
     end
   end
   doatoas
@@ -88,11 +87,12 @@ Return snap ToA of each sensor, which is associated with the coarse DoA-Toa `doa
 If the smallest discrepancy between the coarse ToAs and steering delay is
 larger than 5 samples, ToA = -1 which will be omitted for DoA-ToA refinement.
 """
-function get_associatedsnap(doatoa::Tuple{T,T,Int}, snaps, rxpos, fs, c) where {T}
+function get_associatedsnap(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, snaps, rxpos, fs::Real, c::Real) where {T}
   numsensors = size(rxpos, 2)
-  numdoatoa = length(doatoa)
-  θ′, Γ′ = doatoa[1:numdoatoa-1], doatoa[numdoatoa]
-  samplesd = round.(Int, steering(rxpos, c, [θ′...]') .* fs)
+  m = length(doatoa)
+  θ′, Γ′ = [doatoa[1:m-1]...], doatoa[m]
+  m == 3 && (θ′ = transpose(θ′))
+  samplesd = round.(Int, steering(rxpos, c, θ′) .* fs)
   associated_snaps = Vector{Int}()
   for i ∈ 1:numsensors
     @views snap = snaps[i]
@@ -109,26 +109,35 @@ end
 """
 Refine DoA-ToA of the coarse estimate `doatoa`.
 """
-function refineDoAToA(doatoa::Tuple{T,T,Int}, snaps, rxpos, fs, c) where {T}
+function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, snaps, rxpos, fs::Real, c::Real) where {T}
   anglebnd = deg2rad(T(2))
   samplebnd = T(5)
-  
   associated_snaps = get_associatedsnap(doatoa, snaps, rxpos, fs, c)
   b = associated_snaps .> 0
-  function mse(ζ)
-    numζ = length(ζ)
-    mean(abs2, associated_snaps[b] .- (ζ[numζ] .+ steering(rxpos, c, ζ[1:numζ-1]')[b,1] .* fs))
+  # loss function
+  function mse1d(ζ)
+    mean(abs2, associated_snaps[b] .- (last(ζ) .+ steering(rxpos, c, ζ[1:1])[b,1] .* fs))
   end
-  if length(doatoa) == 2
+  function mse2d(ζ)
+    mean(abs2, associated_snaps[b] .- (last(ζ) .+ steering(rxpos, c, transpose(ζ[1:2]))[b,1] .* fs))
+  end
+  # lower and upper bounds
+  m = length(doatoa)
+  is1d = m == 2 ? true : false
+  if is1d
     lower = [doatoa[1] - anglebnd, Float64(doatoa[2] - 2)]
     upper = [doatoa[1] + anglebnd, Float64(doatoa[2] + 2)]
+    mse = mse1d
   else
     lower = [doatoa[1] - anglebnd, doatoa[2] - anglebnd, T(doatoa[3] - samplebnd)]
     upper = [doatoa[1] + anglebnd, doatoa[2] + anglebnd, T(doatoa[3] + samplebnd)]
+    mse = mse2d
   end
-  result = optimize(mse, lower, upper, [T(doatoa1) for doatoa1 ∈ doatoa], Fminbox(LBFGS()), Optim.Options(g_tol = 1e-9))
-  if (result.minimum ≤ 1) # mse is smaller or equal to one sample.  
-    return Tuple(result.minimizer)
+  # refine DoA-ToA
+  doatoa1 = [T(doatoa1) for doatoa1 ∈ doatoa] # vector of 3 elements
+  result = optimize(mse, lower, upper, doatoa1, Fminbox(LBFGS()), Optim.Options(g_tol = 1e-9))
+  if (Optim.minimum(result) < 1) # mse is smaller than one sample.  
+    return NTuple{m,T}(Optim.minimizer(result))
   else
     return nothing
   end
@@ -137,10 +146,15 @@ end
 """
 Refine DoA-ToAs of the coarse estimates `doatoas`.
 """
-function refineDoAToAs(doatoas::Vector{Tuple{T,T,Int}}, snaps, rxpos, fs, c) where {T}
-  refinedoatoas = NTuple{3,T}[]
+function refine_doatoas(doatoas::Union{Vector{Tuple{T,Int}},Vector{Tuple{T,T,Int}}}, 
+                        snaps::AbstractVector{Vector{Int}}, 
+                        rxpos::AbstractArray, 
+                        fs::Real, 
+                        c::Real) where {T}
+  m = first(doatoas) |> length
+  refinedoatoas = NTuple{m,T}[]
   for doatoa ∈ doatoas
-    refinedoatoa = refineDoAToA(doatoa, snaps, rxpos, fs, c)
+    refinedoatoa = refine_doatoa(doatoa, snaps, rxpos, fs, c)
     !isnothing(refinedoatoa) && push!(refinedoatoas, refinedoatoa)
   end
   refinedoatoas
@@ -148,7 +162,7 @@ end
 
 """
 $(SIGNATURES)
-Detect and estimate direction of arrivals and time of arrivals (DoA-ToA) of snaps from an array of acoustic 
+Detect and estimate direction of arrivals and time of arrivals (DoAs-ToAs) of snaps from an array of acoustic 
 recordngs `data` with sampling rate `fs`. The DoA-ToAs output is a Vector of Tuple (azimuth, elevation, ToA).
 Sensor positions `rxpos` and all the possible coarse direction of arrivals `θ` are required for DoA-Toa estimation. 
 By default, the sound speed `c` is 1540.
@@ -231,7 +245,7 @@ function snapdoatoa(data,
                     minvotes::Union{Nothing,Int} = nothing)
   # M. Chitre, S. Kuselan, and V. Pallayil, The Journal of the Acoustical Society of America 838–847, 2012. 
   snaps = snapdetect(data, fs; p = p, tdist = tdist, twidth = twidth)
-  doatoas = coarseDoAToAs(snaps, rxpos, θ, fs, c; minvotes=minvotes)
-  refineDoAToAs(doatoas, snaps, rxpos, fs, c)
+  doatoas = coarse_doatoas(snaps, rxpos, θ, fs, c; minvotes=minvotes)
+  refine_doatoas(doatoas, snaps, rxpos, fs, c)
 end
-detect_doatoa(data::SignalAnalysis.SampledSignal, args...; kwargs...) = detect_doatoa(samples(data), framerate(data), args...; kwargs...)
+snapdoatoa(data::SignalAnalysis.SampledSignal, args...; kwargs...) = detect_doatoa(samples(data), framerate(data), args...; kwargs...)
