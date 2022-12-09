@@ -11,10 +11,10 @@ envelope(x) = abs.(hilbert(x))
 
 """
 $(SIGNATURES)
-Detect time of arrivals (ToAs) of snaps at each sensor. The column vector of `data` is sensor data with sampling rate `fs`. 
-Percentile `p` as a threshold, minimum time distance between two snaps `tdist` (in seconds), 
-minimum time length of a snap `twidth` (in seconds) are defined for the peak detection of each 
-sensor recording.
+Detect time of arrivals (ToAs) of snaps at each sensor. The column vector of `data` is sensor data
+with sampling rate `fs`. Percentile `p` as a threshold, minimum time distance between two snaps
+`tdist` (in seconds), minimum time length of a snap `twidth` (in seconds) are defined for the
+peak detection of each sensor recording.
 """
 function snapdetect(data::AbstractMatrix, 
                     fs::Real; 
@@ -92,9 +92,9 @@ end
 
 """
 $(SIGNATURES)
-Return snap ToA of each sensor, which is associated with the coarse DoA-Toa `doatoa`. 
-If the smallest discrepancy between the coarse ToAs and steering delay is
-larger than 5 samples, ToA = -1 which will be omitted for DoA-ToA refinement.
+Return snap ToA of each sensor, which is associated with the coarse DoA-Toa `doatoa`. If the smallest 
+discrepancy between the coarse ToAs and steering delay is larger than 5 samples, ToA = -1 which will be 
+omitted from DoA-ToA refinement.
 """
 function gather_snap(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, 
                      snaps::AbstractVector{Vector{Int}}, 
@@ -181,16 +181,16 @@ end
 
 """
 $(SIGNATURES)
-Detect and estimate direction of arrivals and time of arrivals (DoAs-ToAs) of snaps from an array of acoustic 
-recordngs `data` with sampling rate `fs`. The DoA-ToAs output is a Vector of Tuple (azimuth, elevation, ToA).
-Sensor positions `rxpos` and all the possible coarse direction of arrivals `θ` are required for DoA-Toa estimation. 
-By default, the sound speed `c` is 1540.
+Detect and estimate direction of arrivals and time of arrivals (DoAs-ToAs) of snaps from an array
+of acoustic recordngs `data` with sampling rate `fs`. The DoA-ToAs output is a Vector of Tuple
+(azimuth, elevation, ToA). Sensor positions `rxpos` and all the possible coarse direction of
+arrivals `θ` are required for DoA-Toa estimation. By default, the sound speed `c` is 1540.
 
-Percentile `p` as a threshold, minimum time distance (sec) between two snaps `tdist`, minimum time length (sec)
-of a snap `twidth` are defined for the peak detection of each sensor recording.
+Percentile `p` as a threshold, minimum time distance (sec) between two snaps `tdist`, minimum time
+length (sec) of a snap `twidth` are defined for the peak detection of each sensor recording.
 
-On the hough space, only DoA-ToAs with number of votes larger than or equal to `minvotes` are selected for the 
-further processing.
+On the hough space, only DoA-ToAs with number of votes larger than or equal to `minvotes` are
+selected for the further processing.
 
 # Example
 ```julia-repl
