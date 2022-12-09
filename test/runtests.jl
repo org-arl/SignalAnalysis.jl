@@ -680,7 +680,7 @@ end
   θ1d = LinRange(-180, 180, 181)
   θ2d = deg2rad.(reduce(vcat, hcat.(LinRange(-180, 180, 181)', LinRange(-60, 0, 31)))) 
   c = 1540.0
-  p = 99.999
+  p = 99.9999
   tdist = 2e-3
   minvotes = 4
 
@@ -710,6 +710,8 @@ end
       snaps = snapdetect(data, fs; p = p, tdist = tdist)
       @test length.(snaps) == [1,1,1,1]
       @test first.(snaps) == Γ
+      sa_snaps = snapdetect(signal(data, fs); p = p, tdist = tdist)
+      @test snaps == sa_snaps
 
       votes, Γs = SignalAnalysis.houghtransform(snaps, rxpos, θ, fs, c)
       numvotes, indices = findmax(votes)
@@ -738,6 +740,8 @@ end
       @test isapprox(first(doatoas[1]), first(θ1); atol = doatol)
       !is1d && (@test isapprox(doatoas[1][2], θ1[2]; atol = doatol))
       @test isapprox(last(doatoas[1]), Γ₀; atol = toatol)
+      sa_doatoas = snapdoatoa(signal(data, fs), rxpos, θ, c; p = p, tdist = tdist, minvotes = minvotes)
+      @test doatoas == sa_doatoas
     end
   end
 
