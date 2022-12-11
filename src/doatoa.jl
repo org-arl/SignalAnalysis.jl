@@ -42,16 +42,16 @@ $(SIGNATURES)
 Return DoA-ToA hough space of the detected snaps.
 """
 function houghtransform(snaps::AbstractVector{Vector{Int}}, 
-                        rxpos::AbstractArray, 
-                        θ::AbstractArray, 
                         fs::Real, 
+                        θ::AbstractArray, 
+                        rxpos::AbstractArray, 
                         c::Real)
   numsensors = size(rxpos, 2)
   numbeams = size(θ, 1)
   samplesd = round.(Int, steering(rxpos, c, θ) .* fs)
   maxtimesamples = maximum(maximum.(snaps))
   vote_numtime = maxtimesamples + maximum(samplesd)
-  votetype = numsensors < 127 ? Int8 : Int16 # use Int8 or Int16 to reduce the memory
+  votetype = numsensors < typemax(Int8) ? Int8 : Int16 # use Int8 or Int16 to reduce the memory
   votes = zeros(votetype, numbeams, vote_numtime)
   Γs = (0:vote_numtime-1)
   for i ∈ 1:numbeams
@@ -70,14 +70,14 @@ $(SIGNATURES)
 Estimate coarse DoA-ToA based on the detected snaps using Hough transform.
 """
 function coarse_doatoas(snaps::AbstractVector{Vector{Int}}, 
-                        rxpos::AbstractArray, 
-                        θ::AbstractArray{T}, 
                         fs::Real, 
+                        θ::AbstractArray{T}, 
+                        rxpos::AbstractArray, 
                         c::Real; 
                         minvotes::Union{Nothing,Int} = nothing) where {T}
   numsensors = size(rxpos, 2)
   isnothing(minvotes) && (minvotes = numsensors * 2 ÷ 3)
-  votes, Γs = houghtransform(snaps, rxpos, θ, fs, c)  # hough space
+  votes, Γs = houghtransform(snaps, fs, θ, rxpos, c)  # hough space
   pkindices = findlocalmaxima(votes)
   doatoas = if size(θ, 2) == 1
     Tuple{T,Int}[]
@@ -100,14 +100,14 @@ omitted from DoA-ToA refinement.
 """
 function gather_snap(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, 
                      snaps::AbstractVector{Vector{Int}}, 
-                     rxpos::AbstractArray, 
                      fs::Real, 
+                     rxpos::AbstractArray, 
                      c::Real) where {T}
   numsensors = size(rxpos, 2)
   m = length(doatoa)
   θ′, Γ′ = [doatoa[1:m-1]...], last(doatoa)
   m == 3 && (θ′ = transpose(θ′))
-  samplesd = round.(Int, steering(rxpos, c, θ′) .* fs)
+  samplesd = steering(rxpos, c, θ′) .* fs #round.(Int, steering(rxpos, c, θ′) .* fs)
   associated_snaps = Vector{Int}()
   for i ∈ 1:numsensors
     @views snap = snaps[i]
@@ -127,12 +127,12 @@ Refine DoA-ToA of the coarse estimate `doatoa`.
 """
 function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}}, 
                        snaps::AbstractVector{Vector{Int}}, 
-                       rxpos::AbstractArray, 
                        fs::Real, 
+                       rxpos::AbstractArray, 
                        c::Real) where {T}
   anglebnd = deg2rad(T(2))
   samplebnd = T(5)
-  associated_snaps = gather_snap(doatoa, snaps, rxpos, fs, c)
+  associated_snaps = gather_snap(doatoa, snaps, fs, rxpos, c)
   b = associated_snaps .> 0
   # loss function
   function mse1d(ζ)
@@ -159,7 +159,7 @@ function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}},
   if (Optim.minimum(result) < 1) # mse is smaller than one sample.  
     return NTuple{m,T}(Optim.minimizer(result))
   else
-    return NTuple{m,T}()
+    return nothing
   end
 end
 
@@ -169,14 +169,14 @@ Refine DoA-ToAs of the coarse estimates `doatoas`.
 """
 function refine_doatoas(doatoas::Union{Vector{Tuple{T,Int}},Vector{Tuple{T,T,Int}}}, 
                         snaps::AbstractVector{Vector{Int}}, 
-                        rxpos::AbstractArray, 
                         fs::Real, 
+                        rxpos::AbstractArray, 
                         c::Real) where {T}
   m = first(doatoas) |> length
   refinedoatoas = NTuple{m,T}[]
   for doatoa ∈ doatoas
-    refinedoatoa = refine_doatoa(doatoa, snaps, rxpos, fs, c)
-    !isempty(refinedoatoa) && push!(refinedoatoas, refinedoatoa)
+    refinedoatoa = refine_doatoa(doatoa, snaps, fs, rxpos, c)
+    !isnothing(refinedoatoa) && push!(refinedoatoas, refinedoatoa)
   end
   refinedoatoas
 end
@@ -250,15 +250,15 @@ julia> snaps = snapdetect(data, fs; p = p, tdist = tdist)
  [1032]
  [1032]
 
-julia> doatoas = snapdoatoa(data, fs, rxpos, θ, c; p = p, tdist = tdist, minvotes = minvotes) # (azimuth, elevation, ToA)
+julia> doatoas = snapdoatoa(data, fs, θ, rxpos, c; p = p, tdist = tdist, minvotes = minvotes) # (azimuth, elevation, ToA)
 1-element Vector{Tuple{Float64, Float64, Float64}}:
  (0.00336680173802057, 0.0033667826560101035, 999.7500000000016) 
 ```
 """
 function snapdoatoa(data::AbstractMatrix, 
                     fs::Real, 
-                    rxpos::AbstractArray, 
                     θ::AbstractArray{T}, 
+                    rxpos::AbstractArray, 
                     c::Real = 1540.0; 
                     p::Real = 99.5, 
                     tdist::Real = 2e-3, 
@@ -266,12 +266,12 @@ function snapdoatoa(data::AbstractMatrix,
                     minvotes::Union{Nothing,Int} = nothing) where {T}
   # M. Chitre, S. Kuselan, and V. Pallayil, The Journal of the Acoustical Society of America 838–847, 2012. 
   snaps = snapdetect(data, fs; p = p, tdist = tdist, twidth = twidth)
-  doatoas = coarse_doatoas(snaps, rxpos, θ, fs, c; minvotes=minvotes)
+  doatoas = coarse_doatoas(snaps, fs, θ, rxpos, c; minvotes=minvotes)
   if isempty(doatoas) 
-    numdoatoa = size(θ, 2) + 1
-    return Vector{NTuple{numdoatoa,T}}()
+    m = size(θ, 2) + 1
+    return NTuple{m,T}[]
   end
-  refine_doatoas(doatoas, snaps, rxpos, fs, c)
+  refine_doatoas(doatoas, snaps, fs, rxpos, c)
 end
 
 snapdoatoa(data::SignalAnalysis.SampledSignal, args...; kwargs...) = snapdoatoa(samples(data), framerate(data), args...; kwargs...)
