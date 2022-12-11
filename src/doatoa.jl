@@ -5,6 +5,7 @@ using Optim
 export snapdetect, snapdoatoa
 
 """
+$(SIGNATURES)
 Envelope of signal `x`.
 """
 envelope(x) = abs.(hilbert(x))
@@ -107,7 +108,7 @@ function gather_snap(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}},
   m = length(doatoa)
   θ′, Γ′ = [doatoa[1:m-1]...], last(doatoa)
   m == 3 && (θ′ = transpose(θ′))
-  samplesd = steering(rxpos, c, θ′) .* fs #round.(Int, steering(rxpos, c, θ′) .* fs)
+  samplesd = steering(rxpos, c, θ′) .* fs 
   associated_snaps = Vector{Int}()
   for i ∈ 1:numsensors
     @views snap = snaps[i]
