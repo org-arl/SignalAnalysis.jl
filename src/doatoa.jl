@@ -173,7 +173,7 @@ function refine_doatoas(doatoas::Union{Vector{Tuple{T,Int}},Vector{Tuple{T,T,Int
                         fs::Real, 
                         rxpos::AbstractArray, 
                         c::Real) where {T}
-  m = first(doatoas) |> length
+  m = eltype(doatoas) |> fieldcount
   refinedoatoas = NTuple{m,T}[]
   for doatoa ∈ doatoas
     refinedoatoa = refine_doatoa(doatoa, snaps, fs, rxpos, c)
@@ -268,10 +268,6 @@ function snapdoatoa(data::AbstractMatrix,
   # M. Chitre, S. Kuselan, and V. Pallayil, The Journal of the Acoustical Society of America 838–847, 2012. 
   snaps = snapdetect(data, fs; p = p, tdist = tdist, twidth = twidth)
   doatoas = coarse_doatoas(snaps, fs, θ, rxpos, c; minvotes=minvotes)
-  if isempty(doatoas) 
-    m = size(θ, 2) + 1
-    return NTuple{m,T}[]
-  end
   refine_doatoas(doatoas, snaps, fs, rxpos, c)
 end
 
