@@ -284,3 +284,5 @@ Base.getindex(s::SampledSignal, t::NTuple{2}) = Base.getindex(s, toframe(t[1], s
 Base.getindex(s::SampledSignal, t::NTuple{2}, ndx...) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s), ndx...)
 Base.setindex!(s::SampledSignal, v, t::NTuple{2}) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s))
 Base.setindex!(s::SampledSignal, v, t::NTuple{2}, ndx...) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s), ndx...)
+
+Base.reshape(s::SampledSignal, dims::Union{Colon, Int64}...) = signal(reshape(samples(s), dims...), framerate(s))
