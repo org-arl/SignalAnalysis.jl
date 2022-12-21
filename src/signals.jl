@@ -289,6 +289,6 @@ function Base.vec(s::SampledSignal)
   if ndims(s) < 3 && isone(size(s, 2))
     signal(reshape(samples(s), length(s)), framerate(s))
   else
-    throw(ArgumentError("reshape a multi-channel signal as a single-channel signal is undefined."))
+    vec(samples(s))
   end 
 end
