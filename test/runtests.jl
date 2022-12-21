@@ -145,17 +145,21 @@ using SignalAnalysis.Units
   t = toframe(0:0.1:1, x)
   @test t == 1:100:1001
 
-  for i ∈ 1:10
-    x = signal(randn(8000, i), 1000)
-    reshape_x = reshape(x, :)
-    vec_x = vec(x)
-    @test size(reshape_x) == size(vec_x) == (prod(size(x)),)
-    @test reshape_x == vec_x
-    @test framerate(reshape_x) == framerate(vec_x) == framerate(x)
-    reshape1_x = reshape(x, size(x)..., 1)
-    @test size(reshape1_x) == (size(x)..., 1)
-    @test reshape1_x[:,:,1] == x
-  end
+  xlen = 8000
+  x = randn(xlen)
+  fs = 1000
+  s0 = signal(x, fs)
+  @test vec(s0) == s0
+  @test framerate(s0) == fs
+  @test size(vec(s0)) == (xlen,)
+  s1 = signal(reshape(x, :, 1), fs)
+  @test vec(s1) == s0
+  @test framerate(s1) == fs
+  @test size(vec(s1)) == (xlen,)
+  s2 = signal(randn(8000, 2), fs)
+  @test_throws ArgumentError vec(s2)
+  s3 = signal(randn(8000, 1, 1), fs)
+  @test_throws ArgumentError vec(s3)
 
 end
 

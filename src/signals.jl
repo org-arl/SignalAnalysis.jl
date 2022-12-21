@@ -285,4 +285,10 @@ Base.getindex(s::SampledSignal, t::NTuple{2}, ndx...) = Base.getindex(s, toframe
 Base.setindex!(s::SampledSignal, v, t::NTuple{2}) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s))
 Base.setindex!(s::SampledSignal, v, t::NTuple{2}, ndx...) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s), ndx...)
 
-Base.reshape(s::SampledSignal, dims::Union{Int,Colon}...) = signal(reshape(samples(s), dims...), framerate(s))
+function Base.vec(s::SampledSignal) 
+  if ndims(s) < 3 && isone(size(s, 2))
+    signal(reshape(samples(s), length(s)), framerate(s))
+  else
+    throw(ArgumentError("reshape a multi-channel signal as a single-channel signal is undefined."))
+  end 
+end
