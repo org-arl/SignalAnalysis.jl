@@ -156,10 +156,12 @@ using SignalAnalysis.Units
   @test vec(s1) == s0
   @test framerate(vec(s1)) == fs
   @test size(vec(s1)) == (xlen,)
-  s2 = signal(randn(8000, 2), fs)
-  @test_throws ArgumentError vec(s2)
-  s3 = signal(randn(8000, 1, 1), fs)
-  @test_throws ArgumentError vec(s3)
+  x2 = randn(8000, 2)
+  s2 = signal(x2, fs)
+  @test vec(s2) == vec(x2)
+  x3 = randn(8000, 1, 1)
+  s3 = signal(x3, fs)
+  @test vec(s3) == vec(x3)
 
 end
 
