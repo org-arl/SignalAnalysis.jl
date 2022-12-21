@@ -150,11 +150,11 @@ using SignalAnalysis.Units
   fs = 1000
   s0 = signal(x, fs)
   @test vec(s0) == s0
-  @test framerate(s0) == fs
+  @test framerate(vec(s0)) == fs
   @test size(vec(s0)) == (xlen,)
   s1 = signal(reshape(x, :, 1), fs)
   @test vec(s1) == s0
-  @test framerate(s1) == fs
+  @test framerate(vec(s1)) == fs
   @test size(vec(s1)) == (xlen,)
   s2 = signal(randn(8000, 2), fs)
   @test_throws ArgumentError vec(s2)
