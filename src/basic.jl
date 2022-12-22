@@ -5,7 +5,7 @@ $(SIGNATURES)
 Computes total signal energy.
 """
 energy(s::AbstractVector; fs=framerate(s)) = sum(abs2, s)/inHz(fs)
-energy(s::AbstractMatrix; fs=framerate(s)) = vec(sum(abs2, s; dims=1))./inHz(fs)
+energy(s::AbstractMatrix; fs=framerate(s)) = vec(samples(sum(abs2, s; dims=1)))./inHz(fs)
 
 """
 $(SIGNATURES)
