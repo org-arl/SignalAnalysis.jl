@@ -287,8 +287,8 @@ Base.setindex!(s::SampledSignal, v, t::NTuple{2}, ndx...) = Base.setindex!(s, v,
 
 function Base.vec(s::SampledSignal) 
   if ndims(s) < 3 && isone(size(s, 2))
-    signal(reshape(samples(s), length(s)), framerate(s))
+    signal(vec(samples(s)), framerate(s))
   else
-    vec(samples(s))
+    throw(ArgumentError("reshape a multi-channel signal as a single-channel signal is undefined."))
   end 
 end
