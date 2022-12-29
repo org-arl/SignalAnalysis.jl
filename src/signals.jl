@@ -121,7 +121,7 @@ samples(s::SampledSignal) = getfield(s, :data)
 samples(s) = s
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Generates a padded view of a signal with optional delay/advance.
 """
 function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T}
@@ -132,7 +132,23 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T}
     left = padding[1]
     right = padding[2]
   end
-  PaddedView(fill, s, (1-left:length(s)+right,), (1+delay:delay+length(s),))
+  PaddedView(fill, s, (firstindex(s,1)-left:lastindex(s,1)+right,), (firstindex(s,1)+delay:delay+lastindex(s,1),))
+end
+
+"""
+$(TYPEDSIGNATURES)
+Generates a padded view of a signal with optional delay/advance.
+"""
+function padded(s::AbstractMatrix{T}, padding; delay=0, fill=zero(T)) where {T}
+  if length(padding) == 1
+    left = padding
+    right = padding
+  else
+    left = padding[1]
+    right = padding[2]
+  end
+  channelindices = firstindex(s,2):lastindex(s,2)
+  PaddedView(fill, s, (firstindex(s,1)-left:lastindex(s,1)+right,channelindices), (firstindex(s,1)+delay:delay+lastindex(s,1),channelindices))
 end
 
 function padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T
@@ -207,7 +223,7 @@ function Base.length(itr::SignalPartitionIterator)
   return div(l, itr.step) + ((mod(l, itr.step) > 0) ? 1 : 0)
 end
 
-function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=1)
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=firstindex(itr.c))
   l = length(itr.c)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
@@ -215,7 +231,7 @@ function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=1)
   return @inbounds itr.c[state:r], state + itr.step
 end
 
-function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=1)
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=firstindex(itr.c))
   l = length(itr.c)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
@@ -223,7 +239,7 @@ function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=1)
   return @inbounds view(itr.c, state:r), state + itr.step
 end
 
-function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=1)
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=firstindex(itr.c))
   l = size(itr.c, 1)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
