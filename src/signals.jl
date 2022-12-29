@@ -224,7 +224,7 @@ function Base.length(itr::SignalPartitionIterator)
 end
 
 function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=firstindex(itr.c))
-  l = length(itr.c)
+  l = lastindex(itr.c)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
@@ -232,7 +232,7 @@ function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=first
 end
 
 function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=firstindex(itr.c))
-  l = length(itr.c)
+  l = lastindex(itr.c)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
@@ -240,7 +240,7 @@ function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=firs
 end
 
 function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=firstindex(itr.c))
-  l = size(itr.c, 1)
+  l = lastindex(itr.c, 1)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
