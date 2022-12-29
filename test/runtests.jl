@@ -88,12 +88,34 @@ using SignalAnalysis.Units
   @test x1[1] == 0
   @test x1[2] == x[1]
   @test x1[8001] == x[8000]
+  x2 = padded(x1, (1, 1); delay=0)
+  @test x2[-10] == 0
+  @test x2[8006] == 0
+  @test x2[1] == 0
+  @test x2[8001] == x1[8001] == x[8000]
+  x2d = randn(8000, 2)
+  x2d1 = padded(x2d, (10, 5); delay=1)
+  @test all(x2d1[-9,:] .== 0)
+  @test all(x2d1[8005,:] .== 0)
+  @test all(x2d1[1,:] .== 0)
+  @test x2d1[2,:] == x2d[1,:]
+  @test x2d1[8001,:] == x2d[8000,:]
+  x2d2 = padded(x2d1, (1, 1); delay=0)
+  @test all(x2d2[-10,:] .== 0)
+  @test all(x2d2[8006,:] .== 0)
+  @test x2d2[2,:] == x2d1[2,:] == x2d[1,:]
+  @test x2d2[8001,:] == x2d1[8001,:] == x2d[8000,:]
 
   x1 = padded(x, (10, 5); delay=-2)
   @test x1[-9] == 0
   @test x1[8005] == 0
   @test x1[-1] == x[1]
   @test x1[7998] == x[8000]
+  x2d1 = padded(x2d, (10, 5); delay=-2)
+  @test all(x2d1[-9,:] .== 0)
+  @test all(x2d1[8005,:] .== 0)
+  @test x2d1[-1,:] == x2d[1,:]
+  @test x2d1[7998,:] == x2d[8000,:]
 
   x = signal(collect(1:10), 1.0)
   @test length(collect(partition(x, 5))) == 2
