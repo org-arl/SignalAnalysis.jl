@@ -121,7 +121,7 @@ samples(s::SampledSignal) = getfield(s, :data)
 samples(s) = s
 
 """
-$(SIGNATURES)
+$(TYPEDSIGNATURES)
 Generates a padded view of a signal with optional delay/advance.
 """
 function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T}
@@ -132,7 +132,23 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T}
     left = padding[1]
     right = padding[2]
   end
-  PaddedView(fill, s, (1-left:length(s)+right,), (1+delay:delay+length(s),))
+  PaddedView(fill, s, (firstindex(s,1)-left:lastindex(s,1)+right,), (firstindex(s,1)+delay:delay+lastindex(s,1),))
+end
+
+"""
+$(TYPEDSIGNATURES)
+Generates a padded view of a signal with optional delay/advance.
+"""
+function padded(s::AbstractMatrix{T}, padding; delay=0, fill=zero(T)) where {T}
+  if length(padding) == 1
+    left = padding
+    right = padding
+  else
+    left = padding[1]
+    right = padding[2]
+  end
+  channelindices = firstindex(s,2):lastindex(s,2)
+  PaddedView(fill, s, (firstindex(s,1)-left:lastindex(s,1)+right,channelindices), (firstindex(s,1)+delay:delay+lastindex(s,1),channelindices))
 end
 
 function padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T
@@ -207,24 +223,24 @@ function Base.length(itr::SignalPartitionIterator)
   return div(l, itr.step) + ((mod(l, itr.step) > 0) ? 1 : 0)
 end
 
-function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=1)
-  l = length(itr.c)
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=firstindex(itr.c))
+  l = lastindex(itr.c)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
   return @inbounds itr.c[state:r], state + itr.step
 end
 
-function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=1)
-  l = length(itr.c)
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=firstindex(itr.c))
+  l = lastindex(itr.c)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
   return @inbounds view(itr.c, state:r), state + itr.step
 end
 
-function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=1)
-  l = size(itr.c, 1)
+function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=firstindex(itr.c))
+  l = lastindex(itr.c, 1)
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
@@ -284,3 +300,11 @@ Base.getindex(s::SampledSignal, t::NTuple{2}) = Base.getindex(s, toframe(t[1], s
 Base.getindex(s::SampledSignal, t::NTuple{2}, ndx...) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s), ndx...)
 Base.setindex!(s::SampledSignal, v, t::NTuple{2}) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s))
 Base.setindex!(s::SampledSignal, v, t::NTuple{2}, ndx...) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s), ndx...)
+
+function Base.vec(s::SampledSignal) 
+  if ndims(s) < 3 && isone(size(s, 2))
+    signal(vec(samples(s)), framerate(s))
+  else
+    throw(ArgumentError("reshape a multi-channel signal as a single-channel signal is undefined."))
+  end 
+end

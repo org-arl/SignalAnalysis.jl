@@ -88,12 +88,34 @@ using SignalAnalysis.Units
   @test x1[1] == 0
   @test x1[2] == x[1]
   @test x1[8001] == x[8000]
+  x2 = padded(x1, (1, 1); delay=0)
+  @test x2[-10] == 0
+  @test x2[8006] == 0
+  @test x2[1] == 0
+  @test x2[8001] == x1[8001] == x[8000]
+  x2d = randn(8000, 2)
+  x2d1 = padded(x2d, (10, 5); delay=1)
+  @test all(x2d1[-9,:] .== 0)
+  @test all(x2d1[8005,:] .== 0)
+  @test all(x2d1[1,:] .== 0)
+  @test x2d1[2,:] == x2d[1,:]
+  @test x2d1[8001,:] == x2d[8000,:]
+  x2d2 = padded(x2d1, (1, 1); delay=0)
+  @test all(x2d2[-10,:] .== 0)
+  @test all(x2d2[8006,:] .== 0)
+  @test x2d2[2,:] == x2d1[2,:] == x2d[1,:]
+  @test x2d2[8001,:] == x2d1[8001,:] == x2d[8000,:]
 
   x1 = padded(x, (10, 5); delay=-2)
   @test x1[-9] == 0
   @test x1[8005] == 0
   @test x1[-1] == x[1]
   @test x1[7998] == x[8000]
+  x2d1 = padded(x2d, (10, 5); delay=-2)
+  @test all(x2d1[-9,:] .== 0)
+  @test all(x2d1[8005,:] .== 0)
+  @test x2d1[-1,:] == x2d[1,:]
+  @test x2d1[7998,:] == x2d[8000,:]
 
   x = signal(collect(1:10), 1.0)
   @test length(collect(partition(x, 5))) == 2
@@ -104,6 +126,18 @@ using SignalAnalysis.Units
   @test length(collect(partition(x, 4; step=2))) == 5
   @test length(collect(partition(x, 5; step=2, flush=false))) == 3
   @test length(collect(partition(x, 4; step=2, flush=false))) == 4
+
+  pad_x = padded(x, (1, 1))
+  @test iterate(partition(pad_x, 5)) == ([0,1,2,3,4], 5)
+  @test iterate(partition(pad_x, 5), 1) == ([1,2,3,4,5], 6)
+  @test length(collect(partition(pad_x, 5))) == 3
+  @test length(collect(partition(pad_x, 4))) == 3
+  @test length(collect(partition(pad_x, 5; flush=false))) == 2
+  @test length(collect(partition(pad_x, 4; flush=false))) == 3
+  @test length(collect(partition(pad_x, 5; step=2))) == 6
+  @test length(collect(partition(pad_x, 4; step=2))) == 6
+  @test length(collect(partition(pad_x, 5; step=2, flush=false))) == 4
+  @test length(collect(partition(pad_x, 4; step=2, flush=false))) == 5
 
   x = signal(ones(1000), 8kHz)
   x2 = map(enumerate(partition(x, 250))) do (blknum, x1)
@@ -144,6 +178,22 @@ using SignalAnalysis.Units
   x = signal(randn(8000), 1000)
   t = toframe(0:0.1:1, x)
   @test t == 1:100:1001
+
+  xlen = 8000
+  x = randn(xlen)
+  fs = 1000
+  s0 = signal(x, fs)
+  @test vec(s0) == s0
+  @test framerate(vec(s0)) == fs
+  @test size(vec(s0)) == (xlen,)
+  s1 = signal(reshape(x, :, 1), fs)
+  @test vec(s1) == s0
+  @test framerate(vec(s1)) == fs
+  @test size(vec(s1)) == (xlen,)
+  s2 = signal(randn(xlen, 2), fs)
+  @test_throws ArgumentError vec(s2)
+  s3 = signal(randn(xlen, 1, 1), fs)
+  @test_throws ArgumentError vec(s3)
 
 end
 
