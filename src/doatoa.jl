@@ -17,7 +17,7 @@ with sampling rate `fs`. Percentile `p` as a threshold, minimum time distance be
 `tdist` (in seconds), minimum time length of a snap `twidth` (in seconds) are defined for the
 peak detection of each sensor recording.
 """
-function snapdetect(data::AbstractMatrix, 
+function snapdetect(data::AbstractVecOrMat, 
                     fs::Real; 
                     p::Real = 99.5, 
                     tdist::Real = 2e-3, 
@@ -132,7 +132,7 @@ function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}},
                        rxpos::AbstractArray, 
                        c::Real) where {T}
   anglebnd = deg2rad(T(2))
-  samplebnd = T(5)
+  samplebnd = T(1)
   associated_snaps = gather_snap(doatoa, snaps, fs, rxpos, c)
   b = associated_snaps .> 0
   # loss function
@@ -157,7 +157,7 @@ function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}},
   # refine DoA-ToA
   doatoa1 = [T(doatoa1) for doatoa1 ∈ doatoa] # vector of 3 elements
   result = optimize(mse, lower, upper, doatoa1, Fminbox(LBFGS()), Optim.Options(g_tol = 1e-9))
-  if (Optim.minimum(result) < 1) # mse is smaller than one sample.  
+  if (Optim.minimum(result) < 0.5) # mse is less than 0.5 sample.
     return NTuple{m,T}(Optim.minimizer(result))
   else
     return nothing
