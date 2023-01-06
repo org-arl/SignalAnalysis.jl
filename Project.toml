@@ -1,7 +1,7 @@
 name = "SignalAnalysis"
 uuid = "df1fea92-c066-49dd-8b36-eace3378ea47"
 authors = ["Mandar Chitre <mandar@nus.edu.sg>"]
-version = "0.4.2"
+version = "0.4.3"
 
 [deps]
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
