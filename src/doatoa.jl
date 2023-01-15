@@ -139,7 +139,7 @@ function gather_snap(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}},
   for i ∈ 1:numsensors
     @views snap = snaps[i]
     @views minval, index = findmin(abs.(snap .- (Γ′ + samplesd[i,1])))
-    if minval ≤ 5 # error in samples
+    if minval ≤ 2 # error in samples
       push!(associated_snaps, snap[index])
     else
       push!(associated_snaps, -1)
@@ -182,7 +182,8 @@ function refine_doatoa(doatoa::Union{Tuple{T,Int},Tuple{T,T,Int}},
   end
   # refine DoA-ToA
   doatoa1 = [T(doatoa1) for doatoa1 ∈ doatoa] # vector of 3 elements
-  result = optimize(mse, lower, upper, doatoa1, Fminbox(LBFGS()), Optim.Options(g_tol = 1e-9))
+  inner_optimizer = GradientDescent(linesearch=LineSearches.BackTracking(order=3))
+  result = optimize(mse, lower, upper, doatoa1, Fminbox(inner_optimizer))
   if (Optim.minimum(result) < 0.5) # mse is less than 0.5 sample.
     return NTuple{m,T}(Optim.minimizer(result))
   else
