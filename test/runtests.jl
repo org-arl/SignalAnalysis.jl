@@ -720,6 +720,11 @@ end
   x = randn(10000)
   @test SignalAnalysis.envelope(x) == abs.(hilbert(x))
 
+  votes = [1 2 2 2 1;
+           1 2 3 2 1;
+           1 2 2 2 1]
+  @test SignalAnalysis.findpeaks2d(votes) == [CartesianIndex(2,3)]
+                                  
   numtest = 3
   numsensors = 4
   numsamples = 10000

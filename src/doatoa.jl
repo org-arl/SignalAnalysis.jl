@@ -11,6 +11,32 @@ Envelope of signal `x`.
 envelope(x) = abs.(hilbert(x))
 
 """
+2D peak finding. A more efficient implementation of `findlocalmaxima` for hough space.
+"""
+function findpeaks2d(x::AbstractMatrix{T}) where {T}
+  pkindices = Vector{CartesianIndex{2}}(undef, 0)
+  rowfirst = firstindex(x, 1)
+  colfirst = firstindex(x, 2)
+  rowlast = lastindex(x, 1)
+  collast = lastindex(x, 2)
+  xpad =  PaddedView(zero(T), x, (rowfirst-1:rowlast+1, colfirst-1:collast+1))
+  nonzero_indices = findall(!=(zero(T)), x)
+  for nonzero_index ∈ nonzero_indices
+    @views xpadnow = xpad[nonzero_index]
+    (xpadnow > xpad[nonzero_index + CartesianIndex(-1, 0)]) && 
+      (xpadnow > xpad[nonzero_index + CartesianIndex(1, 0)]) && 
+      (xpadnow > xpad[nonzero_index + CartesianIndex(0, -1)]) && 
+      (xpadnow > xpad[nonzero_index + CartesianIndex(0, 1)]) && 
+      (xpadnow > xpad[nonzero_index + CartesianIndex(-1, -1)]) &&
+      (xpadnow > xpad[nonzero_index + CartesianIndex(-1, 1)]) &&
+      (xpadnow > xpad[nonzero_index + CartesianIndex(1, -1)]) &&
+      (xpadnow > xpad[nonzero_index + CartesianIndex(1, 1)]) && push!(pkindices, nonzero_index) 
+  end
+  # TODO: trimming
+  pkindices
+end
+
+"""
 $(SIGNATURES)
 Detect time of arrivals (ToAs) of snaps at each sensor. The column vector of `data` is sensor data
 with sampling rate `fs`. Percentile `p` as a threshold, minimum time distance between two snaps
@@ -79,7 +105,7 @@ function coarse_doatoas(snaps::AbstractVector{Vector{Int}},
   numsensors = size(rxpos, 2)
   isnothing(minvotes) && (minvotes = numsensors * 2 ÷ 3)
   votes, Γs = houghtransform(snaps, fs, θ, rxpos, c)  # hough space
-  pkindices = findlocalmaxima(votes)
+  pkindices = findpeaks2d(votes)
   doatoas = if size(θ, 2) == 1
     Tuple{T,Int}[]
   else
