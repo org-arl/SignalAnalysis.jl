@@ -198,8 +198,7 @@ julia> collect(partition(x, 5))[1]
 function Base.Iterators.partition(s::SampledSignal, n::Integer; step::Integer=n, flush::Bool=true)
   n < 1 && throw(ArgumentError("cannot create partitions of length $n"))
   step < 1 && throw(ArgumentError("cannot create partitions with step size $step"))
-  v = samples(s)
-  return SignalPartitionIterator{typeof(v)}(v, Int(n), Int(step), flush)
+  return SignalPartitionIterator{typeof(s)}(s, Int(n), Int(step), flush)
 end
 
 struct SignalPartitionIterator{T <: AbstractArray}
