@@ -142,6 +142,7 @@ using SignalAnalysis.Units
   x = signal(ones(1000), 8kHz)
   x2 = map(enumerate(partition(x, 250))) do (blknum, x1)
     @test size(x1) == (250,)
+    @test framerate(x) == framerate(x1)
     sum(x1)*blknum
   end
   @test x2 == [250.0, 500.0, 750.0, 1000.0]
