@@ -411,12 +411,12 @@ end
 """
 $(SIGNATURES)
 Compute the inverse short time Fourier transform (ISTFT) of one-sided STFT coefficients `X` which is based
-on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram` 
+on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram`
 for description of the parameters.
 
-For perfect reconstruction, the parameters `nfft`, `noverlap` and `window` in `stft` and 
-`istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).  
-Implementation based on Zhivomirov 2019 and `istft` in `scipy`. 
+For perfect reconstruction, the parameters `nfft`, `noverlap` and `window` in `stft` and
+`istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).
+Implementation based on Zhivomirov 2019 and `istft` in `scipy`.
 
 # Examples:
 ```julia-repl
@@ -447,11 +447,7 @@ julia> x̂ = istft(Real, X; nfft=64, noverlap=0)
  -0.010592954871694371
 ```
 """
-function istft(::Type{<:Real}, 
-               X::AbstractMatrix{Complex{T}}; 
-               nfft::Int, 
-               noverlap::Int, 
-               window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
+function istft(::Type{<:Real}, X::AbstractMatrix{Complex{T}}; nfft::Int, noverlap::Int, window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
   iX = irfft(X, nfft, 1)
   _istft(iX, nfft, noverlap, window)
 end
@@ -459,12 +455,12 @@ end
 """
 $(SIGNATURES)
 Compute the inverse short time Fourier transform (ISTFT) of two-sided STFT coefficients `X` which is based
-on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram` 
-for description of the parameters. 
+on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram`
+for description of the parameters.
 
-For perfect reconstruction, the parameters `nfft`, `noverlap` and `window` in `stft` and 
-`istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).  
-Implementation based on Zhivomirov 2019 and `istft` in `scipy`. 
+For perfect reconstruction, the parameters `nfft`, `noverlap` and `window` in `stft` and
+`istft` have to be the same, and the windowing must obey the constraint of "nonzero overlap add" (NOLA).
+Implementation based on Zhivomirov 2019 and `istft` in `scipy`.
 
 # Examples:
 ```julia-repl
@@ -489,26 +485,18 @@ julia> x̂ = istft(Complex, X; nfft=64, noverlap=0)
   -0.5294529732365809 + 0.7345044619457455im
 ```
 """
-function istft(::Type{<:Complex}, 
-               X::AbstractMatrix{Complex{T}}; 
-               nfft::Int, 
-               noverlap::Int, 
-               window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
+function istft(::Type{<:Complex}, X::AbstractMatrix{Complex{T}}; nfft::Int, noverlap::Int, window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
   iX = ifft(X, 1)
   _istft(iX, nfft, noverlap, window)
 end
-istft(X::AbstractMatrix{Complex{T}}; 
-      nfft::Int, 
-      noverlap::Int, 
-      window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat} = istft(
-        Complex, X; nfft=nfft, noverlap=noverlap, window=window)
+
+function istft(X::AbstractMatrix{Complex{T}}; nfft::Int, noverlap::Int, window::Union{Function,AbstractVector,Nothing}=nothing) where {T<:AbstractFloat}
+  istft(Complex, X; nfft=nfft, noverlap=noverlap, window=window)
+end
 
 
-function _istft(iX::AbstractMatrix{T}, 
-                nfft::Int, 
-                noverlap::Int, 
-                window::Union{Function,AbstractVector,Nothing}=nothing) where {T}
-  # H. Zhivomirov, TEM Journal, Vol. 8, No. 1, pp. 56-64, 2019. 
+function _istft(iX::AbstractMatrix{T}, nfft::Int, noverlap::Int, window::Union{Function,AbstractVector,Nothing}=nothing) where {T}
+  # H. Zhivomirov, TEM Journal, Vol. 8, No. 1, pp. 56-64, 2019.
   (window === nothing) && (window = rect)
   win, norm2 = Periodograms.compute_window(window, nfft)
 
@@ -532,21 +520,17 @@ end
 
 """
 $(SIGNATURES)
-Spectral whitening of input signal `x` in the frequency domain. The parameters `nfft`, 
-`noverlap` and `window` are required for the computation of STFT coefficients of `x`. 
-Refer to `DSP.Periodograms.spectrogram` for description of the parameters. `γ` is a 
+Spectral whitening of input signal `x` in the frequency domain. The parameters `nfft`,
+`noverlap` and `window` are required for the computation of STFT coefficients of `x`.
+Refer to `DSP.Periodograms.spectrogram` for description of the parameters. `γ` is a
 scaling or degree-of-flattening factor. The algorithm is based on Lee 1986.
 """
-function whiten(x::AbstractVector; 
-                nfft::Int, 
-                noverlap::Int,
-                window::Union{Function,AbstractVector,Nothing}=nothing,
-                γ=1)
+function whiten(x::AbstractVector; nfft::Int, noverlap::Int, window::Union{Function,AbstractVector,Nothing}=nothing, γ=1)
   # M. W. Lee, Open-File Report 86-108, 1986.
   xstft = stft(x, nfft, noverlap; window=window)
   mag = abs.(xstft)
   logmag = log.(mag .+ eps(eltype(mag)))
   logmag .-= γ * mean(logmag; dims=2)
   outputtype = isreal(x) ? Real : Complex
-  istft(outputtype, exp.(logmag) .* exp.(im .* angle.(xstft)); nfft=nfft, noverlap=noverlap, window=window) 
+  istft(outputtype, exp.(logmag) .* exp.(im .* angle.(xstft)); nfft=nfft, noverlap=noverlap, window=window)
 end
