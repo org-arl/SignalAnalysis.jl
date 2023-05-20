@@ -121,11 +121,9 @@ function upconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); f
 end
 
 function upconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
-  out = Any[]
-  for j in 1:nchannels(s)
-    push!(out, upconvert(s[:,j], sps, fc, pulseshape; fs=fs))
+  mapreduce(hcat, eachcol(s)) do x
+    upconvert(x, sps, fc, pulseshape; fs=fs)
   end
-  hcat(out...)
 end
 
 """
@@ -136,18 +134,16 @@ be `nothing`, downsampling is performed without filtering.
 """
 function downconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
   s = signal(analytic(s), fs)
-  s .*= cis.(-2π * inHz(fc) * domain(s))
+  s = s .* cis.(-2π * inHz(fc) * domain(s))
   sps == 1 && return signal(s, fs)
   pulseshape == nothing && return signal(s[1:sps:end,:], fs/sps)
   signal(resample(s, 1//sps, pulseshape), fs/sps)
 end
 
 function downconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
-  out = Any[]
-  for j in 1:nchannels(s)
-    push!(out, downconvert(s[:,j], sps, fc, pulseshape; fs=fs))
+  mapreduce(hcat, eachcol(s)) do x
+    downconvert(x, sps, fc, pulseshape; fs=fs)
   end
-  hcat(out...)
 end
 
 """
