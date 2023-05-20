@@ -174,6 +174,8 @@ using SignalAnalysis.Units
   x = signal(randn(2000), 8kHz)
   @test toframe(0.2s, x) == 1601
   @test toframe([0.2s, 201ms], x) == [1601, 1609]
+  @test toframe((0.2, 0.201), x) == 1601:1609
+  @test toframe(0.2:0.201s, x) == 1601:1609
   @test toframe(0.2:0.01:0.3, x)[1:3] == [1601, 1681, 1761]
 
   x = signal(randn(8000), 1000)

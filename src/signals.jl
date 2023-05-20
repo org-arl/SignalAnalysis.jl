@@ -253,23 +253,30 @@ Converts time to signal frame number.
 # Examples:
 ```julia-repl
 julia> x = signal(randn(2000), 8kHz);
-julia> toframe(0.2s, x)
+julia> toframe(0.2𝓈, x)
 1601
 
-julia> toframe([0.2s, 201ms], x)
+julia> toframe([0.2𝓈, 0.201𝓈], x)
 2-element Array{Int64,1}:
- 1601
- 1609
+  1601
+  1609
+
+julia> toframe(0.2:0.201𝓈, x)
+1601:1609
+
+julia> toframe((0.2, 0.201), x)
+1601:1609
 
 julia> toframe(0.2:0.01:0.3, x)
- 11-element Array{Int64,1}:
+11-element Array{Int64,1}:
   1601
   1681
   1761
    ⋮
 ```
 """
-toframe(t, s::SampledSignal) = 1 .+ round.(Int, inseconds.(t)*framerate(s))
+toframe(t, s::SampledSignal) = 1 .+ round.(Int, inseconds.(t) .* framerate(s))
+toframe(t::NTuple{2,<:Real}, s::SampledSignal) = UnitRange((1 .+ round.(Int, inseconds.(t) .* framerate(s)))...)
 
 """
     (:)(start::Unitful.Time, stop::Unitful.Time)
@@ -300,10 +307,10 @@ Base.getindex(s::SampledSignal, t::NTuple{2}, ndx...) = Base.getindex(s, toframe
 Base.setindex!(s::SampledSignal, v, t::NTuple{2}) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s))
 Base.setindex!(s::SampledSignal, v, t::NTuple{2}, ndx...) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s), ndx...)
 
-function Base.vec(s::SampledSignal) 
+function Base.vec(s::SampledSignal)
   if ndims(s) < 3 && isone(size(s, 2))
     signal(vec(samples(s)), framerate(s))
   else
     throw(ArgumentError("reshape a multi-channel signal as a single-channel signal is undefined."))
-  end 
+  end
 end
