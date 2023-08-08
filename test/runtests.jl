@@ -432,6 +432,16 @@ end
   @test framerate(z) == 100
   @test amp2db(rms(x-z)/rms(z)) < -40.0
 
+  x = x[:,1:1]
+  y = upconvert(x, 10, 100)
+  @test nchannels(y) == 1
+  @test framerate(y) == 1000
+  @test y isa AbstractMatrix
+  z = downconvert(y, 10, 100)[12:end-11,:]
+  @test nchannels(z) == 1
+  @test framerate(z) == 100
+  @test z isa AbstractMatrix
+
   x = rcosfir(0.25, 10)
   @test length(x) == 221
   @test x[1:10:end] ≈ vcat(zeros(11), 0.326598866403003, zeros(11))

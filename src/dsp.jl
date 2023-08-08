@@ -123,7 +123,7 @@ end
 function upconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
   mapreduce(hcat, eachcol(s)) do x
     upconvert(x, sps, fc, pulseshape; fs=fs)
-  end
+  end[:,:]
 end
 
 """
@@ -143,7 +143,7 @@ end
 function downconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
   mapreduce(hcat, eachcol(s)) do x
     downconvert(x, sps, fc, pulseshape; fs=fs)
-  end
+  end[:,:]
 end
 
 """
@@ -499,11 +499,9 @@ function _istft(iX::AbstractMatrix{T}, nfft::Int, noverlap::Int, window::Union{F
   # H. Zhivomirov, TEM Journal, Vol. 8, No. 1, pp. 56-64, 2019.
   (window === nothing) && (window = rect)
   win, norm2 = Periodograms.compute_window(window, nfft)
-
   nstep = nfft - noverlap
   nseg = size(iX, 2)
   outputlength = nfft + (nseg-1) * nstep
-
   iX .*= win
   x = zeros(T, outputlength)
   normw = zeros(eltype(win), outputlength)
@@ -511,7 +509,6 @@ function _istft(iX::AbstractMatrix{T}, nfft::Int, noverlap::Int, window::Union{F
       @views x[1+(i-1)*nstep:nfft+(i-1)*nstep] .= x[1+(i-1)*nstep:nfft+(i-1)*nstep] .+ iX[:,i]
       @views normw[1+(i-1)*nstep:nfft+(i-1)*nstep] .= normw[1+(i-1)*nstep:nfft+(i-1)*nstep] .+ win .^ 2
   end
-
   trimlength = nfft % 2 == 0 ? outputlength - nfft : outputlength - nfft + 1
   (sum(@view(normw[1+nfft÷2:end-nfft÷2]) .> 1e-10) != trimlength) && (
     @warn "NOLA condition failed, STFT may not be invertible")
