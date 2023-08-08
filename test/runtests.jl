@@ -442,6 +442,11 @@ end
   @test framerate(z) == 100
   @test z isa AbstractMatrix
 
+  x = signal(rand([-1,1], 1000), 1000.0)
+  @test upconvert(x, 8, 2000.0) == upconvert(complex.(x), 8, 2000.0)
+  x = signal(rand([-1,1], 1000, 2), 1000.0)
+  @test upconvert(x, 8, 2000.0) == upconvert(complex.(x), 8, 2000.0)
+
   x = rcosfir(0.25, 10)
   @test length(x) == 221
   @test x[1:10:end] ≈ vcat(zeros(11), 0.326598866403003, zeros(11))

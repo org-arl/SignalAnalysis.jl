@@ -115,7 +115,7 @@ passband signal centered around carrier frequency `fc`.
 """
 function upconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
   pad = cld(length(pulseshape), 2*sps) - 1
-  s = vcat(zeros(pad), analytic(s), zeros(pad))
+  s = vcat(zeros(pad), complex.(s), zeros(pad))
   s = signal(resample(s, sps, pulseshape), sps*fs)
   √2 * real.(s .* cis.(2π * inHz(fc) * domain(s)))
 end
