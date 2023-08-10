@@ -19,6 +19,7 @@ makedocs(
       "tfa.md",
       "array.md",
       "rand.md",
+      "doatoa.md"
       "plot.md",
       #"iplot.md"
     ]
