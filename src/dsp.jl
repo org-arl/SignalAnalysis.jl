@@ -382,7 +382,9 @@ end
 
 """
     sfilt(f, x[, si])
+    filt(f, x::SampledSignal[, si])
     sfilt(b, a, x[, si])
+    filt(b, a, x::SampledSignal[, si])
 
 Same as [`filt`](https://docs.juliadsp.org/stable/filters/#DSP.filt),
 but retains sampling rate information.
@@ -393,7 +395,9 @@ sfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::AbstractV
 sfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::AbstractVector, si) = signal(filt(b, a, samples(x), si), framerate(x))
 
 """
-$(SIGNATURES)
+    sfiltfilt(coef, x)
+    filtfilt(coef, x::SampledSignal)
+
 Same as [`filtfilt`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.filtfilt),
 but retains sampling rate information.
 """
@@ -401,6 +405,7 @@ sfiltfilt(coef, x) = signal(filtfilt(coef, samples(x)), framerate(x))
 
 """
     sresample(x, rate[, coef])
+    resample(x::SampledSignal, rate[, coef])
 
 Same as [`resample`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.resample),
 but correctly handles sampling rate conversion.
