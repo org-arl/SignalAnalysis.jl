@@ -604,7 +604,11 @@ end
   y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125𝓈, index 129.0
   y = resample(y4, 1//4)
   y .+= 0.1 * randn(length(y))
-  p, t, a = findsignal(x, y, 3)
+  p, t, a = findsignal(x, y, 3; fast=false)
+  @test p == [33, 64, 129]
+  @test t ≈ [0.000775, 0.001545, 0.003124] atol=2e-6
+  @test real(a) / real(a[1]) ≈ [1.0, -0.8, 0.6] atol=1e-2
+  p, t, a = findsignal(x, y, 3; fast=true)
   @test p == [33, 64, 129]
   @test t ≈ [0.000775, 0.001545, 0.003124] atol=1e-5
   @test real(a) / real(a[1]) ≈ [1.0, -0.8, 0.6] atol=1e-2

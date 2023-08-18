@@ -582,10 +582,12 @@ julia> y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125𝓈, index 129
 julia> y = resample(y4, 1//4)
 julia> y .+= 0.1 * randn(length(y))
 julia> findsignal(x, y, 3)
+([33, 64, 129], [0.000781, 0.001538, 0.003125], ComplexF64[...])
+julia> findsignal(x, y, 3; fast=false)
 ([33, 64, 129], [0.000775, 0.001545, 0.003124], ComplexF64[...])
 ```
 """
-function findsignal(r, s, n=1; prominance=0.2, fast=false)
+function findsignal(r, s, n=1; prominance=0.2, fast=true)
   # coarse arrival time estimation
   r = analytic(r)
   r = r / std(r)
