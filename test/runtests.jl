@@ -523,12 +523,38 @@ end
   x = signal(randn(100), 10kHz)
   x1 = signal(vcat(zeros(1000), x/2, zeros(1000)), 10kHz)
   x2 = mfilter(x, x1)
+  @test !isanalytic(x2)
   @test argmax(abs.(x2)) == 1001
 
   x = analytic(signal(randn(100), 10kHz))
   x1 = signal(vcat(zeros(1000), x/2, zeros(1000)), 10kHz)
   x2 = mfilter(x, x1)
+  @test isanalytic(x2)
   @test argmax(abs.(x2)) == 1001
+
+  x = analytic(signal(randn(100), 10kHz))
+  x1 = signal(randn(1000), 10kHz)
+  x2 = mfilter(x, x1)
+  @test isanalytic(x2)
+
+  x = signal(randn(100), 10kHz)
+  x1 = analytic(signal(randn(1000), 10kHz))
+  x2 = mfilter(x, x1)
+  @test isanalytic(x2)
+
+  x = signal(randn(100), 10kHz)
+  x1 = signal(randn(1000), 11kHz)
+  @test_throws ArgumentError mfilter(x, x1)
+
+  x = signal(randn(100), 10kHz)
+  x1 = randn(1000)
+  x2 = mfilter(x, x1)
+  @test !isanalytic(x2)
+
+  x = randn(100)
+  x1 = signal(randn(1000), 10kHz)
+  x2 = mfilter(x, x1)
+  @test !isanalytic(x2)
 
   onesideds = [true, false]
   nfft = 256

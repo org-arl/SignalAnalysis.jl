@@ -403,9 +403,11 @@ $(SIGNATURES)
 Matched filter looking for reference signal `r` in signal `s`.
 """
 function mfilter(r, s)
-  f = conj.(reverse(samples(r)))
+  issamerate(r, s) || throw(ArgumentError("signals `r` and `s` must have the same sampling rate"))
+  r̄, s̄ = promote(samples(r), samples(s))
+  f = conj.(reverse(r̄))
   n = length(r) - 1
-  sfilt(f, padded(s, (0, n)))[n+1:end]
+  sfilt(f, padded(samerateas(s, s̄), (0, n)))[n+1:end]
 end
 
 """
