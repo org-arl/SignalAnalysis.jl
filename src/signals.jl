@@ -156,7 +156,7 @@ function padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T
 end
 
 """
-    partition(x, n; step=n, flush=true)
+    partition(x::SampledSignal, n; step=n, flush=true)
 
 Iterates over the signal `x`, `n` samples at a time, with a step size of `step`. If `flush` is
 enabled, the last partition may be smaller than `n` samples.
@@ -198,7 +198,7 @@ julia> collect(partition(x, 5))[1]
 function Base.Iterators.partition(s::SampledSignal, n::Integer; step::Integer=n, flush::Bool=true)
   n < 1 && throw(ArgumentError("cannot create partitions of length $n"))
   step < 1 && throw(ArgumentError("cannot create partitions with step size $step"))
-  return SignalPartitionIterator{typeof(s)}(s, Int(n), Int(step), flush)
+  SignalPartitionIterator{typeof(s)}(s, Int(n), Int(step), flush)
 end
 
 struct SignalPartitionIterator{T <: AbstractArray}
@@ -219,7 +219,7 @@ Base.eltype(::Type{SignalPartitionIterator{T}}) where {T<:Matrix} = SubArray{elt
 function Base.length(itr::SignalPartitionIterator)
   l = size(itr.c, 1)
   itr.flush || (l -= itr.n-1)
-  return div(l, itr.step) + ((mod(l, itr.step) > 0) ? 1 : 0)
+  div(l, itr.step) + ((mod(l, itr.step) > 0) ? 1 : 0)
 end
 
 function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=firstindex(itr.c))
@@ -227,7 +227,7 @@ function Base.iterate(itr::SignalPartitionIterator{<:AbstractRange}, state=first
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
-  return @inbounds itr.c[state:r], state + itr.step
+  @inbounds itr.c[state:r], state + itr.step
 end
 
 function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=firstindex(itr.c))
@@ -235,7 +235,7 @@ function Base.iterate(itr::SignalPartitionIterator{<:AbstractVector}, state=firs
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
-  return @inbounds view(itr.c, state:r), state + itr.step
+  @inbounds view(itr.c, state:r), state + itr.step
 end
 
 function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=firstindex(itr.c))
@@ -243,7 +243,7 @@ function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=firs
   state > l && return nothing
   itr.flush || state + itr.n - 1 <= l || return nothing
   r = min(state + itr.n - 1, l)
-  return @inbounds view(itr.c, state:r, :), state + itr.step
+  @inbounds view(itr.c, state:r, :), state + itr.step
 end
 
 """
