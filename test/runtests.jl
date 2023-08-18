@@ -198,6 +198,17 @@ using SignalAnalysis.Units
   s3 = signal(randn(xlen, 1, 1), fs)
   @test_throws ArgumentError vec(s3)
 
+  x = signal(randn(100), 1000)
+  x1 = samerateas(x)(randn(200))
+  @test framerate(x1) == framerate(x)
+  @test nframes(x1) == 200
+  x1 = samerateas(x, randn(200))
+  @test framerate(x1) == framerate(x)
+  @test nframes(x1) == 200
+  x1 = samerateas(randn(100), randn(200))
+  @test framerate(x1) == 1.0
+  @test nframes(x1) == 200
+
 end
 
 @testset "generate" begin

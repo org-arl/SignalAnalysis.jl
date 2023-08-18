@@ -6,7 +6,7 @@ using PaddedViews: PaddedView
 
 export signal, analytic, isanalytic, samples
 export padded, toframe, domain
-export partition
+export partition, samerateas
 
 struct SamplingInfo
   fs::Float32
@@ -152,7 +152,7 @@ function padded(s::AbstractMatrix{T}, padding; delay=0, fill=zero(T)) where {T}
 end
 
 function padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T
-  signal(padded(samples(s), padding; delay=delay, fill=fill), framerate(s))
+  samerateas(s, padded(samples(s), padding; delay=delay, fill=fill))
 end
 
 """
@@ -314,3 +314,50 @@ function Base.vec(s::SampledSignal)
     throw(ArgumentError("reshape a multi-channel signal as a single-channel signal is undefined."))
   end
 end
+
+"""
+$(SIGNATURES)
+Checks if two signals have the same sampling rate. If the sampling rate of a
+signal is unknown (because it is not a `SampledSignal`), it is assumed to have
+the same rate as the other signal.
+"""
+issamerate(x::SampledSignal, y::SampledSignal) = framerate(x) == framerate(y)
+issamerate(x::SampledSignal, y::AbstractArray) = true
+issamerate(x::AbstractArray, y::SampledSignal) = true
+issamerate(x::AbstractArray, y::AbstractArray) = true
+
+"""
+$(SIGNATURES)
+Create a signal with the same sampling rate as signal `x`.
+
+# Examples:
+```julia-repl
+julia> x = signal(randn(100), 8kHz)
+julia> y = samerateas(x)(randn(5))
+SampledSignal @ 8000.0 Hz, 5-element Array{Float64,1}:
+ -0.08671384898800058
+ -0.665143340284631
+ -0.3955367460364236
+ 0.8209785486953832
+ 1.3477512734963886
+```
+"""
+samerateas(x) = y -> signal(samples(y), framerate(x))
+
+"""
+$(SIGNATURES)
+Create a signal with samples `y` and sampling rate same as signal `x`.
+
+# Examples:
+```julia-repl
+julia> x = signal(randn(100), 8kHz)
+julia> y = samerateas(x, randn(5))
+SampledSignal @ 8000.0 Hz, 5-element Vector{Float64}:
+ -0.3053704876108388
+ -0.5474123820044299
+ -0.6916442204609657
+ -0.5185296405433826
+ -0.4598263144701988
+```
+"""
+samerateas(x, y) = signal(samples(y), framerate(x))
