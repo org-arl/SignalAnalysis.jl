@@ -1,10 +1,13 @@
 import DSP
-import DSP: filt, filtfilt, resample
+import DSP: filt, filtfilt, resample, nextfastfft
+import Statistics: std
+import Peaks: findmaxima, peakproms!
+import Optim: optimize, minimizer
 
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll
-export sfilt, sfiltfilt, sresample, mfilter
+export sfilt, sfiltfilt, sresample, mfilter, findsignal
 export istft, whiten, filt, filtfilt, resample
 
 """
@@ -548,4 +551,76 @@ function whiten(x::AbstractVector; nfft::Int, noverlap::Int, window::Union{Funct
   logmag .-= γ * mean(logmag; dims=2)
   outputtype = isreal(x) ? Real : Complex
   istft(outputtype, exp.(logmag) .* exp.(im .* angle.(xstft)); nfft=nfft, noverlap=noverlap, window=window)
+end
+
+"""
+$(SIGNATURES)
+Finds up to `n` copies of reference signal `r` in signal `s`. The reference
+signal `r` should have a delta-like autocorrelation for this function to work
+well. If the keyword parameter `fast` is set to `true`, approximate arrival
+times are computed based on a matched filter. If it is set to `false`, an
+iterative optimization is performed to find more accruate arrival times.
+
+Returns tuple `(p, t, a)` where `p` is a vector of indices of the arrivals,
+`t` is a vector of arrival times and `a` is a vector of complex amplitudes
+of the arrivals. The arrival times in `t` may not correspond to the integer
+indices in `p` if `fast` is set to `false`.
+
+# Examples:
+```julia-repl
+julia> x = chirp(1000, 5000, 0.1, 40960; window=(tukey, 0.05))
+julia> x4 = resample(x, 4)
+julia> y4 = samerateas(x4, zeros(32768))
+julia> y4[128:127+length(x4)] = real(x4)          # time 0.000775𝓈, index 32.75
+julia> y4[254:253+length(x4)] += -0.8 * real(x4)  # time 0.001544𝓈, index 64.25
+julia> y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125𝓈, index 129.0
+julia> y = resample(y4, 1//4)
+julia> y .+= 0.1 * randn(length(y))
+julia> findsignal(x, y, 3)
+([33, 64, 129], [0.000775, 0.001545, 0.003124], ComplexF64[...])
+```
+"""
+function findsignal(r, s, n=1; prominance=0.2, fast=false)
+  # coarse arrival time estimation
+  r = analytic(r)
+  r = r / std(r)
+  s = analytic(s)
+  mfo = mfilter(r, s) / length(r)
+  absmfo = abs.(samples(mfo))
+  p, _ = findmaxima(absmfo)
+  peakproms!(p, absmfo; minprom=prominance*maximum(absmfo))
+  length(p) > length(s)/10 && return nothing
+  h = absmfo[p]
+  ndx = sortperm(h; rev=true)
+  length(ndx) > n && (ndx = ndx[1:n])
+  p = p[ndx]
+  if fast
+    t = (p .- 1.0) ./ framerate(s)
+    return p, t, mfo[p]
+  end
+  # iterative fine arrival time estimation
+  margin = 5   # arrival time may vary up to margin from coarse estimates
+  i = minimum(p)
+  n = maximum(p) - i + length(r) + 2 * margin
+  n = nextfastfft(n)
+  i = max(1, i - margin)
+  N = n
+  i + N - 1 > length(s) && (N = length(s) - i + 1)
+  X = fft(vcat(samples(r), zeros(n-length(r))))
+  f = fftfreq(n, 1.0)
+  function reconstruct(v)
+    ii = @view v[1:length(p)]
+    aa = @views complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
+    Z = mapreduce(+, zip(ii, aa)) do (i, a)
+      a .* X .* cis.(-2π .* i .* f)
+    end
+    @view real(ifft(Z))[1:N]
+  end
+  v0 = [p .- i; real.(mfo[p]); imag.(mfo[p])]
+  soln = optimize(v -> sum(abs2, reconstruct(v) .- s[i:i+N-1]), v0)
+  v = minimizer(soln)
+  pp = v[1:length(p)] .+ i
+  t = (pp .- 1.0) ./ framerate(s)
+  a = complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
+  round.(Int, pp), t, a
 end

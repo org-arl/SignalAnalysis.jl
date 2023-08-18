@@ -596,6 +596,19 @@ end
   x̃ = whiten(x; nfft=nfft, noverlap=noverlap, window=nothing, γ=0.)
   @test rms(x[1:length(x̃)] - x̃) / rms(x[1:length(x̃)]) ≈ 0. atol=0.0001
 
+  x = chirp(1000, 5000, 0.1, 40960; window=(tukey, 0.05))
+  x4 = resample(x, 4)
+  y4 = samerateas(x4, zeros(32768))
+  y4[128:127+length(x4)] = real(x4)          # time 0.000775𝓈, index 32.75
+  y4[254:253+length(x4)] += -0.8 * real(x4)  # time 0.001544𝓈, index 64.25
+  y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125𝓈, index 129.0
+  y = resample(y4, 1//4)
+  y .+= 0.1 * randn(length(y))
+  p, t, a = findsignal(x, y, 3)
+  @test p == [33, 64, 129]
+  @test t ≈ [0.000775, 0.001545, 0.003124] atol=1e-5
+  @test real(a) / real(a[1]) ≈ [1.0, -0.8, 0.6] atol=1e-2
+
 end
 
 @testset "rand" begin
