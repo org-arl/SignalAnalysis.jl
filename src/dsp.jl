@@ -1,10 +1,11 @@
+import DSP
 import DSP: filt, filtfilt, resample
 
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll
 export sfilt, sfiltfilt, sresample, mfilter
-export istft, whiten
+export istft, whiten, filt, filtfilt, resample
 
 """
 $(SIGNATURES)
@@ -377,12 +378,16 @@ function pll(x::AbstractVecOrMat, bandwidth=1e-3; fs=framerate(x))
 end
 
 """
-$(SIGNATURES)
+    sfilt(f, x[, si])
+    sfilt(b, a, x[, si])
+
 Same as [`filt`](https://docs.juliadsp.org/stable/filters/#DSP.filt),
 but retains sampling rate information.
 """
-sfilt(f, x, args...) = signal(filt(f, samples(x), args...), framerate(x))
-sfilt(b, a, x, args...) = signal(filt(b, a, samples(x), args...), framerate(x))
+sfilt(f::AbstractVector{<:Number}, x::AbstractVector) = signal(filt(f, samples(x)), framerate(x))
+sfilt(f::AbstractVector{<:Number}, x::AbstractVector, si) = signal(filt(f, samples(x), si), framerate(x))
+sfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::AbstractVector) = signal(filt(b, a, samples(x)), framerate(x))
+sfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::AbstractVector, si) = signal(filt(b, a, samples(x), si), framerate(x))
 
 """
 $(SIGNATURES)
@@ -392,11 +397,22 @@ but retains sampling rate information.
 sfiltfilt(coef, x) = signal(filtfilt(coef, samples(x)), framerate(x))
 
 """
-$(SIGNATURES)
+    sresample(x, rate[, coef])
+
 Same as [`resample`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.resample),
 but correctly handles sampling rate conversion.
 """
-sresample(x, rate, args...; kwargs...) = signal(resample(samples(x), rate, args...; kwargs...), rate * framerate(x))
+sresample(x, rate) = signal(resample(samples(x), rate), rate * framerate(x))
+sresample(x, rate, coef) = signal(resample(samples(x), rate, coef), rate * framerate(x))
+
+# overload DSP versions of the above functions
+DSP.filt(f::AbstractVector{<:Number}, x::SampledSignal) = sfilt(f, x)
+DSP.filt(f::AbstractVector{<:Number}, x::SampledSignal, si) = sfilt(f, x, si)
+DSP.filt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::SampledSignal) = sfilt(b, a, x)
+DSP.filt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::SampledSignal, si) = sfilt(b, a, x, si)
+DSP.Filters.filtfilt(coef::AbstractVector{<:Number}, x::SampledSignal) = sfiltfilt(coef, x)
+DSP.Filters.resample(x::SampledSignal, rate::Real) = sresample(x, rate)
+DSP.Filters.resample(x::SampledSignal, rate::Real, coef::Vector) = sresample(x, rate, coef)
 
 """
 $(SIGNATURES)

@@ -513,11 +513,19 @@ end
   f = fir(127, 5kHz, 10kHz; fs=44.1kHz)
   x1 = sfilt(f, x)
   @test framerate(x1) == framerate(x)
+  x1 = filt(f, x)
+  @test framerate(x1) == framerate(x)
   x1 = sfilt(f, 1, x)
+  @test framerate(x1) == framerate(x)
+  x1 = filt(f, 1, x)
   @test framerate(x1) == framerate(x)
   x1 = sfiltfilt(f, x)
   @test framerate(x1) == framerate(x)
+  x1 = filtfilt(f, x)
+  @test framerate(x1) == framerate(x)
   x1 = sresample(x, 3//2)
+  @test framerate(x1) == 3 * framerate(x) / 2
+  x1 = resample(x, 3//2)
   @test framerate(x1) == 3 * framerate(x) / 2
 
   x = signal(randn(100), 10kHz)
