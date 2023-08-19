@@ -24,6 +24,11 @@ SignalBase.framerate(x::AbstractArray) = 1.0
 SignalBase.nchannels(x::AbstractArray) = size(x, 2)
 SignalBase.sampletype(x::AbstractArray) = eltype(x)
 
+function Base.show(io::IO, mime::MIME"text/plain", s::SampledSignal{T}) where T
+  print(io, "SampledSignal @ ", framerate(s), " Hz, ")
+  show(io, mime, samples(s))
+end
+
 """
 $(SIGNATURES)
 Returns the domain of the signal.
