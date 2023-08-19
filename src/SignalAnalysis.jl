@@ -6,8 +6,8 @@ using DocStringExtensions
 using SignalBase
 using SignalBase.Units
 export nframes, nchannels, sampletype, framerate, duration
-export db2amp, amp2db
-export 𝓈, Hz, kHz
+export db2amp, amp2db, pow2db, db2pow
+export 𝓈, ms, Hz, kHz
 
 const 𝓈 = Units.s
 

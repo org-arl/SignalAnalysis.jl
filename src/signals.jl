@@ -111,7 +111,8 @@ signal(fs) = x -> signal(x, fs)
 
 """
 $(SIGNATURES)
-Converts a signal to analytic representation.
+Converts a signal to analytic representation. The conversion preserves energy,
+i.e., to convert back to a real signal while conserving energy, multiply by √2.
 """
 analytic(s::SampledSignal) = isanalytic(s) ? s : signal(hilbert(s)/√2.0, framerate(s))
 analytic(s) = isanalytic(s) ? s : hilbert(s)/√2.0
