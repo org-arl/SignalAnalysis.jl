@@ -629,6 +629,51 @@ end
   @test t ≈ [0.000775, 0.001545, 0.003124] atol=1e-5
   @test real(a) / real(a[1]) ≈ [1.0, -0.8, 0.6] atol=1e-2
 
+  @test delay!([1,2,3,4], -1) == [2,3,4,0]
+  @test delay!([1,2,3,4], 1) == [0,1,2,3]
+
+  x = signal(vcat(zeros(128), [1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
+  y = copy(samples(x))
+  delay!(x, 1)
+  @test samples(x) == circshift(y, 1)
+  delay!(x, -33.0)
+  @test samples(x) == circshift(y, -32)
+  delay!(x, 10.7)
+  delay!(x, 21.3)
+  @test samples(x) ≈ y atol=0.05
+  y = copy(samples(x))
+  delay!(x, 0.1s)
+  delay!(x, -10)
+  @test samples(x) == y
+
+  x = signal(vcat(zeros(128), ComplexF64[1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
+  y = copy(samples(x))
+  delay!(x, 1)
+  @test samples(x) == circshift(y, 1)
+  delay!(x, -33.0)
+  @test samples(x) == circshift(y, -32)
+  delay!(x, 10.7)
+  delay!(x, 21.3)
+  @test samples(x) ≈ y atol=0.05
+  y = copy(samples(x))
+  delay!(x, 0.1s)
+  delay!(x, -10)
+  @test samples(x) ≈ y atol=1e-3
+
+  x = signal(vcat(zeros(ComplexF32, 128), ComplexF32[1.0, 2.0, 3.0, 2.0, 1.0], zeros(ComplexF32, 128)), 100.0)
+  y = copy(samples(x))
+  delay!(x, 1)
+  @test samples(x) == circshift(y, 1)
+  delay!(x, -33.0)
+  @test samples(x) == circshift(y, -32)
+  delay!(x, 10.7)
+  delay!(x, 21.3)
+  @test samples(x) ≈ y atol=0.05
+  y = copy(samples(x))
+  delay!(x, 0.1s)
+  delay!(x, -10)
+  @test samples(x) ≈ y atol=1e-3
+
 end
 
 @testset "rand" begin

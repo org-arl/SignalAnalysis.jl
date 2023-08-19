@@ -8,7 +8,7 @@ export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll
 export sfilt, sfiltfilt, sresample, mfilter, findsignal
-export istft, whiten, filt, filtfilt, resample
+export istft, whiten, filt, filtfilt, resample, delay!
 
 """
 $(SIGNATURES)
@@ -559,6 +559,88 @@ function whiten(x::AbstractVector; nfft::Int, noverlap::Int, window::Union{Funct
 end
 
 """
+    delay!(x, v)
+
+Delay signal `x` by `v` units. The delay may be specified in samples or in time
+units (e.g. 2.3𝓈). The function supports delays of fractional or negative
+number of samples. The length of the returned signal is the same as the original,
+with any part of the signal that is shifted beyond the original length discarded.
+
+# Examples:
+```julia-repl
+julia> x = signal([1.0, 2.0, 3.0], 10.0)
+julia> delay!(x, 1)
+SampledSignal @ 10.0 Hz, 3-element Vector{Float64}:
+ 0.0
+ 1.0
+ 2.0
+
+julia> x = signal([1.0, 2.0, 3.0], 10.0)
+julia> delay!(x, -1)
+SampledSignal @ 10.0 Hz, 3-element Vector{Float64}:
+ 1.0
+ 2.0
+ 0.0
+
+julia> x = signal([1.0, 2.0, 3.0, 2.0, 1.0], 10.0)
+julia> delay!(x, 1.2)
+SampledSignal @ 10.0 Hz, 5-element Vector{Float64}:
+ -0.10771311593885118
+  0.8061269251734184
+  1.7488781412804602
+  2.9434587943152617
+  2.2755141401574472
+
+julia> x = signal([1.0, 2.0, 3.0, 2.0, 1.0], 10.0)
+julia> delay!(x, -0.11𝓈)
+SampledSignal @ 10.0 Hz, 5-element Vector{Float64}:
+  2.136038062052266
+  2.98570052268015
+  1.870314441196549
+  0.9057002486847239
+ -0.06203155191384361
+```
+"""
+function delay!(x, n::Integer; npad=0)
+  if n > 0
+    @inbounds for i ∈ lastindex(x):-1:firstindex(x)+n
+      x[i] = x[i-n]
+    end
+    x[begin:begin+n-1] .= 0
+  elseif n < 0
+    @inbounds for i ∈ firstindex(x):lastindex(x)+n
+      x[i] = x[i-n]
+    end
+    x[end:end+n+1] .= 0
+  end
+  x
+end
+
+function delay!(x, v::Real; npad=32)
+  vi = floor(Int, v)
+  v > vi || return delay!(x, vi)
+  n = nextfastfft(length(x) + 2 * npad)
+  X = zeros(ComplexF64, n)
+  X[npad+1:npad+length(x)] .= samples(x)
+  fft!(X)
+  X .*= cis.(-2π .* (v - vi) .* fftfreq(n))
+  ifft!(X)
+  for (i, j) ∈ zip(eachindex(x), 1:length(x))
+    k = j - vi + npad
+    if k < 1 || k > length(X)
+      x[i] = 0
+    elseif eltype(x) <: Complex
+      x[i] = X[k]
+    else
+      x[i] = real(X[k])
+    end
+  end
+  x
+end
+
+delay!(x, t::Units.Unitful.Time; kwargs...) = delay!(x, inseconds(t) * framerate(x); kwargs...)
+
+"""
 $(SIGNATURES)
 Finds up to `n` copies of reference signal `r` in signal `s`. The reference
 signal `r` should have a delta-like autocorrelation for this function to work
@@ -602,7 +684,7 @@ function findsignal(r, s, n=1; prominance=0.2, fast=true)
   length(ndx) > n && (ndx = ndx[1:n])
   p = p[ndx]
   if fast
-    t = (p .- 1.0) ./ framerate(s)
+    t = time(s, p)
     return p, t, mfo[p]
   end
   # iterative fine arrival time estimation
@@ -614,7 +696,7 @@ function findsignal(r, s, n=1; prominance=0.2, fast=true)
   N = n
   i + N - 1 > length(s) && (N = length(s) - i + 1)
   X = fft(vcat(samples(r), zeros(n-length(r))))
-  f = fftfreq(n, 1.0)
+  f = fftfreq(n)
   function reconstruct(v)
     ii = @view v[1:length(p)]
     aa = @views complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
@@ -627,7 +709,7 @@ function findsignal(r, s, n=1; prominance=0.2, fast=true)
   soln = optimize(v -> sum(abs2, reconstruct(v) .- s[i:i+N-1]), v0)
   v = minimizer(soln)
   pp = v[1:length(p)] .+ i
-  t = (pp .- 1.0) ./ framerate(s)
+  t = time(s, pp)
   a = complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
   round.(Int, pp), t, a
 end
