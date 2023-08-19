@@ -637,6 +637,11 @@ end
   @test t ≈ [0.000775, 0.001545, 0.003124] atol=1e-5
   @test real(a) / real(a[1]) ≈ [1.0, -0.8, 0.6] atol=1e-2
 
+  y = compose(real(x), time([32.75, 64.25, 129.0], x), [0.8, -0.7, 1.0]; duration=0.2)
+  t, a = findsignal(x, y, 3; coarse=false)
+  @test t ≈ [0.000775, 0.001545, 0.003124] atol=2e-6
+  @test real(a) / real(a[3]) ≈ [0.8, -0.7, 1.0] atol=1e-2
+
   @test delay!([1,2,3,4], -1) == [2,3,4,0]
   @test delay!([1,2,3,4], 1) == [0,1,2,3]
 

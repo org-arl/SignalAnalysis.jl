@@ -655,7 +655,8 @@ times are computed based on a matched filter. If it is set to `false`, an
 iterative optimization is performed to find more accruate arrival times.
 
 Returns named tuple `(time=t, amplitude=a)` where `t` is a vector of arrival
-times and `a` is a vector of complex amplitudes of the arrivals.
+times and `a` is a vector of complex amplitudes of the arrivals. The arrivals
+are sorted in ascending order of arrival times.
 
 # Examples:
 ```julia-repl
@@ -689,7 +690,8 @@ function findsignal(r, s, n=1; prominance=0.2, coarse=false)
   p = p[ndx]
   if coarse
     t = time(Float64.(p), s)
-    return (time=t, amplitude=samples(mfo[p]))
+    ndx = sortperm(t)
+    return (time=t[ndx], amplitude=samples(mfo[p[ndx]]))
   end
   # iterative fine arrival time estimation
   margin = 5   # arrival time may vary up to margin from coarse estimates
@@ -716,7 +718,8 @@ function findsignal(r, s, n=1; prominance=0.2, coarse=false)
   pp = v[1:length(p)] .+ i
   t = time(pp, s)
   a = complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
-  (time=t, amplitude=a)
+  ndx = sortperm(t)
+  (time=t[ndx], amplitude=a[ndx])
 end
 
 """
