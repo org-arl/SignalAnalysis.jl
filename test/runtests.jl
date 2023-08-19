@@ -2,10 +2,13 @@ using Test, Statistics, LinearAlgebra, DSP, DSP.Util
 using Plots
 using SignalAnalysis
 using SignalAnalysis.Units
+using StableRNGs
+
+rng = StableRNG(0)
 
 @testset "signals" begin
 
-  x = signal(randn(8000), 1000)
+  x = signal(randn(rng, 8000), 1000)
   @test x isa AbstractArray
   @test length(x) == 8000
   @test nframes(x) == 8000
@@ -14,7 +17,7 @@ using SignalAnalysis.Units
   @test !isanalytic(x)
   @test domain(x) ≈ 0:1/1000:7999/1000
 
-  x = signal(randn((8000,2)), 1000)
+  x = signal(randn(rng, (8000,2)), 1000)
   @test x isa AbstractArray
   @test size(x) == (8000, 2)
   @test nframes(x) == 8000
@@ -30,7 +33,7 @@ using SignalAnalysis.Units
   @test framerate(x) == 1000
   @test framerate(x1) == 8000
 
-  x = signal(randn(8000), 1000)
+  x = signal(randn(rng, 8000), 1000)
   @test x isa AbstractArray
   @test length(x) == 8000
   @test nframes(x) == 8000
@@ -39,19 +42,19 @@ using SignalAnalysis.Units
   @test !isanalytic(x)
   @test domain(x) ≈ 0:1/1000:7999/1000
 
-  x1 = signal(randn(8000), framerate(x))
+  x1 = signal(randn(rng, 8000), framerate(x))
   @test x1 isa AbstractArray
   @test nframes(x1) == 8000
   @test nchannels(x1) == 1
   @test framerate(x1) == 1000
 
-  x1 = signal(randn(8000), framerate(x)/2)
+  x1 = signal(randn(rng, 8000), framerate(x)/2)
   @test x1 isa AbstractArray
   @test nframes(x1) == 8000
   @test nchannels(x1) == 1
   @test framerate(x1) == 500
 
-  x1 = signal(randn(8000), 1000)
+  x1 = signal(randn(rng, 8000), 1000)
   x = analytic(x1)
   @test nframes(x1) == nframes(x)
   @test nchannels(x1) == nchannels(x)
@@ -63,7 +66,7 @@ using SignalAnalysis.Units
   @test isanalytic(x2)
   @test x === x2
 
-  x1 = signal(randn((8000,2)), 1000)
+  x1 = signal(randn(rng, (8000,2)), 1000)
   x = analytic(x1)
   @test nframes(x1) == nframes(x)
   @test nchannels(x1) == nchannels(x)
@@ -75,13 +78,13 @@ using SignalAnalysis.Units
   @test isanalytic(x2)
   @test x === x2
 
-  x = randn((8000,2))
+  x = randn(rng, (8000,2))
   x1 = signal(x, 1000)
   @test x1 !== x
   @test samples(x1) === x
   @test samples(x) === x
 
-  x = randn(8000)
+  x = randn(rng, 8000)
   x1 = padded(x, (10, 5); delay=1)
   @test x1[-9] == 0
   @test x1[8005] == 0
@@ -93,7 +96,7 @@ using SignalAnalysis.Units
   @test x2[8006] == 0
   @test x2[1] == 0
   @test x2[8001] == x1[8001] == x[8000]
-  x2d = randn(8000, 2)
+  x2d = randn(rng, 8000, 2)
   x2d1 = padded(x2d, (10, 5); delay=1)
   @test all(x2d1[-9,:] .== 0)
   @test all(x2d1[8005,:] .== 0)
@@ -171,19 +174,19 @@ using SignalAnalysis.Units
     @test size(x1) == (250, 2)
   end
 
-  x = signal(randn(2000), 8kHz)
+  x = signal(randn(rng, 2000), 8kHz)
   @test toframe(0.2s, x) == 1601
   @test toframe([0.2s, 201ms], x) == [1601, 1609]
   @test toframe((0.2, 0.201), x) == 1601:1609
   @test toframe(0.2:0.201s, x) == 1601:1609
   @test toframe(0.2:0.01:0.3, x)[1:3] == [1601, 1681, 1761]
 
-  x = signal(randn(8000), 1000)
+  x = signal(randn(rng, 8000), 1000)
   t = toframe(0:0.1:1, x)
   @test t == 1:100:1001
 
   xlen = 8000
-  x = randn(xlen)
+  x = randn(rng, xlen)
   fs = 1000
   s0 = signal(x, fs)
   @test vec(s0) == s0
@@ -193,19 +196,19 @@ using SignalAnalysis.Units
   @test vec(s1) == s0
   @test framerate(vec(s1)) == fs
   @test size(vec(s1)) == (xlen,)
-  s2 = signal(randn(xlen, 2), fs)
+  s2 = signal(randn(rng, xlen, 2), fs)
   @test_throws ArgumentError vec(s2)
-  s3 = signal(randn(xlen, 1, 1), fs)
+  s3 = signal(randn(rng, xlen, 1, 1), fs)
   @test_throws ArgumentError vec(s3)
 
-  x = signal(randn(100), 1000)
-  x1 = samerateas(x)(randn(200))
+  x = signal(randn(rng, 100), 1000)
+  x1 = samerateas(x)(randn(rng, 200))
   @test framerate(x1) == framerate(x)
   @test nframes(x1) == 200
-  x1 = samerateas(x, randn(200))
+  x1 = samerateas(x, randn(rng, 200))
   @test framerate(x1) == framerate(x)
   @test nframes(x1) == 200
-  x1 = samerateas(randn(100), randn(200))
+  x1 = samerateas(randn(rng, 100), randn(rng, 200))
   @test framerate(x1) == 1.0
   @test nframes(x1) == 200
 
@@ -322,8 +325,8 @@ end
 
 @testset "basic" begin
 
-  x1 = signal(randn(8000), 1000)
-  x2 = signal(randn((8000,2)), 1000)
+  x1 = signal(randn(rng, 8000), 1000)
+  x2 = signal(randn(rng, (8000,2)), 1000)
 
   @test energy(x1) isa Real
   @test energy(x1) ≈ sum(abs2, x1)/1000
@@ -367,7 +370,7 @@ end
 
 @testset "dsp" begin
 
-  x = 1 .+ randn(100000)
+  x = 1 .+ randn(rng, 100000)
 
   f = fir(127, 0, 5kHz; fs=44.1kHz)
   @test length(f) == 127
@@ -392,7 +395,7 @@ end
   removedc!(x)
   @test mean(x) ≈ 0 atol=0.01
 
-  x = randn(100000) .* (1 .+ sin.(2π*50 .* (1:100000)./44100))
+  x = randn(rng, 100000) .* (1 .+ sin.(2π*50 .* (1:100000)./44100))
   x = signal(x, 44.1kHz)
   y = demon(x)
   @test length(y) == 400
@@ -407,7 +410,7 @@ end
   @test length(y) == 400
   @test meanfrequency(y) ≈ 50 atol=10
 
-  x = randn(100000,2) .* (1 .+ sin.(2π*50 .* (1:100000)./44100))
+  x = randn(rng, 100000,2) .* (1 .+ sin.(2π*50 .* (1:100000)./44100))
   x = signal(x, 44.1kHz)
   y = demon(x)
   @test size(y) == (400, 2)
@@ -422,7 +425,7 @@ end
   @test size(y) == (400, 2)
   @test meanfrequency(y) ≈ [50, 50] atol=10*√2
 
-  x = signal(2*round.(Int,rand(1000)).-1 + 1im*(2*round.(Int,rand(1000)).-1), 100)/√2
+  x = signal(2*round.(Int,rand(rng, 1000)).-1 + 1im*(2*round.(Int,rand(rng, 1000)).-1), 100)/√2
   y = upconvert(x, 10, 100)
   @test framerate(y) == 1000
   @test rms(y[100:end-100])*sqrt(10) ≈ 1.0 atol=0.01
@@ -431,7 +434,7 @@ end
   @test framerate(z) == 100
   @test amp2db(rms(x-z)/rms(z)) < -40.0
 
-  x = signal(2*round.(Int,rand(1000,2)).-1 + 1im*(2*round.(Int,rand(1000,2)).-1), 100)/√2
+  x = signal(2*round.(Int,rand(rng, 1000,2)).-1 + 1im*(2*round.(Int,rand(rng, 1000,2)).-1), 100)/√2
   y = upconvert(x, 10, 100)
   @test nchannels(y) == 2
   @test framerate(y) == 1000
@@ -453,9 +456,9 @@ end
   @test framerate(z) == 100
   @test z isa AbstractMatrix
 
-  x = signal(rand([-1,1], 1000), 1000.0)
+  x = signal(rand(rng, [-1,1], 1000), 1000.0)
   @test upconvert(x, 8, 2000.0) == upconvert(complex.(x), 8, 2000.0)
-  x = signal(rand([-1,1], 1000, 2), 1000.0)
+  x = signal(rand(rng, [-1,1], 1000, 2), 1000.0)
   @test upconvert(x, 8, 2000.0) == upconvert(complex.(x), 8, 2000.0)
 
   x = rcosfir(0.25, 10)
@@ -502,7 +505,7 @@ end
   @test abs.(goertzel(x, 11kHz)) ≈ [0, size(x,1)] atol=1e-6
 
   x = cw(1kHz, 1s, 80kHz)
-  x2 = x .+ 0.25*rand(size(x)...) .+ 0.25im*rand(size(x)...)
+  x2 = x .+ 0.25*rand(rng, size(x)...) .+ 0.25im*rand(rng, size(x)...)
   e2 = √mean(abs2.(x[800:end] .- x2[800:end]))
   x3 = pll(x2)
   @test meanfrequency(x3[800:end]) ≈ meanfrequency(x[800:end]) atol=0.1
@@ -528,39 +531,39 @@ end
   x1 = resample(x, 3//2)
   @test framerate(x1) == 3 * framerate(x) / 2
 
-  x = signal(randn(100), 10kHz)
+  x = signal(randn(rng, 100), 10kHz)
   x1 = signal(vcat(zeros(1000), x/2, zeros(1000)), 10kHz)
   x2 = mfilter(x, x1)
   @test !isanalytic(x2)
   @test argmax(abs.(x2)) == 1001
 
-  x = analytic(signal(randn(100), 10kHz))
+  x = analytic(signal(randn(rng, 100), 10kHz))
   x1 = signal(vcat(zeros(1000), x/2, zeros(1000)), 10kHz)
   x2 = mfilter(x, x1)
   @test isanalytic(x2)
   @test argmax(abs.(x2)) == 1001
 
-  x = analytic(signal(randn(100), 10kHz))
-  x1 = signal(randn(1000), 10kHz)
+  x = analytic(signal(randn(rng, 100), 10kHz))
+  x1 = signal(randn(rng, 1000), 10kHz)
   x2 = mfilter(x, x1)
   @test isanalytic(x2)
 
-  x = signal(randn(100), 10kHz)
-  x1 = analytic(signal(randn(1000), 10kHz))
+  x = signal(randn(rng, 100), 10kHz)
+  x1 = analytic(signal(randn(rng, 1000), 10kHz))
   x2 = mfilter(x, x1)
   @test isanalytic(x2)
 
-  x = signal(randn(100), 10kHz)
-  x1 = signal(randn(1000), 11kHz)
+  x = signal(randn(rng, 100), 10kHz)
+  x1 = signal(randn(rng, 1000), 11kHz)
   @test_throws ArgumentError mfilter(x, x1)
 
-  x = signal(randn(100), 10kHz)
-  x1 = randn(1000)
+  x = signal(randn(rng, 100), 10kHz)
+  x1 = randn(rng, 1000)
   x2 = mfilter(x, x1)
   @test !isanalytic(x2)
 
-  x = randn(100)
-  x1 = signal(randn(1000), 10kHz)
+  x = randn(rng, 100)
+  x1 = signal(randn(rng, 1000), 10kHz)
   x2 = mfilter(x, x1)
   @test !isanalytic(x2)
 
@@ -570,9 +573,9 @@ end
   noverlaps = [0, 0, (15*nfft)÷16, (5*nfft)÷6, (5*nfft)÷6]
   for onesided in onesideds
     if onesided === true
-      x = randn(96000)
+      x = randn(rng, 96000)
     else
-      x = randn(96000) + im .* randn(96000)
+      x = randn(rng, 96000) + im .* randn(rng, 96000)
     end
     for (window, noverlap) in zip(windows, noverlaps)
       xstft = stft(x, nfft, noverlap; window=window, onesided=onesided)
@@ -585,7 +588,7 @@ end
 
   fs = 9600
   hpf = fir(9, 1000; fs=fs)
-  x = filtfilt(hpf, randn(96000))
+  x = filtfilt(hpf, randn(rng, 96000))
   y = 0.1 .* real(chirp(500, 1000, 1.0, fs))
   x[9600+1:2*9600] .+= y
   nfft = 256
@@ -603,7 +606,7 @@ end
   y4[254:253+length(x4)] += -0.8 * real(x4)  # time 0.001544𝓈, index 64.25
   y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125𝓈, index 129.0
   y = resample(y4, 1//4)
-  y .+= 0.1 * randn(length(y))
+  y .+= 0.1 * randn(rng, length(y))
   p, t, a = findsignal(x, y, 3; fast=false)
   @test p == [33, 64, 129]
   @test t ≈ [0.000775, 0.001545, 0.003124] atol=2e-6
@@ -617,7 +620,7 @@ end
 
 @testset "rand" begin
 
-  x = rand(RedGaussian(100000))
+  x = rand(rng, RedGaussian(100000))
   @test length(x) == 100000
   @test mean(x) ≈ 0 atol=1e-1
   @test std(x) ≈ 1 atol=1e-1
@@ -629,7 +632,7 @@ end
   end
   @test 1 < log10(x1/x2) < 3
 
-  x = rand(PinkGaussian(100000))
+  x = rand(rng, PinkGaussian(100000))
   @test length(x) == 100000
   @test mean(x) ≈ 0 atol=1e-1
   @test std(x) ≈ 1 atol=1e-1
@@ -643,8 +646,8 @@ end
 
   types = [Float16, Float32, Float64]
   for t ∈ types
-    @test eltype(rand(RedGaussian(1000, one(t)))) == t
-    @test eltype(rand(PinkGaussian(1000, one(t)))) == t
+    @test eltype(rand(rng, RedGaussian(1000, one(t)))) == t
+    @test eltype(rand(rng, PinkGaussian(1000, one(t)))) == t
   end
 
 end
@@ -663,7 +666,7 @@ end
   @test p isa Plots.Plot
   p = plot(real([x -x]))
   @test p isa Plots.Plot
-  p = plot(signal(randn(61040, 2), 1000))
+  p = plot(signal(randn(rng, 61040, 2), 1000))
   @test p isa Plots.Plot
   p = psd(x)
   @test p isa Plots.Plot
@@ -739,7 +742,7 @@ end
   @test argmax(bfo) == 135
   bfo = beamform(x4, fc, 4096, sd1; method=Bartlett())
   @test argmax(bfo) == 135
-  bfo = beamform(x4 .+ 0.001*randn(size(x4)), fc, 4096, sd1; method=Capon())
+  bfo = beamform(x4 .+ 0.001*randn(rng, size(x4)), fc, 4096, sd1; method=Capon())
   @test argmax(bfo) == 135
   bfo = beamform(x4, fc, 4096, sd1; method=Capon(0.1))
   @test argmax(bfo) == 135
