@@ -674,7 +674,7 @@ julia> findsignal(x, y, 3)
 (time = Float32[33, 64, 129], [0.000775, 0.001545, 0.003124], amplitude = ComplexF64[...])
 ```
 """
-function findsignal(r, s, n=1; prominance=0.2, coarse=false)
+function findsignal(r, s, n=1; prominence=0.2, coarse=false)
   # coarse arrival time estimation
   r = analytic(r)
   r = r / std(r)
@@ -682,7 +682,7 @@ function findsignal(r, s, n=1; prominance=0.2, coarse=false)
   mfo = mfilter(r, s) / length(r)
   absmfo = abs.(samples(mfo))
   p, _ = findmaxima(absmfo)
-  peakproms!(p, absmfo; minprom=prominance*maximum(absmfo))
+  peakproms!(p, absmfo; minprom=prominence*maximum(absmfo))
   length(p) > length(s)/10 && return (time=Float64[], amplitude=ComplexF64[])
   h = absmfo[p]
   ndx = sortperm(h; rev=true)
