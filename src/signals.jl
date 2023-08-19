@@ -35,10 +35,14 @@ Returns the domain of the signal.
 """
 domain(x) = (0:nframes(x)-1) ./ framerate(x)
 
-function Base.show(io::IO, mime::MIME"text/plain", s::SampledSignal{T}) where T
-  print(io, "SampledSignal @ ", framerate(s), " Hz, ")
-  show(io, mime, samples(s))
-end
+"""
+    time(x::SampledSignal, i)
+
+Gets the time of the `i`th sample in the signal. The index `i` can be a range
+or an array of indices.
+"""
+Base.time(x::SampledSignal, i::Integer) = (i - 1) / framerate(x)
+Base.time(x::SampledSignal, i::AbstractArray{<:Integer}) = (i .- 1) ./ framerate(x)
 
 """
 $(TYPEDSIGNATURES)
@@ -252,13 +256,18 @@ function Base.iterate(itr::SignalPartitionIterator{<:AbstractMatrix}, state=firs
 end
 
 """
-$(SIGNATURES)
+    toframe(t, s::SampledSignal)
+    toframe(t, fs)
+
 Converts time to signal frame number.
 
 # Examples:
 ```julia-repl
 julia> x = signal(randn(2000), 8kHz);
 julia> toframe(0.2𝓈, x)
+1601
+
+julia> toframe(0.2𝓈, 8kHz)
 1601
 
 julia> toframe([0.2𝓈, 0.201𝓈], x)
@@ -272,6 +281,9 @@ julia> toframe(0.2:0.201𝓈, x)
 julia> toframe((0.2, 0.201), x)
 1601:1609
 
+julia> toframe((0.2, 0.201), 8000)
+1601:1609
+
 julia> toframe(0.2:0.01:0.3, x)
 11-element Array{Int64,1}:
   1601
@@ -281,7 +293,9 @@ julia> toframe(0.2:0.01:0.3, x)
 ```
 """
 toframe(t, s::SampledSignal) = 1 .+ round.(Int, inseconds.(t) .* framerate(s))
+toframe(t, fs) = 1 .+ round.(Int, inseconds.(t) .* inHz(fs))
 toframe(t::NTuple{2,<:Real}, s::SampledSignal) = UnitRange((1 .+ round.(Int, inseconds.(t) .* framerate(s)))...)
+toframe(t::NTuple{2,<:Real}, fs) = UnitRange((1 .+ round.(Int, inseconds.(t) .* inHz(fs)))...)
 
 """
     (:)(start::Unitful.Time, stop::Unitful.Time)
@@ -304,8 +318,8 @@ SampledSignal @ 8000.0 Hz, 9-element Array{Float64,1}:
  -0.27722340584395494
 ```
 """
-(::Colon)(t1::Units.Unitful.Time, t2::Units.Unitful.Time) = tuple(inseconds(t1), inseconds(t2))
-(::Colon)(t1::Real, t2::Units.Unitful.Time) = tuple(inseconds(t1), inseconds(t2))
+(::Colon)(t1::Units.Unitful.Time, t2::Units.Unitful.Time) = promote(inseconds(t1), inseconds(t2))
+(::Colon)(t1::Real, t2::Units.Unitful.Time) = promote(inseconds(t1), inseconds(t2))
 
 Base.getindex(s::SampledSignal, t::NTuple{2}) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s))
 Base.getindex(s::SampledSignal, t::NTuple{2}, ndx...) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s), ndx...)

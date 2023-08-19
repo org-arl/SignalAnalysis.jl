@@ -16,6 +16,8 @@ rng = StableRNG(0)
   @test nchannels(x) == 1
   @test !isanalytic(x)
   @test domain(x) ≈ 0:1/1000:7999/1000
+  ndx = rand(1:nframes(x))
+  @test time(x, ndx) == domain(x)[ndx]
 
   x = signal(randn(rng, (8000,2)), 1000)
   @test x isa AbstractArray
@@ -25,6 +27,8 @@ rng = StableRNG(0)
   @test nchannels(x) == 2
   @test !isanalytic(x)
   @test domain(x) ≈ 0:1/1000:7999/1000
+  ndx = rand(1:nframes(x))
+  @test time(x, ndx) == domain(x)[ndx]
 
   x1 = signal(x, 1000)
   @test x === x1
@@ -180,9 +184,18 @@ rng = StableRNG(0)
   @test toframe((0.2, 0.201), x) == 1601:1609
   @test toframe(0.2:0.201s, x) == 1601:1609
   @test toframe(0.2:0.01:0.3, x)[1:3] == [1601, 1681, 1761]
+  @test toframe(0.2s, framerate(x)) == 1601
+  @test toframe([0.2s, 201ms], framerate(x)) == [1601, 1609]
+  @test toframe((0.2, 0.201), framerate(x)) == 1601:1609
+  @test toframe(0.2:0.201s, framerate(x)) == 1601:1609
+  @test toframe(0.2:0.01:0.3, framerate(x))[1:3] == [1601, 1681, 1761]
+  @test x[0.2:0.201s] == x[1601:1609]
+  @test x[0:0.201s] == x[1:1609]
 
   x = signal(randn(rng, 8000), 1000)
   t = toframe(0:0.1:1, x)
+  @test t == 1:100:1001
+  t = toframe(0:0.1:1, framerate(x))
   @test t == 1:100:1001
 
   xlen = 8000
@@ -602,9 +615,9 @@ end
   x = chirp(1000, 5000, 0.1, 40960; window=(tukey, 0.05))
   x4 = resample(x, 4)
   y4 = samerateas(x4, zeros(32768))
-  y4[128:127+length(x4)] = real(x4)          # time 0.000775𝓈, index 32.75
-  y4[254:253+length(x4)] += -0.8 * real(x4)  # time 0.001544𝓈, index 64.25
-  y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125𝓈, index 129.0
+  y4[128:127+length(x4)] = real(x4)          # time 0.000775s, index 32.75
+  y4[254:253+length(x4)] += -0.8 * real(x4)  # time 0.001544s, index 64.25
+  y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125s, index 129.0
   y = resample(y4, 1//4)
   y .+= 0.1 * randn(rng, length(y))
   p, t, a = findsignal(x, y, 3; fast=false)
