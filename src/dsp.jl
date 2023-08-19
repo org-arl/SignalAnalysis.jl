@@ -682,35 +682,36 @@ function findsignal(r, s, n=1; prominance=0.2, coarse=false)
   absmfo = abs.(samples(mfo))
   p, _ = findmaxima(absmfo)
   peakproms!(p, absmfo; minprom=prominance*maximum(absmfo))
-  length(p) > length(s)/10 && return nothing
+  length(p) > length(s)/10 && return (time=Float64[], amplitude=ComplexF64[])
   h = absmfo[p]
   ndx = sortperm(h; rev=true)
   length(ndx) > n && (ndx = ndx[1:n])
   p = p[ndx]
   if coarse
-    t = time(p, s)
-    return (time=t, amplitude=mfo[p])
+    t = time(Float64.(p), s)
+    return (time=t, amplitude=samples(mfo[p]))
   end
   # iterative fine arrival time estimation
   margin = 5   # arrival time may vary up to margin from coarse estimates
-  i = minimum(p)
+  i::Int = minimum(p)
   n = maximum(p) - i + length(r) + 2 * margin
   n = nextfastfft(n)
   i = max(1, i - margin)
   N = n
   i + N - 1 > length(s) && (N = length(s) - i + 1)
   X = fft(vcat(samples(r), zeros(n-length(r))))
-  f = fftfreq(n)
-  function reconstruct(v)
-    ii = @view v[1:length(p)]
-    aa = @views complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
-    Z = mapreduce(+, zip(ii, aa)) do (i, a)
-      a .* X .* cis.(-2π .* i .* f)
+  soln = let p=p, f=fftfreq(n)
+    function reconstruct(v)
+      ii = @view v[1:length(p)]
+      aa = @views complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
+      Z = mapreduce(+, zip(ii, aa)) do (i, a)
+        a .* X .* cis.(-2π .* i .* f)
+      end
+      @view real(ifft(Z))[1:N]
     end
-    @view real(ifft(Z))[1:N]
+    v0 = [p .- i; real.(mfo[p]); imag.(mfo[p])]
+    optimize(v -> sum(abs2, reconstruct(v) .- s[i:i+N-1]), v0)
   end
-  v0 = [p .- i; real.(mfo[p]); imag.(mfo[p])]
-  soln = optimize(v -> sum(abs2, reconstruct(v) .- s[i:i+N-1]), v0)
   v = minimizer(soln)
   pp = v[1:length(p)] .+ i
   t = time(pp, s)
