@@ -602,7 +602,9 @@ SampledSignal @ 10.0 Hz, 5-element Vector{Float64}:
 ```
 """
 function delay!(x, n::Integer; npad=0)
-  if n > 0
+  if n > length(x) || n < -length(x)
+    x .= 0
+  elseif n > 0
     @inbounds for i ∈ lastindex(x):-1:firstindex(x)+n
       x[i] = x[i-n]
     end
@@ -611,12 +613,16 @@ function delay!(x, n::Integer; npad=0)
     @inbounds for i ∈ firstindex(x):lastindex(x)+n
       x[i] = x[i-n]
     end
-    x[end:end+n+1] .= 0
+    x[end+n+1:end] .= 0
   end
   x
 end
 
 function delay!(x, v::Real; npad=32)
+  if v > length(x) || v < -length(x)
+    x .= 0
+    return x
+  end
   vi = floor(Int, v)
   v > vi || return delay!(x, vi)
   n = nextfastfft(length(x) + 2 * npad)
@@ -627,7 +633,7 @@ function delay!(x, v::Real; npad=32)
   ifft!(X)
   for (i, j) ∈ zip(eachindex(x), 1:length(x))
     k = j - vi + npad
-    if k < 1 || k > length(X)
+    if k < 1 || k > length(X) ÷ 2
       x[i] = 0
     elseif eltype(x) <: Complex
       x[i] = X[k]
