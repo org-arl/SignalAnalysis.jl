@@ -619,6 +619,16 @@ end
   y4[254:253+length(x4)] += -0.8 * real(x4)  # time 0.001544s, index 64.25
   y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125s, index 129.0
   y = resample(y4, 1//4)
+
+  z = compose(real(x), time([32.75, 64.25, 129.0], x), [1.0, -0.8, 0.6]; duration=duration(y))
+  @test pow2db(energy(y - z)/ energy(y)) < -40.0
+  z = compose(x, time([32.75, 64.25, 129.0], x), [1.0, -0.8, 0.6]; duration=duration(y)) |> real
+  @test pow2db(energy(y - z)/ energy(y)) < -40.0
+  z = compose(x, [-0.5, 0.5], [1.0, 1.0]; duration=0.3)
+  @test energy(z) ≈ 0.0
+  z = compose(x, [-0.05, 0.25], [1.0, 1.0]; duration=0.3)
+  @test energy(z) ≈ energy(x)
+
   y .+= 0.1 * randn(rng, length(y))
   t, a = findsignal(x, y, 3; coarse=false)
   @test t ≈ [0.000775, 0.001545, 0.003124] atol=2e-6

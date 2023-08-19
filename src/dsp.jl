@@ -8,7 +8,7 @@ export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll
 export sfilt, sfiltfilt, sresample, mfilter, findsignal
-export istft, whiten, filt, filtfilt, resample, delay!
+export istft, whiten, filt, filtfilt, resample, delay!, compose
 
 """
 $(SIGNATURES)
@@ -716,4 +716,31 @@ function findsignal(r, s, n=1; prominance=0.2, coarse=false)
   t = time(pp, s)
   a = complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
   (time=t, amplitude=a)
+end
+
+"""
+$(SIGNATURES)
+Compose a signal from a reference signal and a list of arrival times and amplitudes.
+
+# Examples:
+```julia-repl
+julia> x = cw(10kHz, 0.01, 44.1kHz)
+julia> y1 = compose(x, [0.01, 0.03, 0.04], [1.0, 0.8, 0.6]; duration=0.05)
+julia> y2 = compose(real(x), [10ms, 30ms, 40ms], [1.0, 0.8, 0.6]; duration=50ms)
+```
+"""
+function compose(r, t, a; duration=duration(r)+maximum(t), fs=framerate(r))
+  r isa SampledSignal && framerate(r) != fs && throw(ArgumentError("Reference signal must be sampled at fs"))
+  length(t) == length(a) || @warn "Mismatch in number of time and amplitude entries, using minimum of the two..."
+  r̃ = analytic(r)
+  x = zeros(eltype(r̃), ceil(Int, inseconds(duration) * inHz(fs)))
+  x1 = copy(x)
+  for (t1, a1) ∈ zip(t, a)
+    x1 .= 0
+    copyto!(x1, 1, samples(r̃), 1, min(length(x1), nframes(r̃)))
+    delay!(x1, t1 * inHz(fs))
+    x1 .*= a1
+    x .+= x1
+  end
+  signal(isanalytic(r) ? x : √2 * real(x), fs)
 end
