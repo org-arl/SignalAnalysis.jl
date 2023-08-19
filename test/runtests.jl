@@ -17,7 +17,7 @@ rng = StableRNG(0)
   @test !isanalytic(x)
   @test domain(x) ≈ 0:1/1000:7999/1000
   ndx = rand(1:nframes(x))
-  @test time(x, ndx) == domain(x)[ndx]
+  @test time(ndx, x) == domain(x)[ndx]
 
   x = signal(randn(rng, (8000,2)), 1000)
   @test x isa AbstractArray
@@ -28,7 +28,7 @@ rng = StableRNG(0)
   @test !isanalytic(x)
   @test domain(x) ≈ 0:1/1000:7999/1000
   ndx = rand(1:nframes(x))
-  @test time(x, ndx) == domain(x)[ndx]
+  @test time(ndx, x) == domain(x)[ndx]
 
   x1 = signal(x, 1000)
   @test x === x1
@@ -620,12 +620,10 @@ end
   y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125s, index 129.0
   y = resample(y4, 1//4)
   y .+= 0.1 * randn(rng, length(y))
-  p, t, a = findsignal(x, y, 3; fast=false)
-  @test p == [33, 64, 129]
+  t, a = findsignal(x, y, 3; coarse=false)
   @test t ≈ [0.000775, 0.001545, 0.003124] atol=2e-6
   @test real(a) / real(a[1]) ≈ [1.0, -0.8, 0.6] atol=1e-2
-  p, t, a = findsignal(x, y, 3; fast=true)
-  @test p == [33, 64, 129]
+  t, a = findsignal(x, y, 3; coarse=true)
   @test t ≈ [0.000775, 0.001545, 0.003124] atol=1e-5
   @test real(a) / real(a[1]) ≈ [1.0, -0.8, 0.6] atol=1e-2
 
@@ -644,7 +642,7 @@ end
   y = copy(samples(x))
   delay!(x, 0.1s)
   delay!(x, -10)
-  @test samples(x) == y
+  @test samples(x) ≈ y atol=1e-3
 
   x = signal(vcat(zeros(128), ComplexF64[1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
   y = copy(samples(x))

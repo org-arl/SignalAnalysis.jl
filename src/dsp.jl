@@ -644,14 +644,12 @@ delay!(x, t::Units.Unitful.Time; kwargs...) = delay!(x, inseconds(t) * framerate
 $(SIGNATURES)
 Finds up to `n` copies of reference signal `r` in signal `s`. The reference
 signal `r` should have a delta-like autocorrelation for this function to work
-well. If the keyword parameter `fast` is set to `true`, approximate arrival
+well. If the keyword parameter `coarse` is set to `true`, approximate arrival
 times are computed based on a matched filter. If it is set to `false`, an
 iterative optimization is performed to find more accruate arrival times.
 
-Returns tuple `(p, t, a)` where `p` is a vector of indices of the arrivals,
-`t` is a vector of arrival times and `a` is a vector of complex amplitudes
-of the arrivals. The arrival times in `t` may not correspond to the integer
-indices in `p` if `fast` is set to `false`.
+Returns named tuple `(time=t, amplitude=a)` where `t` is a vector of arrival
+times and `a` is a vector of complex amplitudes of the arrivals.
 
 # Examples:
 ```julia-repl
@@ -663,13 +661,13 @@ julia> y4[254:253+length(x4)] += -0.8 * real(x4)  # time 0.001544𝓈, index 64.
 julia> y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125𝓈, index 129.0
 julia> y = resample(y4, 1//4)
 julia> y .+= 0.1 * randn(length(y))
+julia> findsignal(x, y, 3; coarse=true)
+(time = Float32[0.000781, 0.001538, 0.003125], amplitude = ComplexF64[...])
 julia> findsignal(x, y, 3)
-([33, 64, 129], [0.000781, 0.001538, 0.003125], ComplexF64[...])
-julia> findsignal(x, y, 3; fast=false)
-([33, 64, 129], [0.000775, 0.001545, 0.003124], ComplexF64[...])
+(time = Float32[33, 64, 129], [0.000775, 0.001545, 0.003124], amplitude = ComplexF64[...])
 ```
 """
-function findsignal(r, s, n=1; prominance=0.2, fast=true)
+function findsignal(r, s, n=1; prominance=0.2, coarse=false)
   # coarse arrival time estimation
   r = analytic(r)
   r = r / std(r)
@@ -683,9 +681,9 @@ function findsignal(r, s, n=1; prominance=0.2, fast=true)
   ndx = sortperm(h; rev=true)
   length(ndx) > n && (ndx = ndx[1:n])
   p = p[ndx]
-  if fast
-    t = time(s, p)
-    return p, t, mfo[p]
+  if coarse
+    t = time(p, s)
+    return (time=t, amplitude=mfo[p])
   end
   # iterative fine arrival time estimation
   margin = 5   # arrival time may vary up to margin from coarse estimates
@@ -709,7 +707,7 @@ function findsignal(r, s, n=1; prominance=0.2, fast=true)
   soln = optimize(v -> sum(abs2, reconstruct(v) .- s[i:i+N-1]), v0)
   v = minimizer(soln)
   pp = v[1:length(p)] .+ i
-  t = time(s, pp)
+  t = time(pp, s)
   a = complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
-  round.(Int, pp), t, a
+  (time=t, amplitude=a)
 end

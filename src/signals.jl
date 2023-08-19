@@ -36,13 +36,13 @@ Returns the domain of the signal.
 domain(x) = (0:nframes(x)-1) ./ framerate(x)
 
 """
-    time(x::SampledSignal, i)
+    time(i, x::SampledSignal)
 
 Gets the time of the `i`th sample in the signal. The index `i` can be a range
 or an array of indices.
 """
-Base.time(x::SampledSignal, i::Integer) = (i - 1) / framerate(x)
-Base.time(x::SampledSignal, i::AbstractArray{<:Integer}) = (i .- 1) ./ framerate(x)
+Base.time(i::Real, x::SampledSignal) = (i - 1) / framerate(x)
+Base.time(i::AbstractArray{<:Real}, x::SampledSignal) = (i .- 1) ./ framerate(x)
 
 """
 $(TYPEDSIGNATURES)
