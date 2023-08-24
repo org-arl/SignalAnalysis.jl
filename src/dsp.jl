@@ -410,8 +410,10 @@ sfiltfilt(coef, x) = signal(filtfilt(coef, samples(x)), framerate(x))
 Same as [`resample`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.resample),
 but correctly handles sampling rate conversion.
 """
-sresample(x, rate) = signal(resample(samples(x), rate), rate * framerate(x))
-sresample(x, rate, coef) = signal(resample(samples(x), rate, coef), rate * framerate(x))
+sresample(x::AbstractVector, rate) = signal(resample(samples(x), rate), rate * framerate(x))
+sresample(x::AbstractVector, rate, coef) = signal(resample(samples(x), rate, coef), rate * framerate(x))
+sresample(x::AbstractMatrix, rate) = signal(resample(samples(x), rate; dims=1), rate * framerate(x))
+sresample(x::AbstractMatrix, rate, coef) = signal(resample(samples(x), rate, coef; dims=1), rate * framerate(x))
 
 # overload DSP versions of the above functions
 DSP.filt(f::AbstractVector{<:Number}, x::SampledSignal) = sfilt(f, x)
