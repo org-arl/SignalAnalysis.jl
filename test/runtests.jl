@@ -541,6 +541,12 @@ end
   @test framerate(x1) == framerate(x)
   x1 = sresample(x, 3//2)
   @test framerate(x1) == 3 * framerate(x) / 2
+  x1 = sresample(x, 3//2, [1,1,1])
+  @test framerate(x1) == 3 * framerate(x) / 2
+  x1 = sresample([x x], 3//2)
+  @test framerate(x1) == 3 * framerate(x) / 2
+  x1 = sresample([x x], 3//2, [1,1,1])
+  @test framerate(x1) == 3 * framerate(x) / 2
   x1 = resample(x, 3//2)
   @test framerate(x1) == 3 * framerate(x) / 2
 
