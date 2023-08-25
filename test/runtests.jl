@@ -549,6 +549,10 @@ end
   @test framerate(x1) == 3 * framerate(x) / 2
   x1 = resample(x, 3//2)
   @test framerate(x1) == 3 * framerate(x) / 2
+  x1 = resample([x x], 3//2; dims=1)
+  @test framerate(x1) == 3 * framerate(x) / 2
+  x1 = resample([x x], 3//2, [1,1,1]; dims=1)
+  @test framerate(x1) == 3 * framerate(x) / 2
 
   x = signal(randn(rng, 100), 10kHz)
   x1 = signal(vcat(zeros(1000), x/2, zeros(1000)), 10kHz)
