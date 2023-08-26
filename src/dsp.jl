@@ -671,7 +671,7 @@ julia> y .+= 0.1 * randn(length(y))
 julia> findsignal(x, y, 3; coarse=true)
 (time = Float32[0.000781, 0.001538, 0.003125], amplitude = ComplexF64[...])
 julia> findsignal(x, y, 3)
-(time = Float32[33, 64, 129], [0.000775, 0.001545, 0.003124], amplitude = ComplexF64[...])
+(time = Float32[0.000775, 0.001545, 0.003124], amplitude = ComplexF64[...])
 ```
 """
 function findsignal(r, s, n=1; prominence=0.2, coarse=false)
