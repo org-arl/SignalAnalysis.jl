@@ -580,6 +580,12 @@ end
   x2 = mfilter(x, x1)
   @test !isanalytic(x2)
 
+  x = randn(rng, ComplexF64, 100)
+  x1 = signal(randn(rng, 1000, 2), 10kHz)
+  x2 = mfilter(x, x1)
+  @test isanalytic(x2)
+  @test nchannels(x2) == 2
+
   onesideds = [true, false]
   nfft = 256
   windows = [nothing, rect, tukey(nfft, 0.5), hanning, hamming]

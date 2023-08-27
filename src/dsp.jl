@@ -426,12 +426,25 @@ DSP.Filters.resample(x::SampledSignal, rate::Real, coef::Vector) = sresample(x, 
 $(SIGNATURES)
 Matched filter looking for reference signal `r` in signal `s`.
 """
-function mfilter(r, s)
+function mfilter(r, s::AbstractVector)
   issamerate(r, s) || throw(ArgumentError("signals `r` and `s` must have the same sampling rate"))
-  r̄, s̄ = promote(samples(r), samples(s))
+  if eltype(r) == eltype(s)
+    r̄ = samples(r)
+    s̄ = samples(s)
+  else
+    T = promote_type(eltype(r), eltype(s))
+    r̄ = convert(AbstractArray{T}, samples(r))
+    s̄ = convert(AbstractArray{T}, samples(s))
+  end
   f = conj.(reverse(r̄))
   n = length(r) - 1
   sfilt(f, padded(samerateas(s, s̄), (0, n)))[n+1:end]
+end
+
+function mfilter(r, s::AbstractMatrix)
+  mapreduce(hcat, eachcol(s)) do x
+    mfilter(r, x)
+  end
 end
 
 """
