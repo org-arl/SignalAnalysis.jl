@@ -426,12 +426,25 @@ DSP.Filters.resample(x::SampledSignal, rate::Real, coef::Vector) = sresample(x, 
 $(SIGNATURES)
 Matched filter looking for reference signal `r` in signal `s`.
 """
-function mfilter(r, s)
+function mfilter(r, s::AbstractVector)
   issamerate(r, s) || throw(ArgumentError("signals `r` and `s` must have the same sampling rate"))
-  r̄, s̄ = promote(samples(r), samples(s))
+  if eltype(r) == eltype(s)
+    r̄ = samples(r)
+    s̄ = samples(s)
+  else
+    T = promote_type(eltype(r), eltype(s))
+    r̄ = convert(AbstractArray{T}, samples(r))
+    s̄ = convert(AbstractArray{T}, samples(s))
+  end
   f = conj.(reverse(r̄))
   n = length(r) - 1
   sfilt(f, padded(samerateas(s, s̄), (0, n)))[n+1:end]
+end
+
+function mfilter(r, s::AbstractMatrix)
+  mapreduce(hcat, eachcol(s)) do x
+    mfilter(r, x)
+  end
 end
 
 """
@@ -648,15 +661,16 @@ delay!(x, t::Units.Unitful.Time; kwargs...) = delay!(x, inseconds(t) * framerate
 
 """
 $(SIGNATURES)
-Finds up to `n` copies of reference signal `r` in signal `s`. The reference
+Finds up to `n` strongest copies of reference signal `r` in signal `s`. The reference
 signal `r` should have a delta-like autocorrelation for this function to work
 well. If the keyword parameter `coarse` is set to `true`, approximate arrival
 times are computed based on a matched filter. If it is set to `false`, an
 iterative optimization is performed to find more accruate arrival times.
 
-Returns named tuple `(time=t, amplitude=a)` where `t` is a vector of arrival
-times and `a` is a vector of complex amplitudes of the arrivals. The arrivals
-are sorted in ascending order of arrival times.
+Returns named tuple `(time=t, amplitude=a, mfo=m)` where `t` is a vector of arrival
+times, `a` is a vector of complex amplitudes of the arrivals, and `m` is the complex
+matched filter output (if `mfo` is set to `true`). The arrivals are sorted in
+ascending order of arrival times.
 
 # Examples:
 ```julia-repl
@@ -669,29 +683,30 @@ julia> y4[513:512+length(x4)] += 0.6 * real(x4)   # time 0.003125𝓈, index 129
 julia> y = resample(y4, 1//4)
 julia> y .+= 0.1 * randn(length(y))
 julia> findsignal(x, y, 3; coarse=true)
-(time = Float32[0.000781, 0.001538, 0.003125], amplitude = ComplexF64[...])
-julia> findsignal(x, y, 3)
-(time = Float32[33, 64, 129], [0.000775, 0.001545, 0.003124], amplitude = ComplexF64[...])
+(time = [0.000781, 0.001538, 0.003125], amplitude = [...], mfo=[])
+julia> findsignal(x, y, 3; mfo=true)
+(time = [0.000775, 0.001545, 0.003124], amplitude = [...], mfo=[...])
 ```
 """
-function findsignal(r, s, n=1; prominence=0.2, coarse=false)
+function findsignal(r, s, n=1; prominence=0.2, coarse=false, mfo=false)
   # coarse arrival time estimation
   r = analytic(r)
   r = r / std(r)
   s = analytic(s)
-  mfo = mfilter(r, s) / length(r)
-  absmfo = abs.(samples(mfo))
-  p, _ = findmaxima(absmfo)
-  peakproms!(p, absmfo; minprom=prominence*maximum(absmfo))
-  length(p) > length(s)/10 && return (time=Float64[], amplitude=ComplexF64[])
-  h = absmfo[p]
+  m = mfilter(r, s) / length(r)
+  T = eltype(m)
+  absm = abs.(samples(m))
+  p, _ = findmaxima(absm)
+  peakproms!(p, absm; minprom=prominence*maximum(absm))
+  length(p) > length(s)/10 && return (time=Float64[], amplitude=T[], mfo=(mfo ? m : T[]))
+  h = absm[p]
   ndx = sortperm(h; rev=true)
   length(ndx) > n && (ndx = ndx[1:n])
   p = p[ndx]
   if coarse
     t = time(Float64.(p), s)
     ndx = sortperm(t)
-    return (time=t[ndx], amplitude=samples(mfo[p[ndx]]))
+    return (time=t[ndx], amplitude=samples(m[p[ndx]]), mfo=(mfo ? m : T[]))
   end
   # iterative fine arrival time estimation
   margin = 5   # arrival time may vary up to margin from coarse estimates
@@ -711,7 +726,7 @@ function findsignal(r, s, n=1; prominence=0.2, coarse=false)
       end
       @view real(ifft(Z))[1:N]
     end
-    v0 = [p .- i; real.(mfo[p]); imag.(mfo[p])]
+    v0 = [p .- i; real.(m[p]); imag.(m[p])]
     optimize(v -> sum(abs2, reconstruct(v) .- s[i:i+N-1]), v0)
   end
   v = minimizer(soln)
@@ -719,7 +734,7 @@ function findsignal(r, s, n=1; prominence=0.2, coarse=false)
   t = time(pp, s)
   a = complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
   ndx = sortperm(t)
-  (time=t[ndx], amplitude=a[ndx])
+  (time=t[ndx], amplitude=a[ndx], mfo=(mfo ? m : T[]))
 end
 
 """
