@@ -662,15 +662,20 @@ delay!(x, t::Units.Unitful.Time; kwargs...) = delay!(x, inseconds(t) * framerate
 $(SIGNATURES)
 Finds up to `n` strongest copies of reference signal `r` in signal `s`. The reference
 signal `r` should have a delta-like autocorrelation for this function to work
-well. If the keyword parameter `finetune` is set to 0, approximate arrival
-times are computed based on a matched filter. If it is set to a positive value, an
+well.
+
+If the keyword parameter `finetune` is set to 0, approximate arrival times are
+computed based on a matched filter. If it is set to a positive value, an
 iterative optimization is performed to find more accruate arrival times within
 roughly `finetune` samples of the coarse arrival times.
 
+The keyword parameter `mingap` controls the minimum number of samples between
+two arrivals.
+
 Returns named tuple `(time=t, amplitude=a, mfo=m)` where `t` is a vector of arrival
 times, `a` is a vector of complex amplitudes of the arrivals, and `m` is the complex
-matched filter output (if `mfo` is set to `true`). The arrivals are sorted in
-ascending order of arrival times.
+matched filter output (if keyword parameter `mfo` is set to `true`). The arrivals
+are sorted in ascending order of arrival times.
 
 # Examples:
 ```julia-repl
@@ -688,7 +693,7 @@ julia> findsignal(x, y, 3; mfo=true)
 (time = [0.000775, 0.001545, 0.003124], amplitude = [...], mfo=[...])
 ```
 """
-function findsignal(r, s, n=1; prominence=0.0, finetune=2, mfo=false)
+function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   # coarse arrival time estimation
   r = analytic(r)
   s = analytic(s)
@@ -696,7 +701,7 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mfo=false)
   m ./= (std(r) * length(r))
   T = eltype(m)
   m̄ = abs.(samples(m))
-  p = argmaxima(m̄)
+  p = argmaxima(m̄, mingap)
   prominence > 0 && peakproms!(p, m̄; minprom=prominence*maximum(m̄))
   length(p) > length(s)/10 && return (time=Float64[], amplitude=T[], mfo=(mfo ? m : T[]))
   h = m̄[p]
