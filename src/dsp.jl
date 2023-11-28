@@ -704,8 +704,7 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   p = argmaxima(m̄, mingap)
   prominence > 0 && peakproms!(p, m̄; minprom=prominence*maximum(m̄))
   if length(p) > length(s)/10
-    mfo || empty!(m)
-    return (time=Float64[], amplitude=T[], mfo=m)
+    return (time=Float64[], amplitude=T[], mfo=mfo ? m : empty(m))
   end
   h = m̄[p]
   ndx = partialsortperm(h, 1:n; rev=true)
@@ -713,8 +712,7 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   if finetune == 0
     t = time(Float64.(p), s)
     ndx = sortperm(t)
-    mfo || empty!(m)
-    return (time=t[ndx], amplitude=samples(m[p[ndx]]), mfo=m)
+    return (time=t[ndx], amplitude=samples(m[p[ndx]]), mfo=mfo ? m : empty(m))
   end
   # iterative fine arrival time estimation
   i::Int = minimum(p)
@@ -738,8 +736,7 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   t = time(pp, s)
   a = complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
   ndx = sortperm(t)
-  mfo || empty!(m)
-  (time=t[ndx], amplitude=a[ndx], mfo=m)
+  (time=t[ndx], amplitude=a[ndx], mfo=mfo ? m : empty(m))
 end
 
 """
