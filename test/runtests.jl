@@ -9,13 +9,34 @@ rng = StableRNG(0)
 
 # core tests
 include("tests-core.jl")
-@testset "signals" test_signals()
-@testset "generate" test_generate()
-@testset "basic" test_basic()
-@testset "dsp" test_dsp()
-@testset "rand" test_rand()
-@testset "array" test_array()
-@testset "tfa" test_tfa()
+
+@testset "signals" begin
+  test_signals()
+end
+
+@testset "generate" begin
+  test_generate()
+end
+
+@testset "basic" begin
+  test_basic()
+end
+
+@testset "dsp" begin
+  test_dsp()
+end
+
+@testset "rand" begin
+  test_rand()
+end
+
+@testset "array" begin
+  test_array()
+end
+
+@testset "tfa" begin
+  test_tfa()
+end
 
 # plotting extension tests
 include("tests-ext.jl")
