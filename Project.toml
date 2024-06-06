@@ -1,7 +1,7 @@
 name = "SignalAnalysis"
 uuid = "df1fea92-c066-49dd-8b36-eace3378ea47"
 authors = ["Mandar Chitre <mandar@nus.edu.sg>"]
-version = "0.7.0"
+version = "0.8.0"
 
 [deps]
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
@@ -29,7 +29,7 @@ FFTW = "1"
 MetaArrays = "0.2"
 Optim = "1"
 PaddedViews = "0.5"
-Peaks = "0.4"
+Peaks = "0.5"
 PrecompileTools = "1"
 Requires = "1"
 SignalBase = "0.1"
