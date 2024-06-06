@@ -498,6 +498,15 @@ function test_dsp()
   @test mseq((1,3)) == mseq(3)
   @test all(gmseq(3, 0) .== 1.0)
 
+  for j ∈ [1,2,4,8]
+    H = hadamard(j)
+    @test H isa Matrix{Int}
+    @test H' * H == 2^j * I(2^j)
+    for i ∈ 0:2^j-1
+      @test hadamard(i, j) == H[i+1,:]
+    end
+  end
+
   x = cw(10kHz, 0.1s, 80kHz)
   @test abs(goertzel(x, 10kHz)) ≈ length(x) atol=1e-6
   @test abs(goertzel(x, 9kHz)) ≈ 0 atol=1e-6

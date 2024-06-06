@@ -5,7 +5,7 @@ import Optim: optimize, minimizer, BFGS
 
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
-export mseq, gmseq, circconv, goertzel, pll
+export mseq, gmseq, circconv, goertzel, pll, hadamard
 export sfilt, sfiltfilt, sresample, mfilter, findsignal
 export istft, whiten, filt, filtfilt, resample, delay!, compose
 
@@ -294,6 +294,30 @@ julia> x = gmseq(3, π/4)    # generate m-sequence with exalted carrier
 function gmseq(m, θ=atan(√(2^maximum(m)-1)))
   x = mseq(m) .+ 0im
   cos(θ) .+ 1im * sin(θ) .* x
+end
+
+"""
+    hadamard(k)
+
+Generate a Walsh-Hadamard matrix of size `2ᵏ × 2ᵏ`. Each row of the matrix
+is orthogonal to all other rows.
+"""
+function hadamard(k)
+  n = 2^k
+  [(-1)^count_ones(x&y) for x in 0:n-1, y in 0:n-1]
+end
+
+"""
+    hadamard(i, k)
+
+Generate a vector with the entries of row `i` of a Walsh-Hadamard matrix of
+size `2ᵏ × 2ᵏ`. Rows are numbered from `0` to `2ᵏ-1`, so that `i = 1` is the
+first non-trivial (not all ones) Hadamard sequence.
+"""
+function hadamard(i, k)
+  n = 2^k
+  0 ≤ i < n || throw(ArgumentError("i must be in the range 0 to 2^k-1"))
+  [(-1)^count_ones(x&i) for x in 0:n-1]
 end
 
 """
