@@ -201,6 +201,10 @@ length.
 
 This function currently supports shift register lengths between 2 and 30.
 
+If specification `m` is provided, it should be a list of taps for the shift
+register. List of known m-sequence taps can be found in books or
+[online](https://users.ece.cmu.edu/~koopman/lfsr/).
+
 # Examples:
 ```julia-repl
 julia> x = mseq(3)                  # generate regular m-sequence
