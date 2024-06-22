@@ -475,7 +475,8 @@ function mfilter(r, s::AbstractMatrix)
 end
 
 """
-$(SIGNATURES)
+    istft(Real, X; nfft, noverlap, window)
+
 Compute the inverse short time Fourier transform (ISTFT) of one-sided STFT coefficients `X` which is based
 on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram`
 for description of the parameters.
@@ -519,7 +520,8 @@ function istft(::Type{<:Real}, X::AbstractMatrix{Complex{T}}; nfft::Int, noverla
 end
 
 """
-$(SIGNATURES)
+    istft(Complex, X; nfft, noverlap, window)
+
 Compute the inverse short time Fourier transform (ISTFT) of two-sided STFT coefficients `X` which is based
 on segments with `nfft` samples with overlap of `noverlap` samples. Refer to `DSP.Periodograms.spectrogram`
 for description of the parameters.
