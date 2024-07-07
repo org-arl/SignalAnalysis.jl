@@ -521,7 +521,7 @@ function test_dsp()
   x = cw(1kHz, 1s, 80kHz)
   x2 = x .+ 0.25*rand(rng, size(x)...) .+ 0.25im*rand(rng, size(x)...)
   e2 = √mean(abs2.(x[800:end] .- x2[800:end]))
-  x3 = pll(x2)
+  x3 = pll(x2, 1kHz)
   @test meanfrequency(x3[800:end]) ≈ meanfrequency(x[800:end]) atol=0.1
   e3 = √mean(abs2.(x[800:end] .- x3[800:end]))
   @test e2/e3 > 3

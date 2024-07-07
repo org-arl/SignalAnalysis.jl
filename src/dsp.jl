@@ -390,16 +390,19 @@ end
 
 """
 $(SIGNATURES)
-Phased-lock loop to track dominant carrier frequency in input signal.
+Phased-lock loop to track carrier frequency (approximately `fc`) in the input signal.
+If `fc` is not specified, the algorithm will attempt to track the dominant frequency.
 """
-function pll(x::AbstractVecOrMat, bandwidth=1e-3; fs=framerate(x))
+function pll(x::AbstractVecOrMat, fc=0.0, bandwidth=1e-3; fs=framerate(x))
+  fs = inHz(fs)
+  fc = inHz(fc)
   β = √bandwidth
   n = nchannels(x)
-  ϕ = zeros(1,n)
-  ω = zeros(1,n)
+  ϕ = zeros(1, n)     # phase estimate
+  ω = zeros(1, n)     # integrator
   y = similar(x, ComplexF64)
   for j ∈ 1:nframes(x)
-    y[j,:] = cis.(ϕ)
+    y[j,:] = cis.(-2π * fc * (j-1)/fs .+ ϕ)
     Δϕ = angle.(x[j,:] .* conj.(y[j,:])) .* abs.(x[j,:])
     ω .+= bandwidth * Δϕ
     ϕ .+= β*Δϕ .+ ω
