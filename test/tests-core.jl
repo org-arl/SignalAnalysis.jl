@@ -695,19 +695,19 @@ function test_dsp()
   @test samples(x) ≈ y atol=1e-3
 
   x = rand(rng, ComplexF64, 4096)
-  @test vec(zak(x, length(x))) == x
-  @test zak(x, 1) ≈ fft(x) / sqrt(length(x))
-  Zx = zak(x, 64)
-  @test Zx == zak(x, 64, 64)
-  @test izak(Zx) ≈ x
+  @test vec(dzt(x, length(x))) == x
+  @test dzt(x, 1) ≈ fft(x) / sqrt(length(x))
+  Zx = dzt(x, 64)
+  @test Zx == dzt(x, 64, 64)
+  @test idzt(Zx) ≈ x
   @test sum(abs2, x) ≈ sum(abs2, Zx)
   @test vec(sum(Zx; dims=1)) / sqrt(64) ≈ x[1:64]
-  @test zak(4.2x, 64) ≈ 4.2Zx
-  @test abs.(zak(circshift(x, 10), 64)) ≈ abs.(circshift(Zx, (0, 10)))
+  @test dzt(4.2x, 64) ≈ 4.2Zx
+  @test abs.(dzt(circshift(x, 10), 64)) ≈ abs.(circshift(Zx, (0, 10)))
   y = rand(rng, ComplexF64, 4096)
-  Zy = zak(y, 64)
+  Zy = dzt(y, 64)
   @test vec(Zx)' * vec(Zy) ≈ x' * y
-  @test zak(4.2x + 2.7y, 64) ≈ 4.2Zx + 2.7Zy
+  @test dzt(4.2x + 2.7y, 64) ≈ 4.2Zx + 2.7Zy
 
 end
 
