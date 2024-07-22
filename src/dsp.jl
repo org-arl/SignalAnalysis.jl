@@ -6,7 +6,7 @@ import Optim: optimize, minimizer, BFGS
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, goertzel, pll, hadamard
-export mfilter, findsignal
+export mfilter, findsignal, zak, izak
 export istft, whiten, filt, filtfilt, resample, delay!, compose
 
 """
@@ -792,4 +792,64 @@ function compose(r, t, a; duration=duration(r)+maximum(t), fs=framerate(r))
     x .+= x1
   end
   signal(isanalytic(r) ? x : √2 * real(x), fs)
+end
+
+"""
+    zak(x, L, K)
+    zak(x, L)
+
+Compute the Zak transform of signal `x` with `L` delay bins and `K` Doppler bins.
+The length of signal `x` must be equal to `LK`. If `K` is not specified, it is
+assumed to be the length of `x` divided by `L`. Returns a `K × L` complex matrix.
+
+If the frame rate of `x` if `fs` Sa/s, the delay bins are spaced at `1/fs` seconds
+and the Doppler bins are spaced at `fs/LK` Hz. The Zak transform is scaled such
+that the energy of the signal is preserved, i.e., `sum(abs2, x) ≈ sum(abs2, X)`.
+
+For efficient computation of the Zak transform, `K` should product of small primes.
+
+# Examples:
+```julia-repl
+julia> x = randn(ComplexF64, 4096)
+4096-element Vector{ComplexF64}:
+  :
+julia> X = zak(x, 64)
+64×64 Matrix{ComplexF64}:
+  :
+```
+"""
+function zak(x::AbstractVector, L::Int, K::Int)
+  length(x) == L * K || throw(ArgumentError("Length of x must be L * K"))
+  X = complex.(collect(transpose(reshape(x, L, K)))) ./ sqrt(K)
+  fft!(X, 1)
+end
+
+function zak(x::AbstractVector, L::Int)
+  length(x) % L == 0 || throw(ArgumentError("Length of x must be a multiple of L"))
+  zak(x, L, length(x) ÷ L)
+end
+
+"""
+$(SIGNATURES)
+Compute the inverse Zak transform of 2D `K × L` complex signal `X` with `L`
+delay bins and `K` Doppler bins. The length of the returned signal is `LK`.
+
+See [`zak`](@ref) for more details.
+
+# Examples:
+```julia-repl
+julia> x = randn(ComplexF64, 4096)
+4096-element Vector{ComplexF64}:
+  :
+julia> X = zak(x, 64)
+64×64 Matrix{ComplexF64}:
+  :
+julia> izak(X) ≈ x
+true
+```
+"""
+function izak(X::AbstractMatrix)
+  X = ifft(complex.(X), 1)
+  X .*= sqrt(size(X, 1))
+  collect(vec(transpose(X)))
 end

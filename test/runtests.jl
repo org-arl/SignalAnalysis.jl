@@ -1,4 +1,4 @@
-using Test, Statistics, LinearAlgebra, DSP, DSP.Util
+using Test, Statistics, LinearAlgebra, DSP, DSP.Util, FFTW
 using Plots
 using SignalAnalysis
 using SignalAnalysis.Units
