@@ -127,7 +127,8 @@ isanalytic(s) = eltype(s) <: Complex
 $(SIGNATURES)
 Gets the underlying samples in the signal.
 """
-samples(s::SampledSignal) = getfield(s, :data)
+samples(s::SampledSignal) = samples(getfield(s, :data))
+samples(s::PaddedView) = collect(s)
 samples(s) = s
 
 """
