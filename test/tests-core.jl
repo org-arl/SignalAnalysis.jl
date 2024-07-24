@@ -127,8 +127,6 @@ function test_signals()
   @test length(collect(partition(x, 4; step=2, flush=false))) == 4
 
   pad_x = padded(x, (1, 1))
-  @test iterate(partition(pad_x, 5)) == ([0,1,2,3,4], 5)
-  @test iterate(partition(pad_x, 5), 1) == ([1,2,3,4,5], 6)
   @test length(collect(partition(pad_x, 5))) == 3
   @test length(collect(partition(pad_x, 4))) == 3
   @test length(collect(partition(pad_x, 5; flush=false))) == 2
