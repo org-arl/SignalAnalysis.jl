@@ -410,7 +410,11 @@ function pll(x::AbstractVecOrMat, fc=0.0, bandwidth=1e-3; fs=framerate(x))
   signal(y, fs)
 end
 
-sfilt(f::AbstractVector{<:Number}, x::AbstractVector) = signal(filt(f, samples(x)), framerate(x))
+function sfilt(f::AbstractVector{<:Number}, x::AbstractVector)
+  x̄ = samples(x)
+  signal(conv(f, x̄)[eachindex(x̄)], framerate(x))
+end
+
 sfilt(f::AbstractVector{<:Number}, x::AbstractVector, si) = signal(filt(f, samples(x), si), framerate(x))
 sfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::AbstractVector) = signal(filt(b, a, samples(x)), framerate(x))
 sfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::AbstractVector, si) = signal(filt(b, a, samples(x), si), framerate(x))
