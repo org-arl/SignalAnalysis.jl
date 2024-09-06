@@ -475,20 +475,25 @@ function test_dsp()
   @test y ≈ vcat(zeros(22), 1.0, zeros(22)) atol=0.01
   @test sum(x.^2) ≈ 1.0
 
+  x = rand(rng, 256)
+  @test circcorr(x) ≈ circconv(x, conj.(circshift(reverse(x), 1)))
+
+  x = rand(rng, ComplexF64, 256)
+  @test circcorr(x) ≈ circconv(x, conj.(circshift(reverse(x), 1)))
+
   for j ∈ 2:10
     x = mseq(j)
     @test x isa Array{Float64}
     @test length(x) == 2^j-1
     @test all(abs.(x) .== 1)
-    y = circconv(x)
-    @test all(y .== circconv(x, x))
+    y = circcorr(x)
     @test y[1] ≈ length(x)
     @test all(y[2:end] .≈ -1)
     x = gmseq(j)
     @test x isa Array{ComplexF64}
     @test length(x) == 2^j-1
     @test all(abs.(x) .== 1)
-    y = circconv(x)
+    y = circcorr(x)
     @test y[1] ≈ length(x)
     @test rms(y[2:end]) ≈ 0 atol=1e-10
   end
