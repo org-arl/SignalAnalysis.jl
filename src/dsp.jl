@@ -2,10 +2,11 @@ import DSP: DSP, filt, filtfilt, resample, nextfastfft
 import Statistics: std
 import Peaks: argmaxima, peakproms!
 import Optim: optimize, minimizer, BFGS
+import FFTW: fft, ifft
 
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
-export mseq, gmseq, circconv, goertzel, pll, hadamard
+export mseq, gmseq, circconv, circcorr, goertzel, pll, hadamard
 export mfilter, findsignal, dzt, idzt
 export istft, whiten, filt, filtfilt, resample, delay!, compose
 
@@ -329,16 +330,19 @@ $(SIGNATURES)
 Computes the circular convolution of `x` and `y`. Both vectors must be the same
 length.
 """
-function circconv(x::AbstractVector, y::AbstractVector=x)
-  if length(x) != length(y)
-    throw(ArgumentError("x and y must be of equal length"))
-  end
-  n = length(x)
-  z = similar(x)
-  for j ∈ 1:n
-    z[j] = circshift(x, j-1)' * y
-  end
-  return z
+function circconv(x::AbstractVector, y::AbstractVector)
+  length(x) == length(y) || throw(ArgumentError("x and y must be of equal length"))
+  ifft(fft(x) .* fft(y))
+end
+
+"""
+$(SIGNATURES)
+Computes the circular correlation of `x` and `y`. Both vectors must be the same
+length.
+"""
+function circcorr(x::AbstractVector, y::AbstractVector=x)
+  length(x) == length(y) || throw(ArgumentError("x and y must be of equal length"))
+  ifft(conj.(fft(x)) .* fft(y))
 end
 
 """
@@ -739,7 +743,7 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
     return (time=Float64[], amplitude=T[], mfo=mfo ? m : empty(m))
   end
   h = m̄[p]
-  ndx = partialsortperm(h, 1:n; rev=true)
+  ndx = partialsortperm(h, 1:min(n,length(h)); rev=true)
   p = p[ndx]
   if finetune == 0
     t = time(Float64.(p), s)
