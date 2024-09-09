@@ -476,10 +476,16 @@ function test_dsp()
   @test sum(x.^2) ≈ 1.0
 
   x = rand(rng, 256)
-  @test circcorr(x) ≈ circconv(x, conj.(circshift(reverse(x), 1)))
+  y = rand(rng, 256)
+  @test circcorr(x) ≈ circconv(conj.(circshift(reverse(x), 1)), x)
+  @test circcorr(x, y) ≈ circconv(conj.(circshift(reverse(x), 1)), y)
+  @test circconv(x, y) ≈ circconv(y, x)
 
   x = rand(rng, ComplexF64, 256)
-  @test circcorr(x) ≈ circconv(x, conj.(circshift(reverse(x), 1)))
+  y = rand(rng, ComplexF64, 256)
+  @test circcorr(x) ≈ circconv(conj.(circshift(reverse(x), 1)), x)
+  @test circcorr(x, y) ≈ circconv(conj.(circshift(reverse(x), 1)), y)
+  @test circconv(x, y) ≈ circconv(y, x)
 
   for j ∈ 2:10
     x = mseq(j)
