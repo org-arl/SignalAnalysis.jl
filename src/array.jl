@@ -193,7 +193,10 @@ beamform(s, f, sd; fs=framerate(s), method=Bartlett()) = beamform(s, f, 1, sd; f
 
 function beamformer(::Bartlett, R, sv)
   # TODO: add support for shading
-  [abs.(sv[:, j]' * R * sv[:, j]) for j ∈ 1:size(sv, 2)]
+  RS = Hermitian(R) * sv
+  pseudospectrum = zeros(Float64, size(sv, 2))
+  pseudospectrum .= abs.(dot.(eachcol(sv), eachcol(RS)))
+  # [abs.(sv[:, j]' * R * sv[:, j]) for j ∈ 1:size(sv, 2)]
 end
 
 function beamformer(opt::Capon, R, sv)
