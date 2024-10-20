@@ -76,11 +76,11 @@ function steering(rxpos::AbstractMatrix, c, θ::AbstractVector)
   pos0 = sum(rxpos; dims=2) / nsensors
   rxpos = rxpos .- pos0
   size(rxpos, 1) == 1 && (rxpos = vcat(rxpos, zeros(1, nsensors)))
-  size(rxpos, 1) > 2 && (rxpos = rxpos[1:2,:])
+  size(rxpos, 1) > 2 && (rxpos = rxpos[1:2, :])
   sd = zeros(nsensors, ndir)
   for k ∈ 1:ndir
     for j ∈ 1:nsensors
-      sd[j,k] = -rxpos[:,j]' * [cos(θ[k]), sin(θ[k])] / c
+      sd[j, k] = -rxpos[:, j]' * [cos(θ[k]), sin(θ[k])] / c
     end
   end
   sd
@@ -93,12 +93,12 @@ function steering(rxpos::AbstractMatrix, c, θ::AbstractMatrix)
   rxpos = rxpos .- pos0
   size(rxpos, 1) == 1 && (rxpos = vcat(rxpos, zeros(2, nsensors)))
   size(rxpos, 1) == 2 && (rxpos = vcat(rxpos, zeros(1, nsensors)))
-  γ = θ[:,1]
-  ϕ = θ[:,2]
+  γ = θ[:, 1]
+  ϕ = θ[:, 2]
   sd = zeros(nsensors, ndir)
   for k ∈ 1:ndir
     for j ∈ 1:nsensors
-      sd[j,k] = -rxpos[:,j]' * [cos(ϕ[k])*cos(γ[k]), cos(ϕ[k])*sin(γ[k]), sin(ϕ[k])] / c
+      sd[j, k] = -rxpos[:, j]' * [cos(ϕ[k]) * cos(γ[k]), cos(ϕ[k]) * sin(γ[k]), sin(ϕ[k])] / c
     end
   end
   sd
@@ -128,7 +128,7 @@ function beamform(s, sd; fs=framerate(s))
   bfo = zeros(eltype(s), (nframes(s), ndir))
   for k ∈ 1:ndir
     for j ∈ 1:nchannels(s)
-      @views bfo[:,k] .+= padded(s[:,j], 0; delay=round(Int, -sd[j,k]*fs))
+      @views bfo[:, k] .+= padded(s[:, j], 0; delay=round(Int, -sd[j, k] * fs))
     end
   end
   signal(bfo, fs)
@@ -174,7 +174,7 @@ julia> bfo = beamform([x x x x], 100.0, 4096, sd; method=Capon(0.1))
 """
 function beamform(s, f, n, sd; fs=framerate(s), method=Bartlett())
   s̃ = n > 1 ? goertzel(s, f, n; fs=fs) : signal(s, fs)
-  diff([extrema(abs.(sd))...])[1] > 5/framerate(s̃) && @warn "Narrowband assumption not met, try increasing n"
+  diff([extrema(abs.(sd))...])[1] > 5 / framerate(s̃) && @warn "Narrowband assumption not met, try increasing n"
   R = samples(s̃)' * samples(s̃)
   sv = cis.(2π * f * sd)
   beamformer(method, R, sv)
@@ -193,18 +193,17 @@ beamform(s, f, sd; fs=framerate(s), method=Bartlett()) = beamform(s, f, 1, sd; f
 
 function beamformer(::Bartlett, R, sv)
   # TODO: add support for shading
-  [abs.(sv[:,j]' * R * sv[:,j]) for j ∈ 1:size(sv,2)]
+  [abs.(sv[:, j]' * R * sv[:, j]) for j ∈ 1:size(sv, 2)]
 end
 
 function beamformer(opt::Capon, R, sv)
   opt.γ != 0 && (R .+= opt.γ * I(size(R, 1)))
-  [1 ./ abs.(sv[:,j]' * inv(R) * sv[:,j]) for j ∈ 1:size(sv,2)]
+  [1 ./ abs.(sv[:, j]' * inv(R) * sv[:, j]) for j ∈ 1:size(sv, 2)]
 end
 
 function beamformer(opt::Music, R, sv)
-  F = eigen(R)
-  ndx = sortperm(F.values; rev=true)
-  Q = F.vectors[:, ndx[opt.nsignals+1:end]]
-  Q = Q * Q'
-  [1 ./ abs.(sv[:,j]' * Q * sv[:,j]) for j ∈ 1:size(sv,2)]
+  pseudospectrum = zeros(Float64, size(sv, 2))
+  _, Q = eigen(Hermitian(R), 1:(size(R, 1)-opt.nsignals))
+  QS = Q' * sv
+  pseudospectrum .= 1 ./ real.(dot.(eachcol(QS), eachcol(QS)))
 end
