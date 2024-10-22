@@ -381,7 +381,7 @@ function goertzel(x::AbstractMatrix, f, n; fs=framerate(x))
   count = cld(size(x, 1), n)
   out = Array{ComplexF64}(undef, (count, nchannels(x)))
   for j ∈ 1:nchannels(x)
-    out[:, j] = goertzel(x[:, j], f, n; fs=fs)
+    @inbounds out[:, j] = goertzel(x[:, j], f, n; fs=fs)
   end
   signal(out, fs / n)
 end
@@ -389,7 +389,7 @@ end
 function goertzel(x::AbstractMatrix, f; fs=framerate(x))
   out = Array{ComplexF64}(undef, nchannels(x))
   for j ∈ 1:nchannels(x)
-    out[j] = goertzel(x[:, j], f; fs=fs)
+    @inbounds out[j] = goertzel(x[:, j], f; fs=fs)
   end
   out
 end
