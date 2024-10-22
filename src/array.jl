@@ -198,9 +198,7 @@ end
 
 function beamformer(opt::Capon, R, sv)
   opt.γ != 0 && (R .+= opt.γ * I(size(R, 1)))
-  pseudospectrum = zeros(Float64, size(sv, 2))
-  RiS = inv(Hermitian(R)) * sv
-  pseudospectrum .= 1 ./ abs.(dot.(eachcol(sv), eachcol(RiS)))
+  1 ./ abs.(dot.(eachcol(sv), eachcol(inv(Hermitian(R)) * sv)))
 end
 
 function beamformer(opt::Music, R, sv)
