@@ -204,8 +204,7 @@ function beamformer(opt::Capon, R, sv)
 end
 
 function beamformer(opt::Music, R, sv)
-  pseudospectrum = zeros(Float64, size(sv, 2))
   _, Q = eigen(Hermitian(R), 1:(size(R, 1)-opt.nsignals))
   QS = Q' * sv
-  pseudospectrum .= 1 ./ real.(dot.(eachcol(QS), eachcol(QS)))
+  1 ./ real.(dot.(eachcol(QS), eachcol(QS)))
 end
