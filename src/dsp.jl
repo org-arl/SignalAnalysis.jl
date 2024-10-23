@@ -38,7 +38,7 @@ function fir(n, f1, f2=nothing; fs=2.0, method=FIRWindow(hanning(n)))
   fs = inHz(fs)
   if f1 == 0
     f = Lowpass(inHz(f2); fs=fs)
-  elseif f2 == nothing || inHz(f2) == fs / 2
+  elseif f2 == nothing || inHz(f2) == fs/2
     f = Highpass(inHz(f1); fs=fs)
   else
     f = Bandpass(inHz(f1), inHz(f2); fs=fs)
@@ -54,11 +54,11 @@ based on Lyons 2011 (3rd ed) real-time DC removal filter in Fig. 13-62(d).
 See also: [`removedc`](@ref)
 """
 function removedc!(s; α=0.95)
-  for k = 1:size(s, 2)
-    for j = 2:size(s, 1)
-      s[j, k] += α * s[j-1, k]
+  for k = 1:size(s,2)
+    for j = 2:size(s,1)
+      s[j,k] += α*s[j-1,k]
     end
-    s[2:end, k] .+= -s[1:end-1, k]
+    s[2:end,k] .+= -s[1:end-1,k]
   end
   s *= sqrt(α)
   return s
@@ -82,32 +82,32 @@ frequency and downsampled. Supported downsampling methods are `:rms` (default),
 function demon(x; fs=framerate(x), downsample=250, method=:rms, cutoff=1.0)
   local y
   fs /= downsample
-  for k = 1:size(x, 2)
+  for k = 1:size(x,2)
     if downsample == 1
-      y1 = abs.(hilbert(x[:, k]))
+      y1 = abs.(hilbert(x[:,k]))
     elseif method == :rms
-      y1 = sqrt.(mean.(Periodograms.arraysplit(abs2.(hilbert(x[:, k])), downsample, 0)))
+      y1 = sqrt.(mean.(Periodograms.arraysplit(abs2.(hilbert(x[:,k])), downsample, 0)))
     elseif method == :mean
-      y1 = mean.(Periodograms.arraysplit(abs.(hilbert(x[:, k])), downsample, 0))
+      y1 = mean.(Periodograms.arraysplit(abs.(hilbert(x[:,k])), downsample, 0))
     elseif method == :fir
       aaf = fir(127, 0, 0.48fs; fs=fs)
-      y1 = filtfilt(aaf, abs.(hilbert(x[:, k])))[1:downsample:end]
+      y1 = filtfilt(aaf, abs.(hilbert(x[:,k])))[1:downsample:end]
     else
       throw(ArgumentError("Unknown method"))
     end
     if k == 1
-      y = zeros(length(y1), size(x, 2))
+      y = zeros(length(y1), size(x,2))
     end
-    y[:, k] .= y1
+    y[:,k] .= y1
   end
-  maxflen = length(y) ÷ 4
+  maxflen = length(y)÷4
   mod(maxflen, 2) == 0 && (maxflen += 1)
   hpf = fir(min(127, maxflen), cutoff; fs=fs)
   signal(filtfilt(hpf, y), fs)
 end
 
-function demon(x::AbstractVector{T}; fs=framerate(x), downsample=250, method=:rms, cutoff=1.0) where {T}
-  y = @view samples(x)[:, 1:1]
+function demon(x::AbstractVector{T}; fs=framerate(x), downsample=250, method=:rms, cutoff=1.0) where T
+  y = @view samples(x)[:,1:1]
   z = demon(y, fs=fs, downsample=downsample, method=method, cutoff=cutoff)
   signal(dropdims(samples(z), dims=2), framerate(z))
 end
@@ -118,16 +118,16 @@ Converts baseband signal with `sps` symbols per passband sample to a real
 passband signal centered around carrier frequency `fc`.
 """
 function upconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
-  pad = cld(length(pulseshape), 2 * sps) - 1
+  pad = cld(length(pulseshape), 2*sps) - 1
   s = vcat(zeros(pad), complex.(s), zeros(pad))
-  s = signal(resample(s, sps, pulseshape), sps * fs)
+  s = signal(resample(s, sps, pulseshape), sps*fs)
   √2 * real.(s .* cis.(2π * inHz(fc) * domain(s)))
 end
 
 function upconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
   mapreduce(hcat, eachcol(s)) do x
     upconvert(x, sps, fc, pulseshape; fs=fs)
-  end[:, :]
+  end[:,:]
 end
 
 """
@@ -140,55 +140,55 @@ function downconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps);
   s = signal(analytic(s), fs)
   s = s .* cis.(-2π * inHz(fc) * domain(s))
   sps == 1 && return signal(s, fs)
-  pulseshape == nothing && return signal(s[1:sps:end, :], fs / sps)
-  signal(resample(s, 1 // sps, pulseshape), fs / sps)
+  pulseshape == nothing && return signal(s[1:sps:end,:], fs/sps)
+  signal(resample(s, 1//sps, pulseshape), fs/sps)
 end
 
 function downconvert(s::AbstractMatrix, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
   mapreduce(hcat, eachcol(s)) do x
     downconvert(x, sps, fc, pulseshape; fs=fs)
-  end[:, :]
+  end[:,:]
 end
 
 """
 $(SIGNATURES)
 Root-raised cosine filter.
 """
-function rrcosfir(β, sps, span=β < 0.68 ? 33 - floor(Int, 44β) : 4)
+function rrcosfir(β, sps, span = β < 0.68 ? 33-floor(Int, 44β) : 4)
   # default span based on http://www.commsys.isy.liu.se/TSKS04/lectures/3/MichaelZoltowski_SquareRootRaisedCosine.pdf
-  delay = fld(span * sps, 2)
-  t = collect(-delay:delay) / sps
+  delay = fld(span*sps, 2)
+  t = collect(-delay:delay)/sps
   h = Array{Float64}(undef, size(t))
   for i ∈ 1:length(t)
     if t[i] == 0
-      h[i] = (1 + β * (4 / π - 1)) / sps
-    elseif abs(t[i]) == 1 / (4β)
-      h[i] = β / (√2 * sps) * ((1 + 2 / pi) * sin(π / (4β)) + (1 - 2 / pi) * cos(π / (4β)))
+      h[i] = (1 + β*(4/π - 1))/sps
+    elseif abs(t[i]) == 1/(4β)
+      h[i] = β/(√2*sps) * ((1+2/pi)*sin(π/(4β)) + (1-2/pi)*cos(π/(4β)))
     else
-      h[i] = (sin(π * t[i] * (1 - β)) + 4β * t[i] * cos(π * t[i] * (1 + β))) / (π * t[i] * (1 - (4β * t[i])^2)) / sps
+      h[i] = (sin(π*t[i]*(1-β)) + 4β*t[i]*cos(π*t[i]*(1+β))) / (π*t[i]*(1 - (4β*t[i])^2)) / sps
     end
   end
-  h / √sum(h .^ 2)
+  h / √sum(h.^2)
 end
 
 """
 $(SIGNATURES)
 Raised cosine filter.
 """
-function rcosfir(β, sps, span=β < 0.68 ? 33 - floor(Int, 44β) : 4)
+function rcosfir(β, sps, span = β < 0.68 ? 33-floor(Int, 44β) : 4)
   # default span based on http://www.commsys.isy.liu.se/TSKS04/lectures/3/MichaelZoltowski_SquareRootRaisedCosine.pdf
   # since the span is for rrcosfir, for rcosfir, it is very conservative
-  delay = fld(span * sps, 2)
-  t = collect(-delay:delay) / sps
+  delay = fld(span*sps, 2)
+  t = collect(-delay:delay)/sps
   h = Array{Float64}(undef, size(t))
   for i ∈ 1:length(t)
-    if abs(t[i]) == 1 / (2β)
-      h[i] = π / (4sps) * sinc(1 / (2β))
+    if abs(t[i]) == 1/(2β)
+      h[i] = π/(4sps) * sinc(1/(2β))
     else
-      h[i] = sinc(t[i]) * cos(π * β * t[i]) / (1 - (2β * t[i])^2) / sps
+      h[i] = sinc(t[i]) * cos(π * β * t[i]) / (1-(2β * t[i])^2) / sps
     end
   end
-  h / √sum(h .^ 2)
+  h / √sum(h.^2)
 end
 
 """
@@ -229,16 +229,16 @@ julia> x = mseq((1,3))              # generate m-sequence with specification (1,
  -1.0
 ```
 """
-function mseq(m, θ=π / 2)
+function mseq(m, θ=π/2)
   knownspecs = Dict(  # known m-sequences are specified as base 1 taps
-    2 => (1, 2), 3 => (1, 3), 4 => (1, 4), 5 => (2, 5),
-    6 => (1, 6), 7 => (1, 7), 8 => (1, 2, 7, 8), 9 => (4, 9),
-    10 => (3, 10), 11 => (9, 11), 12 => (6, 8, 11, 12), 13 => (9, 10, 12, 13),
-    14 => (4, 8, 13, 14), 15 => (14, 15), 16 => (4, 13, 15, 16), 17 => (14, 17),
-    18 => (11, 18), 19 => (14, 17, 18, 19), 20 => (17, 20), 21 => (19, 21),
-    22 => (21, 22), 23 => (18, 23), 24 => (17, 22, 23, 24), 25 => (22, 25),
-    26 => (20, 24, 25, 26), 27 => (22, 25, 26, 27), 28 => (25, 28), 29 => (27, 29),
-    30 => (7, 28, 29, 30)
+       2 => (1,2),          3 => (1,3),          4 => (1,4),          5 => (2,5),
+       6 => (1,6),          7 => (1,7),          8 => (1,2,7,8),      9 => (4,9),
+      10 => (3,10),        11 => (9,11),        12 => (6,8,11,12),   13 => (9,10,12,13),
+      14 => (4,8,13,14),   15 => (14,15),       16 => (4,13,15,16),  17 => (14,17),
+      18 => (11,18),       19 => (14,17,18,19), 20 => (17,20),       21 => (19,21),
+      22 => (21,22),       23 => (18,23),       24 => (17,22,23,24), 25 => (22,25),
+      26 => (20,24,25,26), 27 => (22,25,26,27), 28 => (25,28),       29 => (27,29),
+      30 => (7,28,29,30)
   )
   if m ∈ keys(knownspecs)
     spec = collect(knownspecs[m])
@@ -252,7 +252,7 @@ function mseq(m, θ=π / 2)
   for j ∈ 1:n
     b = ⊻(reg[spec]...)
     reg = circshift(reg, 1)
-    x[j] = 2.0 * reg[1] - 1.0
+    x[j] = 2.0*reg[1] - 1.0
     reg[1] = b
   end
   return x
@@ -296,7 +296,7 @@ julia> x = gmseq(3, π/4)    # generate m-sequence with exalted carrier
  0.7071067811865476 - 0.7071067811865475im
 ```
 """
-function gmseq(m, θ=atan(√(2^maximum(m) - 1)))
+function gmseq(m, θ=atan(√(2^maximum(m)-1)))
   x = mseq(m) .+ 0im
   cos(θ) .+ 1im * sin(θ) .* x
 end
@@ -309,7 +309,7 @@ is orthogonal to all other rows.
 """
 function hadamard(k)
   n = 2^k
-  [(-1)^count_ones(x & y) for x in 0:n-1, y in 0:n-1]
+  [(-1)^count_ones(x&y) for x in 0:n-1, y in 0:n-1]
 end
 
 """
@@ -322,7 +322,7 @@ first non-trivial (not all ones) Hadamard sequence.
 function hadamard(i, k)
   n = 2^k
   0 ≤ i < n || throw(ArgumentError("i must be in the range 0 to 2^k-1"))
-  [(-1)^count_ones(x & i) for x in 0:n-1]
+  [(-1)^count_ones(x&i) for x in 0:n-1]
 end
 
 """
@@ -408,10 +408,10 @@ function pll(x::AbstractVecOrMat, fc=0.0, bandwidth=1e-3; fs=framerate(x))
   ω = zeros(1, n)     # integrator
   y = similar(x, ComplexF64)
   for j ∈ 1:nframes(x)
-    y[j, :] = cis.(-2π * fc * (j - 1) / fs .+ ϕ)
-    Δϕ = angle.(x[j, :] .* conj.(y[j, :])) .* abs.(x[j, :])
+    y[j,:] = cis.(-2π * fc * (j-1)/fs .+ ϕ)
+    Δϕ = angle.(x[j,:] .* conj.(y[j,:])) .* abs.(x[j,:])
     ω .+= bandwidth * Δϕ
-    ϕ .+= β * Δϕ .+ ω
+    ϕ .+= β*Δϕ .+ ω
   end
   signal(y, fs)
 end
@@ -577,18 +577,18 @@ function _istft(iX::AbstractMatrix{T}, nfft::Int, noverlap::Int, window::Union{F
   win, norm2 = Periodograms.compute_window(window, nfft)
   nstep = nfft - noverlap
   nseg = size(iX, 2)
-  outputlength = nfft + (nseg - 1) * nstep
+  outputlength = nfft + (nseg-1) * nstep
   iX .*= win
   x = zeros(T, outputlength)
   normw = zeros(eltype(win), outputlength)
   for i = 1:nseg
-    @views x[1+(i-1)*nstep:nfft+(i-1)*nstep] .= x[1+(i-1)*nstep:nfft+(i-1)*nstep] .+ iX[:, i]
-    @views normw[1+(i-1)*nstep:nfft+(i-1)*nstep] .= normw[1+(i-1)*nstep:nfft+(i-1)*nstep] .+ win .^ 2
+      @views x[1+(i-1)*nstep:nfft+(i-1)*nstep] .= x[1+(i-1)*nstep:nfft+(i-1)*nstep] .+ iX[:,i]
+      @views normw[1+(i-1)*nstep:nfft+(i-1)*nstep] .= normw[1+(i-1)*nstep:nfft+(i-1)*nstep] .+ win .^ 2
   end
   trimlength = nfft % 2 == 0 ? outputlength - nfft : outputlength - nfft + 1
   (sum(@view(normw[1+nfft÷2:end-nfft÷2]) .> 1e-10) != trimlength) && (
     @warn "NOLA condition failed, STFT may not be invertible")
-  x .*= nstep / norm2
+  x .*= nstep/norm2
 end
 
 """
@@ -740,12 +740,12 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   T = eltype(m)
   m̄ = abs.(samples(m))
   p = argmaxima(m̄, mingap)
-  prominence > 0 && peakproms!(p, m̄; minprom=prominence * maximum(m̄))
-  if length(p) > length(s) / 10
+  prominence > 0 && peakproms!(p, m̄; minprom=prominence*maximum(m̄))
+  if length(p) > length(s)/10
     return (time=Float64[], amplitude=T[], mfo=mfo ? m : empty(m))
   end
   h = m̄[p]
-  ndx = partialsortperm(h, 1:min(n, length(h)); rev=true)
+  ndx = partialsortperm(h, 1:min(n,length(h)); rev=true)
   p = p[ndx]
   if finetune == 0
     t = time(Float64.(p), s)
@@ -757,9 +757,9 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   N::Int = maximum(p) - i + length(r) + 2 * finetune
   N = nextfastfft(N)
   i = max(1, i - finetune)
-  X = fft(vcat(samples(r), zeros(N - length(r))))
-  S = fft(vcat(samples(s[i:min(i + N - 1, end)]), zeros(max(i + N - 1 - length(s), 0))))
-  soln = let P = length(p), f = fftfreq(N)
+  X = fft(vcat(samples(r), zeros(N-length(r))))
+  S = fft(vcat(samples(s[i:min(i+N-1,end)]), zeros(max(i+N-1-length(s),0))))
+  soln = let P=length(p), f=fftfreq(N)
     optimize([p .- i; real.(m[p]); imag.(m[p])], BFGS(); autodiff=:forward) do v
       ii = @view v[1:P]
       aa = @views complex.(v[P+1:2P], v[2P+1:3P])
@@ -788,7 +788,7 @@ julia> y1 = compose(x, [0.01, 0.03, 0.04], [1.0, 0.8, 0.6]; duration=0.05)
 julia> y2 = compose(real(x), [10ms, 30ms, 40ms], [1.0, 0.8, 0.6]; duration=50ms)
 ```
 """
-function compose(r, t, a; duration=duration(r) + maximum(t), fs=framerate(r))
+function compose(r, t, a; duration=duration(r)+maximum(t), fs=framerate(r))
   r isa SampledSignal && framerate(r) != fs && throw(ArgumentError("Reference signal must be sampled at fs"))
   length(t) == length(a) || @warn "Mismatch in number of time and amplitude entries, using minimum of the two..."
   r̃ = analytic(r)
