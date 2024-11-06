@@ -8,7 +8,7 @@ export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, circcorr, goertzel, pll, hadamard
 export mfilter, findsignal, dzt, idzt
-export istft, whiten, filt, filtfilt, resample, delay!, compose
+export istft, whiten, filt, filtfilt, resample, delay, delay!, compose
 
 """
 $(SIGNATURES)
@@ -683,7 +683,7 @@ function delay!(x, v::Real; npad=32)
   ifft!(X)
   for (i, j) ∈ zip(eachindex(x), 1:length(x))
     k = j - vi + npad
-    if k < 1 || k > length(X) ÷ 2
+    if k < 1 || k > length(X)
       x[i] = 0
     elseif eltype(x) <: Complex
       x[i] = X[k]
@@ -695,6 +695,14 @@ function delay!(x, v::Real; npad=32)
 end
 
 delay!(x, t::Units.Unitful.Time; kwargs...) = delay!(x, inseconds(t) * framerate(x); kwargs...)
+
+"""
+    delay(x, v)
+
+Create a delayed version of signal `x` with `v` units of delay.
+See [`delay!`](@ref) for details.
+"""
+delay(x, v; kwargs...) = delay!(copy(x), v; kwargs)
 
 """
 $(SIGNATURES)

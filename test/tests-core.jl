@@ -670,6 +670,8 @@ function test_dsp()
   delay!(x, 10.7)
   delay!(x, 21.3)
   @test samples(x) ≈ y atol=0.05
+
+  x = signal(vcat(zeros(128), [1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
   y = copy(samples(x))
   delay!(x, 0.1s)
   delay!(x, -10)
@@ -684,6 +686,8 @@ function test_dsp()
   delay!(x, 10.7)
   delay!(x, 21.3)
   @test samples(x) ≈ y atol=0.05
+
+  x = signal(vcat(zeros(128), ComplexF64[1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
   y = copy(samples(x))
   delay!(x, 0.1s)
   delay!(x, -10)
@@ -698,9 +702,17 @@ function test_dsp()
   delay!(x, 10.7)
   delay!(x, 21.3)
   @test samples(x) ≈ y atol=0.05
+
+  x = signal(vcat(zeros(ComplexF32, 128), ComplexF32[1.0, 2.0, 3.0, 2.0, 1.0], zeros(ComplexF32, 128)), 100.0)
   y = copy(samples(x))
   delay!(x, 0.1s)
   delay!(x, -10)
+  @test samples(x) ≈ y atol=1e-3
+
+  x = signal(Float64[1,2,3,4,5,6,7,0],3)
+  y = copy(samples(x))
+  delay!(x, 0.9999999)
+  delay!(x, -0.9999999)
   @test samples(x) ≈ y atol=1e-3
 
   x = rand(rng, ComplexF64, 4096)
