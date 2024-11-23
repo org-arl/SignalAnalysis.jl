@@ -6,9 +6,16 @@ using DocStringExtensions
 using SignalBase
 using SignalBase.Units
 
+# from SignalBase
 export nframes, nchannels, sampletype, framerate, duration
-export db2amp, amp2db, pow2db, db2pow, stft
 export 𝓈, ms, Hz, kHz
+
+# from DSP
+export db2amp, amp2db, pow2db, db2pow, stft
+
+# from Peaks
+export findmaxima, argmaxima, peakproms, peakproms!, peakwidths, peakwidths!
+export peakheights, peakheights!, filterpeaks!, findnextmaxima
 
 const 𝓈 = Units.s
 

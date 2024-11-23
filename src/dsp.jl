@@ -1,6 +1,7 @@
 import DSP: DSP, filt, filtfilt, resample, nextfastfft
 import Statistics: std
-import Peaks: argmaxima, peakproms!
+import Peaks: findmaxima, argmaxima, peakproms, peakproms!, peakwidths, peakwidths!
+import Peaks: peakheights, peakheights!, filterpeaks!, findnextmaxima
 import Optim: optimize, minimizer, BFGS
 import FFTW: fft, ifft
 
