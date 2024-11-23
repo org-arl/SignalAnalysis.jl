@@ -731,7 +731,7 @@ function test_dsp()
   @test dzt(4.2x + 2.7y, 64) ≈ 4.2Zx + 2.7Zy
 
   x = compose(mseq(12), [0.1, 0.2], [1.0, 0.7]; duration=1.0, fs=8000)
-  x += 0.1 * randn(size(x))
+  x += 0.1 * randn(rng, size(x))
   t, a = decompose(mseq(12), x)
   @test t ≈ [0.1, 0.2]
   @test eltype(a) == Float64
