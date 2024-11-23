@@ -9,7 +9,7 @@ export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, circcorr, goertzel, pll, hadamard
 export mfilter, findsignal, dzt, idzt
-export istft, whiten, filt, filtfilt, resample, delay, delay!, compose
+export istft, whiten, filt, filtfilt, resample, delay, delay!, compose, decompose
 
 """
 $(SIGNATURES)
@@ -811,6 +811,63 @@ function compose(r, t, a; duration=duration(r)+maximum(t), fs=framerate(r))
     x .+= x1
   end
   signal(isanalytic(r) ? x : √2 * real(x), fs)
+end
+
+"""
+$(SIGNATURES)
+Decompose a signal as a sum of reference signal with some arrival times and amplitudes.
+If the number of signals `n` is non-zero, the function will limit the decomposition
+to the strongest `n` signals.
+
+The resolution for arrival time is one sample. The `threshold` parameter controls
+the stopping criterion for the decomposition. If the relative change in the residual
+energy is less than `threshold`, the decomposition stops. The `refine` parameter
+controls whether the amplitudes are refined using an optimization algorithm. Without
+refinement, the amplitudes are simply the matched filter outputs at the arrival times.
+
+# Examples:
+```julia-repl
+julia> x = compose(mseq(12), [0.1, 0.2], [1.0, 0.7]; duration=1.0, fs=8000)
+julia> x += 0.1 * randn(size(x))
+julia> decompose(mseq(12), x)
+(Float32[0.1, 0.2], [1.0020050686753323, 0.7006076693773022])
+```
+"""
+function decompose(r::AbstractVector, x::AbstractVector, n=0; threshold=0.1, refine=true)
+  # use OMP algorithm for sparse signal decomposition
+  Λ = Int[]
+  a = Array{eltype(x)}(undef, 0)
+  xᵣ = x
+  while n == 0 || length(Λ) < n
+    mfo = mfilter(r, xᵣ) / energy(r)
+    absmfo = abs.(mfo)
+    absmfo[Λ] .= 0
+    λ = argmax(absmfo)
+    absmfo[λ] == 0 && break
+    push!(Λ, λ)
+    push!(a, mfo[λ])
+    if refine
+      sol = optimize(a, BFGS()) do a
+        x̂ = compose(r, time(Λ, x), a; duration=duration(x), fs=framerate(x))
+        sum(abs2, x - x̂)
+      end
+      next_a = minimizer(sol)
+    else
+      next_a = a
+    end
+    x̂ = compose(r, time(Λ, x), next_a; duration=duration(x), fs=framerate(x))
+    prev_rms = rms(xᵣ[λ:min(λ+length(r)-1, end)])
+    xᵣ = x - x̂
+    if (prev_rms - rms(xᵣ[λ:min(λ+length(r)-1, end)])) / prev_rms < threshold
+      # remove last entry, since it does not meet threshold
+      resize!(Λ, length(Λ)-1)
+      resize!(a, length(a)-1)
+      break
+    end
+    a = next_a
+  end
+  ndx = sortperm(Λ)
+  (time(Λ[ndx], x), a[ndx])
 end
 
 """

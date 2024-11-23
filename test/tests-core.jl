@@ -730,6 +730,25 @@ function test_dsp()
   @test vec(Zx)' * vec(Zy) ≈ x' * y
   @test dzt(4.2x + 2.7y, 64) ≈ 4.2Zx + 2.7Zy
 
+  x = compose(mseq(12), [0.1, 0.2], [1.0, 0.7]; duration=1.0, fs=8000)
+  x += 0.1 * randn(size(x))
+  t, a = decompose(mseq(12), x)
+  @test t ≈ [0.1, 0.2]
+  @test eltype(a) == Float64
+  @test a ≈ [1.0, 0.7] atol=0.01
+  t, a = decompose(mseq(12), x; refine=false)
+  @test t ≈ [0.1, 0.2]
+  @test eltype(a) == Float64
+  @test a ≈ [1.0, 0.7] atol=0.01
+  t, a = decompose(mseq(12), √2 * analytic(x))
+  @test t ≈ [0.1, 0.2]
+  @test eltype(a) == ComplexF64
+  @test a ≈ [1.0, 0.7] atol=0.01
+  t, a = decompose(ComplexF64.(mseq(12)), √2 * analytic(x), 2)
+  @test t ≈ [0.1, 0.2]
+  @test eltype(a) == ComplexF64
+  @test a ≈ [1.0, 0.7] atol=0.1
+
 end
 
 function test_rand()
