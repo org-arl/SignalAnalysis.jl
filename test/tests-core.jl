@@ -748,6 +748,10 @@ function test_dsp()
   @test t ≈ [0.1, 0.2]
   @test eltype(a) == ComplexF64
   @test a ≈ [1.0, 0.7] atol=0.1
+  t, a, ndx = decompose(mseq(12), samples(x), 2)
+  @test t ≈ [800.0, 1600.0]
+  @test ndx == [801, 1601]
+  @test a ≈ [1.0, 0.7] atol=0.01
 
 end
 

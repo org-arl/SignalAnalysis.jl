@@ -825,11 +825,12 @@ refinement, the amplitudes are simply the matched filter outputs at the arrival 
 julia> x = compose(mseq(12), [0.1, 0.2], [1.0, 0.7]; duration=1.0, fs=8000)
 julia> x += 0.1 * randn(size(x))
 julia> decompose(mseq(12), x)
-(Float32[0.1, 0.2], [1.0020050686753323, 0.7006076693773022])
+(time=[0.1, 0.2], amplitude=[1.00201, 0.70061], index=[801, 1601])
 ```
 """
-function decompose(r::AbstractVector, x::AbstractVector, n=0; threshold=0.1, refine=true)
+function decompose(r::AbstractVector, x::AbstractVector, n=0; threshold=0.01, refine=true)
   # use OMP algorithm for sparse signal decomposition
+  fs = framerate(x)
   Λ = Int[]
   a = Array{eltype(x)}(undef, 0)
   xᵣ = x
@@ -843,14 +844,14 @@ function decompose(r::AbstractVector, x::AbstractVector, n=0; threshold=0.1, ref
     push!(a, mfo[λ])
     if refine
       sol = optimize(a, BFGS()) do a
-        x̂ = compose(r, time(Λ, x), a; duration=duration(x), fs=framerate(x))
+        x̂ = compose(r, (Λ .- 1) ./ fs, a; duration=duration(x), fs)
         sum(abs2, x - x̂)
       end
       next_a = minimizer(sol)
     else
       next_a = a
     end
-    x̂ = compose(r, time(Λ, x), next_a; duration=duration(x), fs=framerate(x))
+    x̂ = compose(r, (Λ .- 1) ./ fs, next_a; duration=duration(x), fs)
     prev_rms = rms(xᵣ[λ:min(λ+length(r)-1, end)])
     xᵣ = x - x̂
     if (prev_rms - rms(xᵣ[λ:min(λ+length(r)-1, end)])) / prev_rms < threshold
@@ -862,7 +863,7 @@ function decompose(r::AbstractVector, x::AbstractVector, n=0; threshold=0.1, ref
     a = next_a
   end
   ndx = sortperm(Λ)
-  (time(Λ[ndx], x), a[ndx])
+  (time=(Λ[ndx] .- 1) ./ fs, amplitude=a[ndx], index=Λ[ndx])
 end
 
 """
