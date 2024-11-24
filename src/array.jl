@@ -1,6 +1,3 @@
-using LinearAlgebra
-import Base.@kwdef
-
 export steering, beamform
 export Bartlett, Capon, Music
 
@@ -14,14 +11,14 @@ struct Bartlett <: Beamformer end
 @doc """
 Frequency-domain Capon beamformer with diagonal loading factor `γ`.
 """ Capon
-@kwdef struct Capon <: Beamformer
+Base.@kwdef struct Capon <: Beamformer
   γ = 0.0
 end
 
 @doc """
 Frequency-domain MUSIC beamformer with `nsignals` signals.
 """ Music
-@kwdef struct Music <: Beamformer
+Base.@kwdef struct Music <: Beamformer
   nsignals = 1
 end
 

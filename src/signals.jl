@@ -1,7 +1,6 @@
 using MetaArrays: MetaArray
 using Base.Iterators: partition
 using WAV: wavread
-using DSP: hilbert
 using PaddedViews: PaddedView
 
 export signal, analytic, isanalytic, samples

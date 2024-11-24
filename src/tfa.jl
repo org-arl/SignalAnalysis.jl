@@ -1,5 +1,4 @@
-using DSP, DSP.Periodograms
-using FFTW
+using DSP.Periodograms
 
 export tfd, Wigner, Spectrogram
 
@@ -85,7 +84,7 @@ function tfd(s, kernel::Wigner; onesided=eltype(s)<:Real, fs=framerate(s))
     if pad > 0
       xx = X[floor(Int, pad/2)+2 : end-(ceil(Int, pad/2)-1), n+1] # view
     else
-      xx = X[:, n+1] # view 
+      xx = X[:, n+1] # view
     end
     xx .= x̂[1 .+ 2n .+ (-kn:kn)] .* conj.(x̂[1 .+ 2n .- (-kn:kn)])
   end

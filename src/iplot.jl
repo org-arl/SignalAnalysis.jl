@@ -1,5 +1,4 @@
 using .InteractiveViz
-using Statistics
 using DSP.Periodograms
 
 export iplot, iplot!, ispecgram

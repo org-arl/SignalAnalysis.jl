@@ -1,6 +1,5 @@
 using Random
 using Distributions
-using DSP: filt
 
 export RedGaussian, PinkGaussian
 

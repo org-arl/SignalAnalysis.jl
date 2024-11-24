@@ -1,6 +1,4 @@
 using .Plots
-using DSP
-using DSP.Windows
 
 """
     plot(data::SampledSignal; kwargs...)

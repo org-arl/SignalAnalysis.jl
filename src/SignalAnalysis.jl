@@ -1,21 +1,19 @@
 module SignalAnalysis
 
 using Requires
+using Reexport
 using DocStringExtensions
 
-using SignalBase
-using SignalBase.Units
+@reexport using SignalBase
+@reexport using SignalBase.Units
 
-# from SignalBase
-export nframes, nchannels, sampletype, framerate, duration
+@reexport using DSP
+@reexport using FFTW
+@reexport using Peaks
+@reexport using Statistics
+@reexport using LinearAlgebra
+
 export 𝓈, ms, Hz, kHz
-
-# from DSP
-export db2amp, amp2db, pow2db, db2pow, stft
-
-# from Peaks
-export findmaxima, argmaxima, peakproms, peakproms!, peakwidths, peakwidths!
-export peakheights, peakheights!, filterpeaks!, findnextmaxima
 
 const 𝓈 = Units.s
 
