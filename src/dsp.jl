@@ -114,9 +114,11 @@ Converts baseband signal with `sps` symbols per passband sample to a real
 passband signal centered around carrier frequency `fc`.
 """
 function upconvert(s::AbstractVector, sps, fc, pulseshape=rrcosfir(0.25, sps); fs=framerate(s))
-  pad = cld(length(pulseshape), 2*sps) - 1
-  s = vcat(zeros(pad), complex.(s), zeros(pad))
-  s = signal(resample(s, sps, pulseshape), sps*fs)
+  if sps != 1
+    pad = cld(length(pulseshape), 2*sps) - 1
+    s = vcat(zeros(pad), complex.(s), zeros(pad))
+    s = signal(resample(s, sps, pulseshape), sps*fs)
+  end
   √2 * real.(s .* cis.(2π * inHz(fc) * domain(s)))
 end
 
