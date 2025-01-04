@@ -33,11 +33,11 @@ julia> bpf = fir(127, 1kHz, 5kHz; fs=44.1kHz) # design a bandpass filter
 function fir(n, f1, f2=nothing; fs=2.0, method=FIRWindow(hanning(n)))
   fs = inHz(fs)
   if f1 == 0
-    f = Lowpass(inHz(f2); fs=fs)
+    f = Lowpass(2 * inHz(f2) / fs)
   elseif f2 == nothing || inHz(f2) == fs/2
-    f = Highpass(inHz(f1); fs=fs)
+    f = Highpass(2 * inHz(f1) / fs)
   else
-    f = Bandpass(inHz(f1), inHz(f2); fs=fs)
+    f = Bandpass(2 * inHz(f1) / fs, 2 * inHz(f2) / fs)
   end
   return digitalfilter(f, method)
 end
