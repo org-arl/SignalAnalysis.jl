@@ -13,7 +13,7 @@ using DocStringExtensions
 @reexport using Statistics
 @reexport using LinearAlgebra
 
-export 𝓈, ms, Hz, kHz
+export 𝓈, ms, Hz, kHz, °
 
 const 𝓈 = Units.s
 
@@ -34,19 +34,8 @@ end
 
 using PrecompileTools
 
-@setup_workload begin
-  using Test
-  rng = Random.MersenneTwister(0)
-  include("../test/tests-core.jl")
-  @compile_workload begin
-    test_signals()
-    test_generate()
-    test_basic()
-    test_dsp()
-    test_rand()
-    test_array()
-    test_tfa()
-  end
+@compile_workload begin
+  include("precompile.jl")
 end
 
 end # module
