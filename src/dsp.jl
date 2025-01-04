@@ -419,32 +419,32 @@ function sfilt(f::AbstractVector{<:Number}, x::AbstractVector)
   signal(conv(f, x̄)[eachindex(x̄)], framerate(x))
 end
 
-sfilt(f::AbstractVector{<:Number}, x::AbstractVector, si) = signal(filt(f, samples(x), si), framerate(x))
-sfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::AbstractVector) = signal(filt(b, a, samples(x)), framerate(x))
-sfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::AbstractVector, si) = signal(filt(b, a, samples(x), si), framerate(x))
-sfiltfilt(coef, x) = signal(filtfilt(coef, samples(x)), framerate(x))
+sfilt(f, x) = signal(filt(f, samples(x)), framerate(x))
+sfilt(b, a, x) = signal(filt(b, a, samples(x)), framerate(x))
+sfiltfilt(f, x) = signal(filtfilt(f, samples(x)), framerate(x))
+sfiltfilt(b, a, x) = signal(filtfilt(b, a, samples(x)), framerate(x))
 sresample(x, rate) = signal(resample(samples(x), rate; dims=1), rate * framerate(x))
 sresample(x, rate, coef) = signal(resample(samples(x), rate, coef; dims=1), rate * framerate(x))
 
 """
-    filt(f, x::SampledSignal[, si])
-    filt(b, a, x::SampledSignal[, si])
+    filt(f, x::SampledSignal)
+    filt(b, a, x::SampledSignal)
 
 Same as [`filt`](https://docs.juliadsp.org/stable/filters/#DSP.filt),
 but retains sampling rate information.
 """
 DSP.filt(f::AbstractVector{<:Number}, x::SampledSignal) = sfilt(f, x)
-DSP.filt(f::AbstractVector{<:Number}, x::SampledSignal, si) = sfilt(f, x, si)
 DSP.filt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::SampledSignal) = sfilt(b, a, x)
-DSP.filt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::SampledSignal, si) = sfilt(b, a, x, si)
 
 """
-    filtfilt(coef, x::SampledSignal)
+    filtfilt(f, x::SampledSignal)
+    filtfilt(b, a, x::SampledSignal)
 
 Same as [`filtfilt`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.filtfilt),
 but retains sampling rate information.
 """
-DSP.Filters.filtfilt(coef::AbstractVector{<:Number}, x::SampledSignal) = sfiltfilt(coef, x)
+DSP.Filters.filtfilt(f::AbstractVector{<:Number}, x::SampledSignal) = sfiltfilt(f, x)
+DSP.Filters.filtfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::SampledSignal) = sfiltfilt(b, a, x)
 
 """
     resample(x::SampledSignal, rate[, coef])
@@ -700,7 +700,7 @@ delay!(x, t::Units.Unitful.Time; kwargs...) = delay!(x, inseconds(t) * framerate
 Create a delayed version of signal `x` with `v` units of delay.
 See [`delay!`](@ref) for details.
 """
-delay(x, v; kwargs...) = delay!(copy(x), v; kwargs)
+delay(x, v; kwargs...) = delay!(copy(x), v; kwargs...)
 
 """
 $(SIGNATURES)
