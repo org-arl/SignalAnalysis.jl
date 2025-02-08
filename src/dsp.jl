@@ -423,6 +423,10 @@ sfilt(f, x) = signal(filt(f, samples(x)), framerate(x))
 sfilt(b, a, x) = signal(filt(b, a, samples(x)), framerate(x))
 sfiltfilt(f, x) = signal(filtfilt(f, samples(x)), framerate(x))
 sfiltfilt(b, a, x) = signal(filtfilt(b, a, samples(x)), framerate(x))
+
+# special case for AbstractVector to get around DSP bug: https://github.com/JuliaDSP/DSP.jl/issues/625
+sresample(x::AbstractVector, rate) = signal(resample(samples(x), rate), rate * framerate(x))
+sresample(x::AbstractVector, rate, coef) = signal(resample(samples(x), rate, coef), rate * framerate(x))
 sresample(x, rate) = signal(resample(samples(x), rate; dims=1), rate * framerate(x))
 sresample(x, rate, coef) = signal(resample(samples(x), rate, coef; dims=1), rate * framerate(x))
 
