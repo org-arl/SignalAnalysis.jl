@@ -452,8 +452,8 @@ DSP.Filters.filtfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector
 Same as [`resample`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.resample),
 but correctly handles sampling rate conversion.
 """
-DSP.Filters.resample(x::SampledSignal, rate::Real) = sresample(x, rate)
-DSP.Filters.resample(x::SampledSignal, rate::Real, coef::Vector) = sresample(x, rate, coef)
+DSP.Filters.resample(x::SampledSignal, rate::Union{Integer,Rational}) = sresample(x, rate)
+DSP.Filters.resample(x::SampledSignal, rate::Union{Integer,Rational}, coef::Vector) = sresample(x, rate, coef)
 
 """
 $(SIGNATURES)
