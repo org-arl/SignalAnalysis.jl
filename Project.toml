@@ -23,7 +23,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 WAV = "8149f6b0-98f6-5db9-b78f-408fbbb8ef88"
 
 [compat]
-DSP = "0.6, 0.7, 0.8"
+DSP = "0.6, 0.7, 0.8.2"
 Distributions = "0.23, 0.24, 0.25"
 DocStringExtensions = "0.8,0.9"
 FFTW = "1"
