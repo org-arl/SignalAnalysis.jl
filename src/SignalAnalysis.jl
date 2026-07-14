@@ -1,6 +1,5 @@
 module SignalAnalysis
 
-using Requires
 using Reexport
 using DocStringExtensions
 
@@ -25,10 +24,45 @@ include("generate.jl")
 include("array.jl")
 include("rand.jl")
 
-function __init__()
-  @require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" include("plot.jl")
-  @require InteractiveViz="d14badfc-0adb-4d57-980e-37858d990fa5" include("iplot.jl")
-end
+# implemented in the Plots extension (see ext/PlotsExt.jl)
+export psd, psd!, specgram, specgram!, plotfreqresp, plotfreqresp!
+
+"""
+Plots the power spectral density of data. Requires `Plots` to be loaded.
+"""
+function psd end
+function psd! end
+
+"""
+Plots a spectrogram of the data. Requires `Plots` to be loaded.
+"""
+function specgram end
+function specgram! end
+
+"""
+Plots frequency response of a digital filter. Requires `Plots` to be loaded.
+"""
+function plotfreqresp end
+function plotfreqresp! end
+
+# implemented in the InteractiveViz extension (see ext/InteractiveVizExt.jl)
+export iplot, iplot!, ispecgram
+
+"""
+Plots interactive timeseries of the signal. Requires `InteractiveViz` to be loaded.
+"""
+function iplot end
+
+"""
+Plots interactive timeseries of the signal over a previous plot. Requires
+`InteractiveViz` to be loaded.
+"""
+function iplot! end
+
+"""
+Plots interactive spectrogram of the signal. Requires `InteractiveViz` to be loaded.
+"""
+function ispecgram end
 
 ## precompilation workload to speed up TTFX
 
