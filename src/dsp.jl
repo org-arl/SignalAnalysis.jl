@@ -765,7 +765,7 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   T = eltype(m)
   m̄ = abs.(samples(m))
   p = argmaxima(m̄, mingap)
-  prominence > 0 && peakproms!(p, m̄; minprom=prominence*maximum(m̄))
+  prominence > 0 && peakproms!(p, m̄; min=prominence*maximum(m̄))
   if length(p) > length(s)/10
     return (time=Float64[], amplitude=T[], mfo=mfo ? m : empty(m))
   end
