@@ -1,5 +1,3 @@
-import Optim: optimize, minimizer, BFGS
-
 export fir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, circcorr, goertzel, pll, hadamard
@@ -737,6 +735,27 @@ julia> findsignal(x, y, 3; mfo=true)
 (time = [0.000775, 0.001545, 0.003124], amplitude = [...], mfo=[...])
 ```
 """
+# golden-section minimization of a unimodal function over [a, b]
+function _minimize(f, a, b; tol=1e-4)
+  φ = (√5 - 1) / 2
+  c = b - φ * (b - a)
+  d = a + φ * (b - a)
+  fc = f(c)
+  fd = f(d)
+  while b - a > tol
+    if fc < fd
+      b, d, fd = d, c, fc
+      c = b - φ * (b - a)
+      fc = f(c)
+    else
+      a, c, fc = c, d, fd
+      d = a + φ * (b - a)
+      fd = f(d)
+    end
+  end
+  (a + b) / 2
+end
+
 function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   # coarse arrival time estimation
   r = analytic(r)
@@ -765,20 +784,29 @@ function findsignal(r, s, n=1; prominence=0.0, finetune=2, mingap=1, mfo=false)
   i = max(1, i - finetune)
   X = fft(vcat(samples(r), zeros(N-length(r))))
   S = fft(vcat(samples(s[i:min(i+N-1,end)]), zeros(max(i+N-1-length(s),0))))
-  soln = let P=length(p), f=fftfreq(N)
-    optimize([p .- i; real.(m[p]); imag.(m[p])], BFGS(); autodiff=:forward) do v
-      ii = @view v[1:P]
-      aa = @views complex.(v[P+1:2P], v[2P+1:3P])
-      X̄ = mapreduce(+, zip(ii, aa)) do (i, a)
-        a .* X .* cis.(-2π .* i .* f)
-      end
-      sum(abs2, X̄ .- S)
+  ii, a = let P=length(p), f=fftfreq(N)
+    # variable projection: for fixed fractional delays, the optimal amplitudes
+    # are given by a linear least-squares solve, so we only need to search over
+    # the delays (each bracketed within ±finetune samples of its coarse peak)
+    ii = Float64.(p .- i)
+    B = Matrix{ComplexF64}(undef, N, P)
+    for k ∈ 1:P
+      @views B[:,k] .= X .* cis.(-2π .* ii[k] .* f)
     end
+    cost = () -> (a = B \ S; sum(abs2, B * a .- S))
+    for _ ∈ 1:3
+      for k ∈ 1:P
+        ii[k] = _minimize(ii[k] - finetune, ii[k] + finetune; tol=1e-3) do v
+          @views B[:,k] .= X .* cis.(-2π .* v .* f)
+          cost()
+        end
+        @views B[:,k] .= X .* cis.(-2π .* ii[k] .* f)
+      end
+    end
+    (ii, B \ S)
   end
-  v = minimizer(soln)
-  pp = v[1:length(p)] .+ i
+  pp = ii .+ i
   t = time(pp, s)
-  a = complex.(v[length(p)+1:2*length(p)], v[2*length(p)+1:3*length(p)])
   ndx = sortperm(t)
   (time=t[ndx], amplitude=a[ndx], mfo=mfo ? m : empty(m))
 end
@@ -845,11 +873,17 @@ function decompose(r::AbstractVector, x::AbstractVector, n=0; threshold=0.01, re
     push!(Λ, λ)
     push!(a, mfo[λ])
     if refine
-      sol = optimize(a, BFGS()) do a
-        x̂ = compose(r, (Λ .- 1) ./ fs, a; duration=duration(x), fs)
-        sum(abs2, x - x̂)
+      # amplitudes with fixed arrival times form a linear least-squares problem
+      A = stack(λ -> samples(compose(r, [(λ - 1) / fs], [one(eltype(x))]; duration=duration(x), fs)), Λ)
+      if eltype(A) <: Real && eltype(x) <: Complex
+        # real reference with complex amplitudes: compose output √2⋅Re(Σ aₖr̃ₖ) is
+        # only R-linear in a, so solve for real & imaginary parts separately
+        B = stack(λ -> samples(compose(r, [(λ - 1) / fs], [im * one(eltype(x))]; duration=duration(x), fs)), Λ)
+        v = [A B] \ real(samples(x))
+        next_a = complex.(v[1:length(Λ)], v[length(Λ)+1:end])
+      else
+        next_a = A \ samples(x)
       end
-      next_a = minimizer(sol)
     else
       next_a = a
     end
