@@ -1,7 +1,7 @@
 name = "SignalAnalysis"
 uuid = "df1fea92-c066-49dd-8b36-eace3378ea47"
+version = "0.11.0"
 authors = ["Mandar Chitre <mandar@nus.edu.sg>"]
-version = "0.10.4"
 
 [deps]
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
@@ -16,24 +16,32 @@ Peaks = "18e31ff7-3703-566c-8e60-38913d67486b"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
-Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 SignalBase = "00c44e92-20f5-44bc-8f45-a1dcef76ba38"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[weakdeps]
+InteractiveViz = "d14badfc-0adb-4d57-980e-37858d990fa5"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 WAV = "8149f6b0-98f6-5db9-b78f-408fbbb8ef88"
+
+[extensions]
+InteractiveVizExt = "InteractiveViz"
+PlotsExt = "Plots"
+WAVExt = "WAV"
 
 [compat]
 DSP = "0.6, 0.7, 0.8.2"
 Distributions = "0.23, 0.24, 0.25"
 DocStringExtensions = "0.8,0.9"
 FFTW = "1"
+InteractiveViz = "0.5, 0.6"
 MetaArrays = "0.2"
 Optim = "1"
 PaddedViews = "0.5"
 Peaks = "0.5"
+Plots = "1"
 PrecompileTools = "1"
 Reexport = "1.2.2"
-Requires = "1"
 SignalBase = "0.1"
 WAV = "1"
-julia = "1.6"
+julia = "1.9"

@@ -1,7 +1,12 @@
-using .InteractiveViz
-using DSP.Periodograms
+module InteractiveVizExt
 
-export iplot, iplot!, ispecgram
+using SignalAnalysis
+using SignalAnalysis: SampledSignal
+using InteractiveViz
+using DSP.Periodograms
+using DocStringExtensions
+
+import SignalAnalysis: iplot, iplot!, ispecgram
 
 """
 $(SIGNATURES)
@@ -71,3 +76,5 @@ function ispecgram(s; fs=framerate(s), nfft=min(div(length(s),8),256), noverlap=
     colorrange=(cmin, cmax),
     axis=(; xlabel=xlabel, ylabel=ylabel), kwargs...)
 end
+
+end # module

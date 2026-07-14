@@ -1,6 +1,5 @@
 using MetaArrays: MetaArray
 using Base.Iterators: partition
-using WAV: wavread
 using PaddedViews: PaddedView
 
 export signal, analytic, isanalytic, samples
@@ -64,18 +63,9 @@ $(TYPEDSIGNATURES)
 Loads a signal from a WAV file.
 """
 function signal(filename::AbstractString; start=1, nsamples=missing)
-  if start == 1 && nsamples === missing
-    data, fs = wavread(filename)
-  elseif start == 1
-    data, fs = wavread(filename; subrange=nsamples)
-  else
-    if nsamples === missing
-      n, ch = wavread(filename; format="size")
-      nsamples = n - start + 1
-    end
-    data, fs = wavread(filename; subrange=start:(start+nsamples-1))
-  end
-  signal(data, fs)
+  ext = Base.get_extension(@__MODULE__, :WAVExt)
+  ext === nothing && error("Loading signals from WAV files requires the WAV package to be loaded; run `using WAV` first")
+  ext.loadsignal(filename; start, nsamples)
 end
 
 """

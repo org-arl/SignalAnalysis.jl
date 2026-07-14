@@ -1,4 +1,9 @@
-using .Plots
+module PlotsExt
+
+using SignalAnalysis
+using SignalAnalysis: SampledSignal
+using Plots
+using DSP.Periodograms
 
 """
     plot(data::SampledSignal; kwargs...)
@@ -328,6 +333,17 @@ Plots frequency response of a digital filter.
   end
 end
 
+# forward the userplot entry points to the SignalAnalysis stubs, since the
+# @userplot-generated functions are local to this extension module
+SignalAnalysis.psd(args...; kwargs...) = psd(args...; kwargs...)
+SignalAnalysis.psd!(args...; kwargs...) = psd!(args...; kwargs...)
+SignalAnalysis.specgram(args...; kwargs...) = specgram(args...; kwargs...)
+SignalAnalysis.specgram!(args...; kwargs...) = specgram!(args...; kwargs...)
+SignalAnalysis.plotfreqresp(args...; kwargs...) = plotfreqresp(args...; kwargs...)
+SignalAnalysis.plotfreqresp!(args...; kwargs...) = plotfreqresp!(args...; kwargs...)
+
 # helper functions
 
 orderedextrema(x) = argmin(x) < argmax(x) ? (minimum(x), maximum(x)) : (maximum(x), minimum(x))
+
+end # module
