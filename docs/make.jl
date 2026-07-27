@@ -9,6 +9,7 @@ makedocs(
   sitename = "SignalAnalysis.jl",
   format = Documenter.HTML(prettyurls = false),
   linkcheck = !("skiplinks" in ARGS),
+  linkcheck_ignore = [r"users\.ece\.cmu\.edu"],
   pages = Any[
     "Home" => "index.md",
     "Manual" => Any[
