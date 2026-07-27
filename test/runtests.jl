@@ -1,4 +1,4 @@
-using Test, Statistics, LinearAlgebra, DSP, DSP.Util, FFTW
+using Test, Statistics, LinearAlgebra, Random, DSP, DSP.Util, FFTW
 using Plots
 using WAV
 using SignalAnalysis
