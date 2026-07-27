@@ -19,6 +19,6 @@ While this package works with most array-like data types, it uses the [`SignalBa
 - [Signal processing](https://org-arl.github.io/SignalAnalysis.jl/stable/dsp.html)
 - [Time-frequency analysis](https://org-arl.github.io/SignalAnalysis.jl/stable/tfa.html)
 - [Array processing](https://org-arl.github.io/SignalAnalysis.jl/stable/array.html)
-- [Random noise generation](https://org-arl.github.io/SignalAnalysis.jl/stable/random.html)
+- [Random noise generation](https://org-arl.github.io/SignalAnalysis.jl/stable/rand.html)
 - [Plot recipes](https://org-arl.github.io/SignalAnalysis.jl/stable/plot.html)
 - [Interactive plotting](https://org-arl.github.io/SignalAnalysis.jl/stable/iplot.html)
