@@ -27,7 +27,7 @@ julia> rand(RedGaussian(1000, 2.0))
    ⋮
 ```
 """
-Base.@kwdef struct RedGaussian{T} <: NoiseDistribution
+Base.@kwdef struct RedGaussian{T<:AbstractFloat} <: NoiseDistribution
   n::Int
   σ::T = 1.0
 end
@@ -49,7 +49,7 @@ julia> rand(PinkGaussian(1000, 2.0))
    ⋮
 ```
 """
-Base.@kwdef struct PinkGaussian{T} <: NoiseDistribution
+Base.@kwdef struct PinkGaussian{T<:AbstractFloat} <: NoiseDistribution
   n::Int
   σ::T = 1.0
 end
@@ -59,7 +59,8 @@ PinkGaussian(n) = PinkGaussian(n=n)
 function Random.rand!(rng::AbstractRNG, d::RedGaussian{T}, x::AbstractVector{T}) where {T<:Real}
   length(x) >= d.n || throw(ArgumentError("length of x must be at least n"))
   extra = 100
-  v = d.σ .* randn(rng, T, length(x)+extra)
+  v = randn(rng, T, length(x)+extra)
+  v .*= d.σ
   for j = 2:length(v)
     v[j] += v[j-1]
   end
@@ -74,7 +75,8 @@ function Random.rand!(rng::AbstractRNG, d::PinkGaussian{T}, x::AbstractVector{T}
   hb = [0.049922035, -0.095993537, 0.050612699, -0.004408786]
   ha = [1.0, -2.494956002, 2.017265875, -0.522189400]
   extra = 1430
-  v = d.σ .* randn(rng, T, length(x)+extra)
+  v = randn(rng, T, length(x)+extra)
+  v .*= d.σ
   v = filt(hb, ha, v)/0.08680587859687908
   x .= v[extra+1:end]
   return x
@@ -89,6 +91,8 @@ Base.rand(rng::AbstractRNG, d::NoiseDistribution, m::Integer) = rand!(rng, d, ze
 Base.rand(d::NoiseDistribution, m::Integer) = rand(Random.default_rng(), d, m)
 
 function Random.rand!(rng::AbstractRNG, d::NoiseDistribution, A::AbstractMatrix)
-  foreach(x -> rand!(rng, d, x), eachcol(A))
+  for x ∈ eachcol(A)
+    rand!(rng, d, x)
+  end
   return A
 end
