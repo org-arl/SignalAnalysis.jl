@@ -787,6 +787,22 @@ function test_rand()
     @test eltype(rand(rng, PinkGaussian(1000, one(t)))) == t
   end
 
+  for d ∈ (RedGaussian(1000), PinkGaussian(1000))
+    @test length(d) == 1000
+    @test length(rand(d)) == 1000
+    @test size(rand(d, 3)) == (1000, 3)
+    A = rand(rng, d, 3)
+    @test size(A) == (1000, 3)
+    @test std(A) ≈ 1 atol=2e-1
+    @test A[:,1] != A[:,2]
+    x = zeros(1000)
+    @test Random.rand!(d, x) === x
+    @test std(x) ≈ 1 atol=2e-1
+    B = zeros(1000, 3)
+    @test Random.rand!(rng, d, B) === B
+    @test B[:,1] != B[:,2]
+  end
+
 end
 
 function test_array()
