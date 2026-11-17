@@ -442,7 +442,7 @@ Same as [`filtfilt`](https://docs.juliadsp.org/stable/filters/#DSP.Filters.filtf
 but retains sampling rate information.
 """
 DSP.Filters.filtfilt(f::AbstractVector{<:Number}, x::SampledSignal) = sfiltfilt(f, x)
-DSP.Filters.filtfilt(b::AbstractVector{<:Number}, a::Union{Number,AbstractVector}, x::SampledSignal) = sfiltfilt(b, a, x)
+DSP.Filters.filtfilt(b::AbstractVector{<:Number}, a::AbstractVector{<:Number}, x::SampledSignal) = sfiltfilt(b, a, x)
 
 """
     resample(x::SampledSignal, rate[, coef])

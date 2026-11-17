@@ -543,6 +543,22 @@ function test_dsp()
   @test framerate(x1) == framerate(x)
   x1 = filtfilt(f, x)
   @test framerate(x1) == framerate(x)
+  x1 = filtfilt(f, [1.0], x)
+  @test framerate(x1) == framerate(x)
+  @test x1 ≈ filtfilt(f, x)
+  x1 = filtfilt(PolynomialRatio(f, [1.0]), x)
+  @test framerate(x1) == framerate(x)
+  @test x1 ≈ filtfilt(f, x)
+  x1 = filtfilt(f, [1.0], [x x])
+  @test framerate(x1) == framerate(x)
+  @test size(x1) == (nframes(x), 2)
+
+  x = signal(cos.(2π * 10000 .* (0:19999) ./ 96000), 96000)
+  x1 = filtfilt(fir(255, 5kHz, 15kHz; fs=96kHz), x)
+  @test framerate(x1) == framerate(x)
+  @test x1[3000:17000] ≈ x[3000:17000] atol=1e-9
+
+  x = cw(7kHz, 1s, 44.1kHz)
   x1 = resample(x, 3//2)
   @test framerate(x1) == 3 * framerate(x) / 2
   x1 = resample(x, 3//2, [1,1,1])
