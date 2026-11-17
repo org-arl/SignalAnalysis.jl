@@ -14,6 +14,32 @@
   @test p isa Plots.Plot
   p = plot(signal(randn(rng, 61040, 2), 1000))
   @test p isa Plots.Plot
+  seriestypes(p) = [s[:seriestype] for s in p.series_list]
+  markershapes(p) = [s[:markershape] for s in p.series_list]
+  npoints(p) = [length(s[:y]) for s in p.series_list]
+  y = signal(randn(rng, 100), 1000)
+  p = plot(y)
+  @test seriestypes(p) == [:path]
+  @test markershapes(p) == [:none]
+  for p in (plot(y; seriestype=:stem), plot(y; seriestype=:sticks), sticks(y))
+    @test p isa Plots.Plot
+    @test (:scatter, :circle) in zip(seriestypes(p), markershapes(p))
+  end
+  p = plot(y; seriestype=:stem, marker=:none)
+  @test all(==(:none), markershapes(p))
+  p = plot(y; seriestype=:stem, marker=:rect)
+  @test (:scatter, :rect) in zip(seriestypes(p), markershapes(p))
+  p = scatter(y)
+  @test seriestypes(p) == [:scatter]
+  @test npoints(p) == [100]
+  p = scatter([y -y])
+  @test seriestypes(p) == [:scatter, :scatter]
+  y = signal(randn(rng, 20000), 1000)
+  @test npoints(plot(y)) == [10000]
+  @test npoints(scatter(y)) == [5000]
+  @test npoints(scatter(y; pooling=:minmax)) == [10000]
+  @test npoints(scatter(y; pooling=:mean)) == [5000]
+  @test npoints(scatter(y; downsample=1)) == [20000]
   p = psd(x)
   @test p isa Plots.Plot
   p = psd(real(x))

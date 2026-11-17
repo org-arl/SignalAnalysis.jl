@@ -14,10 +14,17 @@ Plots timeseries from a sample buffer.
 - `t0=0.0`: start time
 - `downsample=:auto`: downsampling factor (integer)
 - `pooling=:auto`: pooling mode (`:min`, `:max`, `:mean`, `:minmax`, `nothing` or function)
+- `seriestype=:line`: series type, e.g. `:line`, `:stem` or `:scatter`
 - other `kwargs` are passed on to `plot`
+
+Long signals are downsampled for display. By default, line plots use `:minmax`
+pooling and other series types use no pooling. Stem plots have circle markers
+by default, and `marker=:none` removes them.
 """
 @recipe function plot(s::SampledSignal; t0=0.0, downsample=:auto, pooling=:auto)
   ticks --> :native
+  seriestype = get(plotattributes, :seriestype, :line)
+  pooling == :auto && seriestype ∉ (:line, :path) && (pooling = nothing)
   legend --> ndims(s) > 1 && size(s, 2) > 1
   s1 = samples(s)
   eltype(s1) <: Complex && (s1 = abs.(s1))
@@ -75,7 +82,8 @@ Plots timeseries from a sample buffer.
     end
   end
   @series begin
-    seriestype := :line
+    seriestype --> :line
+    seriestype == :sticks && (markershape --> :circle)
     t[1:size(s1,1)], s1
   end
 end
