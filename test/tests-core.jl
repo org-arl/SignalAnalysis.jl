@@ -831,6 +831,8 @@ function test_rand()
     @test A[:,1] != A[:,2]
     x = zeros(1000)
     @test Random.rand!(d, x) === x
+    @test !any(iszero, x)
+    @test Random.rand!(rng, d, x) === x
     @test std(x) ≈ 1 atol=2e-1
     B = zeros(1000, 3)
     @test Random.rand!(rng, d, B) === B
