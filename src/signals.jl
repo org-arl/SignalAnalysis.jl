@@ -99,6 +99,35 @@ Creates a curried function that takes in an array and creates a signal with samp
 signal(fs) = x -> signal(x, fs)
 
 """
+$(TYPEDSIGNATURES)
+Creates a signal by sampling function `f` at frame rate `fs`, from time `t0` up
+to, but not including, time `t1`. Function `f` is called with time in seconds.
+The time axis of the resulting signal starts at 0.
+
+# Examples:
+```julia-repl
+julia> x = signal(t -> sin(2π * 100 * t), 1𝓈, 2𝓈, 8kHz)
+julia> x = signal(sinpi, 0, 2, 100)
+```
+"""
+function signal(f::Function, t0, t1, fs)
+  t = (inseconds(t0):1/inHz(fs):inseconds(t1))[1:end-1]
+  signal(f.(t), fs)
+end
+
+"""
+$(TYPEDSIGNATURES)
+Creates a signal by sampling function `f` at frame rate `fs`, from time 0 up
+to, but not including, time `T`. Function `f` is called with time in seconds.
+
+# Examples:
+```julia-repl
+julia> x = signal(t -> sin(2π * 100 * t), 500ms, 8kHz)
+```
+"""
+signal(f::Function, T, fs) = signal(f, 0, T, fs)
+
+"""
 $(SIGNATURES)
 Converts a signal to analytic representation. The conversion preserves energy,
 i.e., to convert back to a real signal while conserving energy, multiply by √2.
