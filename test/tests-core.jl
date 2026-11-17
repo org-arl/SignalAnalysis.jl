@@ -11,6 +11,24 @@ function test_signals()
   ndx = rand(1:nframes(x))
   @test time(ndx, x) == domain(x)[ndx]
 
+  x = signal(t -> sin(2π * 100 * t), 1, 3, 8000)
+  @test x isa AbstractVector{Float64}
+  @test nframes(x) == 16000
+  @test framerate(x) == 8000
+  @test x ≈ sin.(2π * 100 .* (1 .+ (0:15999) ./ 8000))
+  @test signal(t -> sin(2π * 100 * t), 1𝓈, 3𝓈, 8kHz) == x
+  x = signal(cispi, 2, 100)
+  @test x isa AbstractVector{ComplexF64}
+  @test nframes(x) == 200
+  @test framerate(x) == 100
+  @test x ≈ cispi.((0:199) ./ 100)
+  @test signal(cispi, 2000ms, 0.1kHz) == x
+  @test signal(cispi, 0, 2, 100) == x
+  @test nframes(signal(sin, 100ms, 44.1kHz)) == 4410
+  @test nframes(signal(sin, 1, 1, 100)) == 0
+  @test @inferred(signal(sin, 0, 1, 100)) isa AbstractVector{Float64}
+  @test @inferred(signal(sin, 1, 100)) isa AbstractVector{Float64}
+
   x = signal(randn(rng, (8000,2)), 1000)
   @test x isa AbstractArray
   @test size(x) == (8000, 2)
