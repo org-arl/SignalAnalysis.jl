@@ -41,7 +41,7 @@ by default, and `marker=:none` removes them.
     #downsample > 1 && @warn "Downsampling by $downsample"
   end
   if downsample !== nothing && downsample != 1
-    if pooling === nothing || (pooling == :auto && isanalytic(s1))
+    if pooling === nothing || (pooling == :auto && isanalytic(s))
       phase = floor(Int, downsample/2)
       s1 = s1[1+phase:downsample:end,:]
       t = t[1+phase:downsample:end]
