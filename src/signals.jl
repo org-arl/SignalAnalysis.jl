@@ -67,6 +67,8 @@ times, the samples are returned unchanged.
 Samples outside the signal are read from the signal itself: zero for most
 signals, or the fill value for [`padded`](@ref) signals. The result may
 therefore be non-zero slightly before the start or after the end of the signal.
+A `NaN` time gives `NaN`, and an infinite time gives the value far outside the
+signal.
 
 For a single-channel signal, `s(t)` returns a single value. For a multichannel
 signal, it returns a vector with one value per channel, and `s(t, ch)` returns
@@ -537,9 +539,15 @@ function sincinterp(data::AbstractMatrix, pos::AbstractVector)
 end
 
 function sincinterp(data, pos::Real, ch)
+  T = float(eltype(data))
+  isnan(pos) && return nanvalue(T)
+  isinf(pos) && return T(padded(data)[pos > 0 ? typemax(Int) ÷ 2 : typemin(Int) ÷ 2, ch])
   k₀ = floor(Int, pos)
-  sincsum(padded(data), k₀, sincweights(real(float(eltype(data))), pos - k₀), ch)
+  sincsum(padded(data), k₀, sincweights(real(T), pos - k₀), ch)
 end
+
+nanvalue(::Type{T}) where {T<:Complex} = T(NaN, NaN)
+nanvalue(::Type{T}) where {T} = T(NaN)
 
 # value at fractional index k₀ + d, where `w = sincweights(R, d)`
 function sincsum(p, k₀, w, ch)

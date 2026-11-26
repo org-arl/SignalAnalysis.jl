@@ -405,7 +405,7 @@ function incomplete(X)
   m = spectruminfo(X)
   !m.onesided && size(X, 1) == m.n &&
     throw(ArgumentError("spectrum is shifted; use ifftshift() or padded() before inverting"))
-  throw(ArgumentError("spectrum is incomplete; use padded() to zero-fill it before inverting"))
+  throw(ArgumentError("spectrum is incomplete; use padded() to zero-fill the missing bins"))
 end
 
 function twosidedbins(X::SampledSpectrum)
