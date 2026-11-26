@@ -1,7 +1,7 @@
 module PlotsExt
 
 using SignalAnalysis
-using SignalAnalysis: SampledSignal
+using SignalAnalysis: SampledSignal, SampledSpectrum
 using Plots
 using DSP.Periodograms
 
@@ -85,6 +85,28 @@ by default, and `marker=:none` removes them.
     seriestype --> :line
     seriestype == :sticks && (markershape --> :circle)
     t[1:size(s1,1)], s1
+  end
+end
+
+"""
+    plot(X::SampledSpectrum; kwargs...)
+
+Plots the magnitude (in dB) of a spectrum against frequency.
+"""
+@recipe function plot(X::SampledSpectrum)
+  ticks --> :native
+  legend --> ndims(X) > 1 && size(X, 2) > 1
+  f = domain(X)
+  if maximum(abs, f) >= 5000.0
+    f = f ./ 1000.0
+    xguide --> "Frequency (kHz)"
+  else
+    xguide --> "Frequency (Hz)"
+  end
+  yguide --> "Magnitude (dB)"
+  @series begin
+    seriestype --> :line
+    f, amp2db.(abs.(samples(X)))
   end
 end
 

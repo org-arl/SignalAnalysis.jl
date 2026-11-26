@@ -17,6 +17,7 @@ export 𝓈, ms, Hz, kHz, °
 const 𝓈 = Units.s
 
 include("signals.jl")
+include("spectrum.jl")
 include("basic.jl")
 include("dsp.jl")
 include("tfa.jl")
