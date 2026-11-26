@@ -28,5 +28,5 @@ We also provide convenience plot recipes for common signal processing plots:
 ```@docs
 psd
 specgram
-plotfreqresp
+freqz
 ```

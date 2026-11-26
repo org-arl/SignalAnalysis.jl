@@ -279,23 +279,32 @@ Plots a spectrogram of the data.
 end
 
 """
-    plotfreqresp(filter; kwargs...)
-    plotfreqresp(num; kwargs...)
-    plotfreqresp(num, den; kwargs...)
+    freqz(filter; kwargs...)
+    freqz(num; kwargs...)
+    freqz(num, den; kwargs...)
 
-Plots frequency response of a digital filter.
+Plots frequency response of a digital filter. The filter may be a DSP.jl filter
+(such as one designed by [`iir`](@ref)), a vector of FIR taps (such as one
+designed by [`fir`](@ref)), or numerator and denominator coefficients.
 
 # Optional keyword arguments
 - `fs=1.0`: sampling frequency
 - `nfreq=256`: number of frequency points to evaluate filter response at
 - `xscale=:auto`: one of `:auto`, `:identity` or `:log10`
+- `show=:both`: one of `:both`, `:mag` or `:phase`
+- `dbrange=30`: dynamic range (dB) of magnitude plot, or `nothing` for automatic
+- `unwrap=true`: unwrap the phase response
 - other `kwargs` are passed on to `plot`
+
+Plot attributes apply to both magnitude and phase subplots. To set attributes
+for each subplot separately, use a row matrix, e.g. `ylims=[(-60, 0) (-π, π)]`.
 """
-@userplot PlotFreqResp
-@recipe function plot(s::PlotFreqResp; fs=1.0, nfreq=256, xscale=:auto)
+@userplot FreqZ
+@recipe function plot(s::FreqZ; fs=1.0, nfreq=256, xscale=:auto, show=:both, dbrange=30, unwrap=true)
   if length(s.args) ∉ (1, 2)
-    throw(ArgumentError("plotfreqresp should be provided filter details"))
+    throw(ArgumentError("freqz should be provided filter details"))
   end
+  show ∈ (:both, :mag, :phase) || throw(ArgumentError("show should be one of :both, :mag or :phase"))
   if s.args[1] isa FilterCoefficients
     filt = s.args[1]
   else
@@ -322,22 +331,32 @@ Plots frequency response of a digital filter.
     f = f[2:end]
     z = z[2:end]
   end
-  layout := @layout [mag; phase]
-  @series begin
-    seriestype := :line
-    subplot := 1
-    xguide --> "Frequency ("*funit*")"
-    yguide --> "Response (dB)"
-    legend --> false
-    f, amp2db.(abs.(z))
+  show == :both && (layout := @layout [mag; phase])
+  if show ∈ (:both, :mag)
+    mag = amp2db.(abs.(z))
+    @series begin
+      seriestype := :line
+      subplot := 1
+      xguide --> "Frequency ("*funit*")"
+      yguide --> "Response (dB)"
+      legend --> false
+      if dbrange !== nothing
+        maxdb = maximum(filter(isfinite, mag))
+        ylims --> (maxdb - dbrange, maxdb + 3)
+      end
+      f, mag
+    end
   end
-  @series begin
-    seriestype := :line
-    subplot := 2
-    xguide --> "Frequency ("*funit*")"
-    yguide --> "Phase (radians)"
-    legend --> false
-    f, angle.(z)
+  if show ∈ (:both, :phase)
+    ϕ = angle.(z)
+    @series begin
+      seriestype := :line
+      subplot := show == :both ? 2 : 1
+      xguide --> "Frequency ("*funit*")"
+      yguide --> "Phase (radians)"
+      legend --> false
+      f, unwrap ? DSP.unwrap(ϕ) : ϕ
+    end
   end
 end
 
@@ -347,8 +366,8 @@ SignalAnalysis.psd(args...; kwargs...) = psd(args...; kwargs...)
 SignalAnalysis.psd!(args...; kwargs...) = psd!(args...; kwargs...)
 SignalAnalysis.specgram(args...; kwargs...) = specgram(args...; kwargs...)
 SignalAnalysis.specgram!(args...; kwargs...) = specgram!(args...; kwargs...)
-SignalAnalysis.plotfreqresp(args...; kwargs...) = plotfreqresp(args...; kwargs...)
-SignalAnalysis.plotfreqresp!(args...; kwargs...) = plotfreqresp!(args...; kwargs...)
+SignalAnalysis.freqz(args...; kwargs...) = freqz(args...; kwargs...)
+SignalAnalysis.freqz!(args...; kwargs...) = freqz!(args...; kwargs...)
 
 # helper functions
 

@@ -63,11 +63,35 @@
   p = specgram(samples(x); fs=framerate(x))
   @test p isa Plots.Plot
   f = fir(127, 15kHz; fs=44.1kHz)
-  p = plotfreqresp(f)
+  p = freqz(f)
   @test p isa Plots.Plot
-  p = plotfreqresp(f; xscale=:log10)
+  @test length(p.subplots) == 2
+  p = freqz(f; xscale=:log10)
   @test p isa Plots.Plot
-  p = plotfreqresp(f, [1])
+  p = freqz(f, [1])
+  @test p isa Plots.Plot
+  p = freqz(f; fs=44.1kHz)
+  @test p isa Plots.Plot
+  maxdb = maximum(p[1][1][:y])
+  @test all(Plots.ylims(p[1]) .≈ (maxdb - 30, maxdb + 3))
+  p = freqz(f; dbrange=nothing)
+  @test p isa Plots.Plot
+  p = freqz(f; show=:mag)
+  @test length(p.subplots) == 1
+  @test p[1][:yaxis][:guide] == "Response (dB)"
+  p = freqz(f; show=:phase)
+  @test length(p.subplots) == 1
+  @test p[1][:yaxis][:guide] == "Phase (radians)"
+  @test all(abs.(diff(p[1][1][:y])) .< π)
+  p = freqz(f; show=:phase, unwrap=false)
+  @test all(-π .<= p[1][1][:y] .<= π)
+  @test_throws ArgumentError freqz(f; show=:foo)
+  p = freqz(iir(4, 0, 5kHz; fs=44.1kHz); fs=44.1kHz, ylims=[(-60, 5) (-10, 0)])
+  @test Plots.ylims(p[1]) == (-60, 5)
+  @test Plots.ylims(p[2]) == (-10, 0)
+  p = freqz(iir(Elliptic(4, 0.5, 40), 5kHz, 10kHz; fs=44.1kHz, bandstop=true); fs=44.1kHz)
+  @test p isa Plots.Plot
+  p = @test_logs (:warn, r"deprecated") plotfreqresp(f)
   @test p isa Plots.Plot
 
 end
