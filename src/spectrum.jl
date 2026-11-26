@@ -1,4 +1,5 @@
 using FFTW: AbstractFFTs
+import MetaArrays
 
 export spectrum, tobin
 
@@ -171,11 +172,18 @@ function sliceinfo(m::SpectrumInfo, i::AbstractRange{<:Integer})
   SpectrumInfo(m.fs, m.n ÷ s, m.onesided, k ÷ s)
 end
 
+function sidedness(X, m::SpectrumInfo, i)
+  X isa PaddedSpectrum && m.onesided || return m
+  len = i isa Colon ? size(X, 1) : length(i)
+  0 ≤ m.k0 && m.k0 + len - 1 ≤ m.n ÷ 2 && return m
+  SpectrumInfo(m.fs, m.n, false, m.k0)
+end
+
 function spectrumindex(f, X, I...)
   J = map(i -> toindex(X, i), I)
   data = getfield(X, :data)
   m = sliceinfo(X, J...)
-  m === nothing ? f(data, J...) : withinfo(f(data, J...), m)
+  m === nothing ? f(data, J...) : withinfo(f(data, J...), sidedness(X, m, first(J)))
 end
 
 Base.getindex(X::SampledSpectrum, i...) = spectrumindex(getindex, X, i...)
@@ -375,3 +383,41 @@ for (f, from, to) ∈ ((:fftshift, :(0), :(-(m.n ÷ 2))), (:ifftshift, :(-(m.n �
     withinfo($f(samples(X), 1), SpectrumInfo(m.fs, m.n, false, $to))
   end
 end
+
+### reductions
+
+const SampledArray = Union{SampledSignal,SampledSpectrum}
+
+Base.mapreduce(f, op, A::SampledArray; dims=:, kwargs...) = mapreduce(f, op, samples(A); dims=dims, kwargs...)
+Base.findmax(f, A::SampledArray; dims=:) = findmax(f, samples(A); dims=dims)
+Base.findmin(f, A::SampledArray; dims=:) = findmin(f, samples(A); dims=dims)
+Base.findmax(A::SampledArray; dims=:) = findmax(samples(A); dims=dims)
+Base.findmin(A::SampledArray; dims=:) = findmin(samples(A); dims=dims)
+Statistics.mean(A::SampledArray; dims=:) = mean(samples(A); dims=dims)
+Statistics.mean(f, A::SampledArray; dims=:) = mean(f, samples(A); dims=dims)
+Statistics.var(A::SampledArray; dims=:, kwargs...) = var(samples(A); dims=dims, kwargs...)
+Statistics.std(A::SampledArray; dims=:, kwargs...) = std(samples(A); dims=dims, kwargs...)
+Statistics.median(A::SampledArray; dims=:) = median(samples(A); dims=dims)
+
+### combining
+
+function MetaArrays.metamerge(a::SpectrumInfo, b::SpectrumInfo)
+  a == b && return a
+  a.fs == b.fs || throw(ArgumentError("cannot combine spectra with different sampling rates ($(a.fs) and $(b.fs) Hz)"))
+  a.n == b.n || throw(ArgumentError("cannot combine spectra from FFTs of different lengths ($(a.n) and $(b.n) points)"))
+  a.onesided == b.onesided || throw(ArgumentError("cannot combine a one-sided spectrum with a two-sided one"))
+  throw(ArgumentError("cannot combine spectra covering different bins (starting at bins $(a.k0) and $(b.k0)); use samples() on one of them to keep the bins of the other"))
+end
+
+function MetaArrays.metamerge(a::SamplingInfo, b::SamplingInfo)
+  a == b && return a
+  throw(ArgumentError("cannot combine signals with different sampling rates ($(a.fs) and $(b.fs) Hz)"))
+end
+
+MetaArrays.metamerge(::SpectrumInfo, ::SamplingInfo) =
+  throw(ArgumentError("cannot combine a spectrum with a signal; use samples() if this is intended"))
+MetaArrays.metamerge(::SamplingInfo, ::SpectrumInfo) =
+  throw(ArgumentError("cannot combine a signal with a spectrum; use samples() if this is intended"))
+
+Base.diff(X::SampledSpectrum; dims::Integer) = diff(samples(X); dims=dims)
+Base.diff(X::MetaArray{<:AbstractVector,SpectrumInfo}) = diff(samples(X))

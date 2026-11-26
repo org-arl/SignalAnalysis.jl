@@ -471,7 +471,46 @@ function test_signals()
   @test ifft(padded(Xm[3:5, :])) ≈ ifft([zeros(2, 2); samples(Xm)[3:5, :]; zeros(11, 2)], 1)
   @test padded(Xm)[0, 2] == Xm[16, 2]
 
-  @test_throws Exception fft(xc) .* fft(signal(randn(rng, ComplexF64, 64), 2000))
+  xs = signal(randn(rng, 32, 3), 1000)
+  Xs = fft(xs)
+  for A ∈ (xs, Xs), d ∈ (1, 2)
+    for r ∈ (sum(A; dims=d), sum(abs2, A; dims=d), prod(A; dims=d), maximum(abs, A; dims=d),
+             minimum(abs, A; dims=d), reduce(+, A; dims=d), mapreduce(abs, +, A; dims=d),
+             count(z -> abs(z) > 1, A; dims=d), any(z -> abs(z) > 1, A; dims=d),
+             first(findmax(abs, A; dims=d)), first(findmin(abs, A; dims=d)),
+             mean(A; dims=d), mean(abs2, A; dims=d), var(A; dims=d), std(A; dims=d), median(abs.(A); dims=d))
+      @test !(r isa SignalAnalysis.MetaArray)
+    end
+    @test sum(A; dims=d) ≈ sum(samples(A); dims=d)
+    @test median(abs.(A); dims=d) ≈ median(abs.(samples(A)); dims=d)
+  end
+  @test sum(xs) ≈ sum(samples(xs))
+  d = 2
+  @test @inferred(sum(xs; dims=d)) isa Matrix{Float64}
+  @test @inferred(mean(abs2, Xs; dims=d)) isa Matrix{Float64}
+
+  @test_throws ArgumentError fft(xc) .* fft(signal(randn(rng, ComplexF64, 64), 2000))
+  @test_throws ArgumentError X[1:4] .+ X[5:8]
+  @test X[1:4] .+ samples(X[5:8]) ≈ samples(X)[1:4] .+ samples(X)[5:8]
+  @test domain(X[1:4] .+ samples(X[5:8])) == domain(X[1:4])
+  @test domain(samples(X[5:8]) .+ X[1:4]) == domain(X[1:4])
+  @test_throws ArgumentError X[1:5] .* fft(signal(randn(rng, ComplexF64, 10), 1000))[1:5]
+  @test_throws ArgumentError X[1:33] .* rfft(real(xc))
+  @test_throws ArgumentError X .* xc
+  @test_throws ArgumentError xc .* X
+  @test_throws ArgumentError xc .+ signal(randn(rng, ComplexF64, 64), 2000)
+  @test (X .* X) isa SignalAnalysis.SampledSpectrum
+  @test diff(X) isa Vector{ComplexF64}
+  @test diff(X) ≈ diff(samples(X))
+  @test diff(Xs; dims=1) isa Matrix{ComplexF64}
+  R8 = rfft(signal(randn(rng, 8), 1000))
+  P8 = padded(R8)
+  @test SignalAnalysis.spectruminfo(P8[2:4]).onesided
+  @test SignalAnalysis.spectruminfo(P8[1:5]).onesided
+  @test !SignalAnalysis.spectruminfo(P8[-2:2]).onesided
+  @test !SignalAnalysis.spectruminfo(P8[5:7]).onesided
+  @test domain(P8[-2:2]) ≈ (-3:1) .* 125
+  @test ifft(padded(P8[-2:2])) ≈ ifft([P8[1:2]; zeros(3); P8[-2:0]])
   @test framerate(circconv(xr, xr)) == 1000
 
   @test fftfreq(xr) == fftfreq(64, 1000)
