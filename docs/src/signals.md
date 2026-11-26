@@ -22,7 +22,7 @@ Signals wrapped in a `SampledSignal` data type may be easily created using `sign
 ```julia
 x = signal(data, fs)
 ```
-Properties such as frame rate (sampling rate), number of channels, etc may be accessed using the [`SignalBase`](https://github.com/haberdashPI/SignalBase.jl) API. The signals can be treated as arrays, but carry sampling rate metadata with them. Most operations infer the sampling rate of their output from the input signal. Common `DSP.jl` functions retain the sampling rate when applied to signals, or adjust it when resampling:
+Properties such as frame rate (sampling rate), number of channels, etc may be accessed using the [`SignalBase`](https://github.com/haberdashPI/SignalBase.jl) API. The signals can be treated as arrays, but carry sampling rate metadata with them. Most operations infer the sampling rate of their output from the input signal, and combining signals with different sampling rates throws an error. Reductions with `dims` (e.g. `sum(x; dims=2)` to combine channels) return plain arrays; use `samerateas(x, sum(x; dims=2))` to keep the sampling rate. Common `DSP.jl` functions retain the sampling rate when applied to signals, or adjust it when resampling:
 ```julia
 # create a 1-second signal sampled at 20 kHz
 y = signal(randn(20000), 20kHz)

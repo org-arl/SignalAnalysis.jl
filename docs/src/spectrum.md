@@ -14,7 +14,12 @@ samples(X)                      # the underlying FFT coefficients
 ```
 Each channel of a multichannel signal is transformed separately, along time. `fft(x, 1)` is accepted as a synonym for `fft(x)`, but other regions are not, since they would transform across channels. To transform along other dimensions, use the underlying samples, e.g. `fft(samples(x), 2)`.
 
-A spectrum is an array, so it can be used in computations like any other array. Operations that combine spectra, such as `X .* Y`, check that they come from the same FFT grid.
+A spectrum is an array, so it can be used in computations like any other array. Combining a spectrum with plain arrays or numbers, or with another spectrum covering the same bins of the same FFT grid, gives a spectrum. Combining spectra with different sampling rates, FFT lengths or bins, or a spectrum with a signal, throws an error, since this is usually a mistake. To combine different bands deliberately, use `samples()` on one of them, so that the result keeps the bins of the other:
+```julia
+X .* conj.(Y)                       # spectrum, if X and Y cover the same bins
+X[1kHz:1999Hz] .+ samples(X[2kHz:2999Hz])   # spectrum with bins from 1 kHz to 1999 Hz
+```
+Reductions with `dims` (e.g. `sum(abs2, X; dims=1)` or `mean(X; dims=2)`) return plain arrays, as do functions such as `diff` whose results no longer correspond to the bins of the spectrum.
 
 ### Frequencies
 
