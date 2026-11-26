@@ -29,7 +29,9 @@ is 0, the designed filter is a lowpass filter, and if `f2` is `nothing` then it 
 a highpass filter. If `bandstop` is `true`, the band from `f1` to `f2` is rejected
 instead.
 
-If an integer `n` is given, a `n`-tap Hann-windowed filter is designed. Otherwise
+The filter is returned as a vector of taps, and can be applied using `filt(f, x)`
+or `filtfilt(f, x)`. If an integer `n` is given, a `n`-tap Hann-windowed filter is
+designed. Otherwise
 `method` is a `DSP.FIRWindow` design method, such as `FIRWindow(hamming(63))` or
 `FIRWindow(; transitionwidth=0.05, attenuation=60)`. Highpass and bandstop filters
 need an odd number of taps.
@@ -85,7 +87,10 @@ If an integer `n` is given, an order `n` Butterworth filter is designed. Otherwi
 `Chebyshev1(n, ripple)`, `Chebyshev2(n, ripple)` or `Elliptic(n, rp, rs)`.
 Bandpass and bandstop filters have twice the order of the design method.
 
-The filter is returned as `DSP.SecondOrderSections`, for numerical stability.
+The filter is returned as `DSP.SecondOrderSections`, for numerical stability, and
+can be applied using `filt(f, x)` or `filtfilt(f, x)`. Numerator and denominator
+coefficients can be obtained using `convert(PolynomialRatio, f)`, but filtering with
+them may be inaccurate or unstable for high order or narrowband filters.
 This method is a convenience wrapper around `DSP.digitalfilter`.
 
 # Examples:
@@ -95,6 +100,7 @@ julia> hpf = iir(4, 100Hz; fs=8kHz)                         # Butterworth highpa
 julia> bpf = iir(Chebyshev1(4, 1), 1kHz, 2kHz; fs=8kHz)     # Chebyshev bandpass filter
 julia> bsf = iir(Elliptic(4, 0.5, 40), 950Hz, 1050Hz; fs=8kHz, bandstop=true)
 julia> y = filt(lpf, x)                                     # apply the filter
+julia> freqz(bpf; fs=8kHz)                                  # plot the frequency response
 ```
 """
 iir(n::Integer, f1, f2=nothing; fs=2.0, bandstop=false) =

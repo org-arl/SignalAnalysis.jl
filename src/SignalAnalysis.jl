@@ -25,7 +25,7 @@ include("array.jl")
 include("rand.jl")
 
 # implemented in the Plots extension (see ext/PlotsExt.jl)
-export psd, psd!, specgram, specgram!, plotfreqresp, plotfreqresp!
+export psd, psd!, specgram, specgram!, freqz, freqz!, plotfreqresp, plotfreqresp!
 
 """
 Plots the power spectral density of data. Requires `Plots` to be loaded.
@@ -42,8 +42,18 @@ function specgram! end
 """
 Plots frequency response of a digital filter. Requires `Plots` to be loaded.
 """
-function plotfreqresp end
-function plotfreqresp! end
+function freqz end
+function freqz! end
+
+function plotfreqresp(args...; kwargs...)
+  @warn "`plotfreqresp` is deprecated, use `freqz` instead" maxlog=1
+  freqz(args...; kwargs...)
+end
+
+function plotfreqresp!(args...; kwargs...)
+  @warn "`plotfreqresp!` is deprecated, use `freqz!` instead" maxlog=1
+  freqz!(args...; kwargs...)
+end
 
 # implemented in the InteractiveViz extension (see ext/InteractiveVizExt.jl)
 export iplot, iplot!, ispecgram
