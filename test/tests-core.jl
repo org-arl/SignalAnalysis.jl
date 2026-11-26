@@ -234,18 +234,77 @@ function test_signals()
   @test nframes(x1) == 200
 
   xc = signal(randn(rng, ComplexF64, 64), 1000)
-  @test fft(xc) isa Vector{ComplexF64}
-  @test fft(xc) ≈ fft(samples(xc))
+  X = @inferred fft(xc)
+  @test X isa SignalAnalysis.SampledSpectrum
+  @test samples(X) isa Vector{ComplexF64}
+  @test samples(X) ≈ fft(samples(xc))
+  @test framerate(X) == 1000
+  @test nframes(X) == 64
+  @test domain(X) ≈ fftfreq(64, 1000)
+  y = @inferred ifft(X)
+  @test y isa SignalAnalysis.SampledSignal
+  @test framerate(y) == 1000
+  @test samples(y) ≈ samples(xc)
+  @test bfft(X) ≈ 64 .* samples(xc)
+  @test framerate(bfft(X)) == 1000
   @test ifft(xc) ≈ ifft(samples(xc))
   @test bfft(xc) ≈ bfft(samples(xc))
+  @test framerate(ifft(log.(abs.(X)))) == 1000
+  @test framerate(ifft(vcat(X[1:32], zeros(64), X[33:end]))) == 2000
+  @test framerate(ifft(X[1:32])) == 500
+
+  for fs ∈ (8000, 11025, 44100, 48000, 96000), n ∈ (63, 100, 1000, 4097)
+    x = signal(randn(rng, n), fs)
+    @test framerate(ifft(fft(x))) == framerate(x)
+    @test framerate(irfft(rfft(x))) == framerate(x)
+  end
+
+  S = fftshift(X)
+  @test samples(S) ≈ fftshift(samples(X))
+  @test domain(S) ≈ fftshift(fftfreq(64, 1000))
+  @test_throws ArgumentError ifft(S)
+  @test_throws ArgumentError fftshift(S)
+  @test_throws ArgumentError ifftshift(X)
+  @test ifftshift(S) ≈ X
+  @test ifft(ifftshift(S)) ≈ samples(xc)
+  x5 = signal(randn(rng, ComplexF64, 5), 1000)
+  @test domain(fftshift(fft(x5))) ≈ fftshift(fftfreq(5, 1000))
+  @test ifft(ifftshift(fftshift(fft(x5)))) ≈ samples(x5)
+
   xr = signal(randn(rng, 64), 1000)
   @test fft(xr) ≈ fft(samples(xr))
-  @test rfft(xr) ≈ rfft(samples(xr))
-  X = signal(rfft(samples(xr)), 1000)
-  @test irfft(X, 64) ≈ samples(xr)
-  @test brfft(X, 64) ≈ 64 .* samples(xr)
+  R = @inferred rfft(xr)
+  @test R ≈ rfft(samples(xr))
+  @test domain(R) ≈ (0:32) .* (1000 / 64)
+  @test irfft(R) ≈ samples(xr)
+  @test framerate(irfft(R)) == 1000
+  @test brfft(R) ≈ 64 .* samples(xr)
+  @test irfft(R, 64) ≈ samples(xr)
+  @test framerate(irfft(vcat(R, zeros(32)), 128)) == 2000
+  @test_throws ArgumentError irfft(R[1:20])
+  @test_throws ArgumentError ifft(R)
+  @test_throws ArgumentError irfft(X)
+  @test_throws ArgumentError fftshift(R)
+  xr2 = signal(rfft(samples(xr)), 1000)
+  @test irfft(xr2, 64) ≈ samples(xr)
+  @test brfft(xr2, 64) ≈ 64 .* samples(xr)
+
   xm = signal(randn(rng, ComplexF64, 16, 2), 1000)
-  @test fft(xm, 1) ≈ fft(samples(xm), 1)
+  Xm = fft(xm)
+  @test size(Xm) == (16, 2)
+  @test Xm ≈ fft(samples(xm), 1)
+  @test fft(xm, 1) ≈ Xm
+  @test fft(xm, (1,)) ≈ Xm
+  @test fft(xm, 1:1) ≈ Xm
+  @test_throws ArgumentError fft(xm, 2)
+  @test_throws ArgumentError fft(xm, 1:2)
+  @test_throws ArgumentError fft(xm, (1, 2))
+  @test ifft(Xm) ≈ samples(xm)
+  @test fftshift(Xm) ≈ fftshift(samples(Xm), 1)
+  @test domain(Xm) ≈ fftfreq(16, 1000)
+
+  @test_throws Exception fft(xc) .* fft(signal(randn(rng, ComplexF64, 64), 2000))
+  @test framerate(circconv(xr, xr)) == 1000
 
   @test fftfreq(xr) == fftfreq(64, 1000)
   @test fftfreq(256, xr) == fftfreq(256, 1000)

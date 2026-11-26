@@ -62,6 +62,12 @@
   @test p isa Plots.Plot
   p = specgram(samples(x); fs=framerate(x))
   @test p isa Plots.Plot
+  p = plot(fft(x))
+  @test p isa Plots.Plot
+  p = plot(rfft(real(x)))
+  @test p isa Plots.Plot
+  p = plot(fftshift(fft([x -x])))
+  @test p isa Plots.Plot
   f = fir(127, 15kHz; fs=44.1kHz)
   p = freqz(f)
   @test p isa Plots.Plot

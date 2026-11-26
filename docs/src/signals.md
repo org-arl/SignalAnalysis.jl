@@ -40,5 +40,5 @@ y = sresample(y, 2//3)
 
 ```@autodocs
 Modules = [SignalAnalysis]
-Pages   = ["signals.jl"]
+Pages   = ["signals.jl", "spectrum.jl"]
 ```
