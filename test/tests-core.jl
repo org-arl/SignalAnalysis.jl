@@ -430,6 +430,51 @@ function test_dsp()
   @test energy(y) < energy(x)/2
   @test mean(y) ≈ 0 atol=0.01
 
+  gain(f, freq, fs) = abs(only(DSP.freqresp(f, [2π * inHz(freq) / fs])))
+  gain(f::AbstractVector, freq, fs) = gain(PolynomialRatio(f, [1.0]), freq, fs)
+
+  f = fir(127, 5kHz, 10kHz; fs=44.1kHz, bandstop=true)
+  @test length(f) == 127
+  @test gain(f, 7.5kHz, 44100) < 0.01
+  @test gain(f, 0, 44100) ≈ 1 atol=0.01
+  @test gain(f, 15kHz, 44100) ≈ 1 atol=0.01
+  @test_throws ArgumentError fir(128, 5kHz, 10kHz; fs=44.1kHz, bandstop=true)
+  @test_throws ArgumentError fir(127, 0, 5kHz; fs=44.1kHz, bandstop=true)
+  @test_throws ArgumentError fir(127, 5kHz; fs=44.1kHz, bandstop=true)
+
+  f = fir(FIRWindow(hamming(63)), 0, 5kHz; fs=44.1kHz)
+  @test length(f) == 63
+  @test f ≈ digitalfilter(Lowpass(10/44.1), FIRWindow(hamming(63)))
+  f = fir(FIRWindow(; transitionwidth=0.05, attenuation=60), 0, 5kHz; fs=44.1kHz)
+  @test gain(f, 0, 44100) ≈ 1 atol=0.01
+  @test gain(f, 10kHz, 44100) < 0.01
+  f = @test_logs (:warn, r"deprecated") match_mode=:any fir(127, 0, 5kHz; fs=44.1kHz, method=FIRWindow(hamming(63)))
+  @test length(f) == 63
+
+  f = iir(4, 0, 5kHz; fs=44.1kHz)
+  @test f isa SecondOrderSections
+  ω = range(0, π; length=64)
+  @test DSP.freqresp(f, ω) ≈ DSP.freqresp(digitalfilter(Lowpass(10/44.1), Butterworth(4)), ω)
+  @test gain(f, 5kHz, 44100) ≈ 1/√2 atol=1e-6
+  @test gain(f, 0, 44100) ≈ 1 atol=1e-6
+  @test gain(f, 15kHz, 44100) < 0.01
+  f = iir(4, 15kHz; fs=44.1kHz)
+  @test gain(f, 15kHz, 44100) ≈ 1/√2 atol=1e-6
+  @test gain(f, 5kHz, 44100) < 0.01
+  f = iir(Chebyshev1(4, 1), 5kHz, 10kHz; fs=44.1kHz)
+  @test gain(f, 7.5kHz, 44100) ≈ 1 atol=0.15
+  @test gain(f, 0, 44100) < 0.01
+  @test gain(f, 15kHz, 44100) < 0.01
+  f = iir(Elliptic(4, 0.5, 40), 5kHz, 10kHz; fs=44.1kHz, bandstop=true)
+  @test gain(f, 7.5kHz, 44100) < 0.011
+  @test gain(f, 0, 44100) ≈ 1 atol=0.06
+  @test gain(f, 15kHz, 44100) ≈ 1 atol=0.06
+  @test_throws ArgumentError iir(4, 0, 5kHz; fs=44.1kHz, bandstop=true)
+  y = filt(iir(4, 0, 5kHz; fs=44.1kHz), signal(x, 44.1kHz))
+  @test framerate(y) == 44100
+  @test mean(y) ≈ mean(x) atol=0.1
+  @test framerate(filtfilt(iir(4, 0, 5kHz; fs=44.1kHz), signal(x, 44.1kHz))) == 44100
+
   @test mean(removedc(x)) ≈ 0 atol=0.01
   @test mean(x) ≈ 1 atol=0.01
   removedc!(x)

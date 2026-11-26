@@ -1,15 +1,38 @@
-export fir, removedc, removedc!, demon
+export fir, iir, removedc, removedc!, demon
 export upconvert, downconvert, rrcosfir, rcosfir
 export mseq, gmseq, circconv, circcorr, goertzel, pll, hadamard
 export mfilter, findsignal, dzt, idzt
 export istft, whiten, filt, filtfilt, resample, delay, delay!, compose, decompose
 
+function responsetype(f1, f2, fs, bandstop)
+  fs = inHz(fs)
+  if f1 == 0
+    bandstop && throw(ArgumentError("bandstop filters need both band edges f1 and f2"))
+    Lowpass(2 * inHz(f2) / fs)
+  elseif f2 === nothing || inHz(f2) == fs/2
+    bandstop && throw(ArgumentError("bandstop filters need both band edges f1 and f2"))
+    Highpass(2 * inHz(f1) / fs)
+  elseif bandstop
+    Bandstop(2 * inHz(f1) / fs, 2 * inHz(f2) / fs)
+  else
+    Bandpass(2 * inHz(f1) / fs, 2 * inHz(f2) / fs)
+  end
+end
+
 """
-$(SIGNATURES)
-Designs a `n`-tap FIR filter with a passband from `f1` to `f2` using the
-specified `method`. If frame rate `fs` is not specified, `f1` and `f2` are given
-in normalized units (1.0 being Nyquist). If `f1` is 0, the designed filter is
-a lowpass filter, and if `f2` is `nothing` then it is a highpass filter.
+    fir(n, f1, f2=nothing; fs=2.0, bandstop=false)
+    fir(method, f1, f2=nothing; fs=2.0, bandstop=false)
+
+Designs a FIR filter with a passband from `f1` to `f2`. If frame rate `fs` is not
+specified, `f1` and `f2` are given in normalized units (1.0 being Nyquist). If `f1`
+is 0, the designed filter is a lowpass filter, and if `f2` is `nothing` then it is
+a highpass filter. If `bandstop` is `true`, the band from `f1` to `f2` is rejected
+instead.
+
+If an integer `n` is given, a `n`-tap Hann-windowed filter is designed. Otherwise
+`method` is a `DSP.FIRWindow` design method, such as `FIRWindow(hamming(63))` or
+`FIRWindow(; transitionwidth=0.05, attenuation=60)`. Highpass and bandstop filters
+need an odd number of taps.
 
 This method is a convenience wrapper around `DSP.digitalfilter`.
 
@@ -26,19 +49,59 @@ julia> hpf = fir(127, 10kHz; fs=44.1kHz)      # design a highpass filter
 julia> bpf = fir(127, 1kHz, 5kHz; fs=44.1kHz) # design a bandpass filter
 127-element Array{Float64,1}:
   ⋮
+
+julia> bsf = fir(127, 1kHz, 5kHz; fs=44.1kHz, bandstop=true) # design a bandstop filter
+127-element Array{Float64,1}:
+  ⋮
+
+julia> lpf = fir(FIRWindow(hamming(63)), 0, 10kHz; fs=44.1kHz) # use a Hamming window
+63-element Array{Float64,1}:
+  ⋮
 ```
 """
-function fir(n, f1, f2=nothing; fs=2.0, method=FIRWindow(hanning(n)))
-  fs = inHz(fs)
-  if f1 == 0
-    f = Lowpass(2 * inHz(f2) / fs)
-  elseif f2 == nothing || inHz(f2) == fs/2
-    f = Highpass(2 * inHz(f1) / fs)
-  else
-    f = Bandpass(2 * inHz(f1) / fs, 2 * inHz(f2) / fs)
+function fir(n::Integer, f1, f2=nothing; fs=2.0, bandstop=false, method=nothing)
+  if method !== nothing
+    @warn "`fir(n, f1, f2; method)` is deprecated, use `fir(method, f1, f2)` instead" maxlog=1
+    return fir(method, f1, f2; fs, bandstop)
   end
-  return digitalfilter(f, method)
+  fir(FIRWindow(hanning(n)), f1, f2; fs, bandstop)
 end
+
+fir(method::FIRWindow, f1, f2=nothing; fs=2.0, bandstop=false) =
+  digitalfilter(responsetype(f1, f2, fs, bandstop), method)
+
+"""
+    iir(n, f1, f2=nothing; fs=2.0, bandstop=false)
+    iir(method, f1, f2=nothing; fs=2.0, bandstop=false)
+
+Designs an IIR filter with a passband from `f1` to `f2`. If frame rate `fs` is not
+specified, `f1` and `f2` are given in normalized units (1.0 being Nyquist). If `f1`
+is 0, the designed filter is a lowpass filter, and if `f2` is `nothing` then it is
+a highpass filter. If `bandstop` is `true`, the band from `f1` to `f2` is rejected
+instead.
+
+If an integer `n` is given, an order `n` Butterworth filter is designed. Otherwise
+`method` is a DSP.jl IIR design method, such as `Butterworth(n)`,
+`Chebyshev1(n, ripple)`, `Chebyshev2(n, ripple)` or `Elliptic(n, rp, rs)`.
+Bandpass and bandstop filters have twice the order of the design method.
+
+The filter is returned as `DSP.SecondOrderSections`, for numerical stability.
+This method is a convenience wrapper around `DSP.digitalfilter`.
+
+# Examples:
+```julia-repl
+julia> lpf = iir(4, 0, 1kHz; fs=8kHz)                       # Butterworth lowpass filter
+julia> hpf = iir(4, 100Hz; fs=8kHz)                         # Butterworth highpass filter
+julia> bpf = iir(Chebyshev1(4, 1), 1kHz, 2kHz; fs=8kHz)     # Chebyshev bandpass filter
+julia> bsf = iir(Elliptic(4, 0.5, 40), 950Hz, 1050Hz; fs=8kHz, bandstop=true)
+julia> y = filt(lpf, x)                                     # apply the filter
+```
+"""
+iir(n::Integer, f1, f2=nothing; fs=2.0, bandstop=false) =
+  iir(Butterworth(n), f1, f2; fs, bandstop)
+
+iir(method::FilterCoefficients{:s}, f1, f2=nothing; fs=2.0, bandstop=false) =
+  convert(SecondOrderSections, digitalfilter(responsetype(f1, f2, fs, bandstop), method))
 
 """
 $(SIGNATURES)
