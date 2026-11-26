@@ -91,22 +91,46 @@ end
 """
     plot(X::SampledSpectrum; kwargs...)
 
-Plots the magnitude (in dB) of a spectrum against frequency.
+Plots the magnitude of a spectrum against frequency.
+
+# Optional keyword arguments
+- `db=true`: plot magnitude in dB, or linear magnitude if `false`
+- `ylims=50`: a number gives the y-scale dB range below the maximum; limits
+  may also be given as usual
+- other `kwargs` are passed on to `plot`
 """
-@recipe function plot(X::SampledSpectrum)
+@recipe function plot(X::SampledSpectrum; db=true)
   ticks --> :native
   legend --> ndims(X) > 1 && size(X, 2) > 1
   f = domain(X)
+  y = abs.(samples(X))
+  if issorted(f)
+    i = axes(y, 1)
+  else
+    i = sortperm(f)
+    f = f[i]
+  end
+  y = y[i, :]
+  ndims(X) == 1 && (y = vec(y))
   if maximum(abs, f) >= 5000.0
     f = f ./ 1000.0
     xguide --> "Frequency (kHz)"
   else
     xguide --> "Frequency (Hz)"
   end
-  yguide --> "Magnitude (dB)"
+  r = get(plotattributes, :ylims, 50)
+  if db
+    y = amp2db.(y)
+    yguide --> "Magnitude (dB)"
+    r isa Real && (ylims := dblims(y, r))
+  else
+    r isa Real && haskey(plotattributes, :ylims) &&
+      throw(ArgumentError("ylims given as a dB range needs db=true"))
+    yguide --> "Magnitude"
+  end
   @series begin
     seriestype --> :line
-    f, amp2db.(abs.(samples(X)))
+    f, y
   end
 end
 
@@ -168,12 +192,13 @@ Plots the power spectral density of data.
 - `noverlap=nfft÷2`: window overlap size
 - `window=hamming(nfft)`: accepts any window from [`DSP.jl`](https://juliadsp.github.io/DSP.jl/stable/windows/)
 - `xscale=:auto`: one of `:auto`, `:identity` or `:log10`
-- `yrange=50`: y-scale dB range for automatic scaling
+- `ylims=50`: a number gives the y-scale dB range below the maximum; limits
+  may also be given as usual
 - other `kwargs` are passed on to `plot`
 """
 @userplot PSD
 @recipe function plot(s::PSD; fs=1.0, nfft=512, noverlap=div(nfft,2),
-                      window=hamming(nfft), xscale=:auto, yrange=50)
+                      window=hamming(nfft), xscale=:auto)
   if length(s.args) != 1 || !(s.args[1] isa AbstractArray)
     throw(ArgumentError("psd should be provided timeseries data"))
   end
@@ -186,6 +211,7 @@ Plots the power spectral density of data.
   ticks --> :native
   legend --> ndims(s) > 1 && size(s, 2) > 1
   yguide --> "Power spectral density (dB/Hz)"
+  r = get(plotattributes, :ylims, 50)
   xscale == :auto && (xscale := :identity)
   for j = 1:size(s, 2)
     p = welch_pgram(s[:,j], nfft, noverlap; fs=inHz(fs), window=window)
@@ -200,9 +226,7 @@ Plots the power spectral density of data.
       xlims --> (f[2], f[end])
     end
     y = pow2db.(power(p))
-    ymax = ceil(Int, maximum(y)/5)*5
-    ymin = max(ymax-yrange, floor(Int, minimum(y)/5)*5)
-    ylims --> (ymin, ymax)
+    j == 1 && r isa Real && (ylims := dblims(y, r))
     @series begin
       seriestype := :line
       f, y
@@ -314,15 +338,16 @@ designed by [`fir`](@ref)), or numerator and denominator coefficients.
 - `nfreq=256`: number of frequency points to evaluate filter response at
 - `xscale=:auto`: one of `:auto`, `:identity` or `:log10`
 - `show=:both`: one of `:both`, `:mag` or `:phase`
-- `dbrange=30`: dynamic range (dB) of magnitude plot, or `nothing` for automatic
 - `unwrap=true`: unwrap the phase response
+- `ylims=50`: a number gives the dB range of the magnitude plot below its maximum;
+  limits may also be given as usual
 - other `kwargs` are passed on to `plot`
 
 Plot attributes apply to both magnitude and phase subplots. To set attributes
 for each subplot separately, use a row matrix, e.g. `ylims=[(-60, 0) (-π, π)]`.
 """
 @userplot FreqZ
-@recipe function plot(s::FreqZ; fs=1.0, nfreq=256, xscale=:auto, show=:both, dbrange=30, unwrap=true)
+@recipe function plot(s::FreqZ; fs=1.0, nfreq=256, xscale=:auto, show=:both, unwrap=true)
   if length(s.args) ∉ (1, 2)
     throw(ArgumentError("freqz should be provided filter details"))
   end
@@ -354,6 +379,7 @@ for each subplot separately, use a row matrix, e.g. `ylims=[(-60, 0) (-π, π)]`
     z = z[2:end]
   end
   show == :both && (layout := @layout [mag; phase])
+  r = get(plotattributes, :ylims, 50)
   if show ∈ (:both, :mag)
     mag = amp2db.(abs.(z))
     @series begin
@@ -362,9 +388,9 @@ for each subplot separately, use a row matrix, e.g. `ylims=[(-60, 0) (-π, π)]`
       xguide --> "Frequency ("*funit*")"
       yguide --> "Response (dB)"
       legend --> false
-      if dbrange !== nothing
+      if r isa Real
         maxdb = maximum(filter(isfinite, mag))
-        ylims --> (maxdb - dbrange, maxdb + 3)
+        ylims := (maxdb - r, maxdb + 3)
       end
       f, mag
     end
@@ -374,6 +400,7 @@ for each subplot separately, use a row matrix, e.g. `ylims=[(-60, 0) (-π, π)]`
     @series begin
       seriestype := :line
       subplot := show == :both ? 2 : 1
+      r isa Real && (ylims := :auto)
       xguide --> "Frequency ("*funit*")"
       yguide --> "Phase (radians)"
       legend --> false
@@ -392,6 +419,12 @@ SignalAnalysis.freqz(args...; kwargs...) = freqz(args...; kwargs...)
 SignalAnalysis.freqz!(args...; kwargs...) = freqz!(args...; kwargs...)
 
 # helper functions
+
+function dblims(y, r)
+  ymax = ceil(Int, maximum(y) / 5) * 5
+  ymin = max(ymax - r, floor(Int, minimum(filter(isfinite, y)) / 5) * 5)
+  (ymin, ymax)
+end
 
 orderedextrema(x) = argmin(x) < argmax(x) ? (minimum(x), maximum(x)) : (maximum(x), minimum(x))
 

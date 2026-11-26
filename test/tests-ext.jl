@@ -50,6 +50,12 @@
   @test p isa Plots.Plot
   p = psd(real([x -x]))
   @test p isa Plots.Plot
+  p = psd(x; ylims=20)
+  @test Plots.ylims(p[1])[2] - Plots.ylims(p[1])[1] ≤ 20
+  p = psd(x; yrange=20)
+  @test Plots.ylims(p[1])[2] - Plots.ylims(p[1])[1] ≤ 20
+  p = psd(x; ylims=(-100, 0))
+  @test Plots.ylims(p[1]) == (-100, 0)
   p = psd(real([x -x]); xscale=:log10)
   @test p isa Plots.Plot
   p = psd(samples(x); fs=framerate(x))
@@ -64,6 +70,24 @@
   @test p isa Plots.Plot
   p = plot(fft(x))
   @test p isa Plots.Plot
+  @test p[1][:yaxis][:guide] == "Magnitude (dB)"
+  @test Plots.ylims(p[1])[2] ≥ maximum(p[1][1][:y])
+  @test Plots.ylims(p[1])[2] - Plots.ylims(p[1])[1] ≤ 50
+  p = plot(fft(x); ylims=20)
+  @test Plots.ylims(p[1])[2] - Plots.ylims(p[1])[1] ≤ 20
+  p = plot(fft(x); db=false)
+  @test p[1][:yaxis][:guide] == "Magnitude"
+  @test p[1][1][:x] ≈ fftshift(domain(fft(x))) ./ 1000
+  @test p[1][1][:y] ≈ fftshift(abs.(samples(fft(x))))
+  p = plot(fftshift(fft(x)); db=false)
+  @test p[1][1][:x] ≈ domain(fftshift(fft(x))) ./ 1000
+  p = plot(fft(x); ylims=(-20, 10))
+  @test Plots.ylims(p[1]) == (-20, 10)
+  @test_throws ArgumentError plot(fft(x); db=false, ylims=20)
+  p = plot(fft(x); db=false, ylims=(0, 1))
+  @test Plots.ylims(p[1]) == (0, 1)
+  p = plot(fft(signal(ones(64), 1000)))
+  @test all(isfinite, Plots.ylims(p[1]))
   p = plot(rfft(real(x)))
   @test p isa Plots.Plot
   p = plot(fftshift(fft([x -x])))
@@ -79,9 +103,14 @@
   p = freqz(f; fs=44.1kHz)
   @test p isa Plots.Plot
   maxdb = maximum(p[1][1][:y])
-  @test all(Plots.ylims(p[1]) .≈ (maxdb - 30, maxdb + 3))
-  p = freqz(f; dbrange=nothing)
-  @test p isa Plots.Plot
+  @test all(Plots.ylims(p[1]) .≈ (maxdb - 50, maxdb + 3))
+  p = freqz(f; ylims=60)
+  @test Plots.ylims(p[1])[2] - Plots.ylims(p[1])[1] ≈ 63
+  @test Plots.ylims(p[2])[1] ≤ minimum(p[2][1][:y])
+  p = freqz(f; ylims=:auto)
+  @test Plots.ylims(p[1])[1] < maximum(p[1][1][:y]) - 63
+  p = freqz(f; show=:phase, ylims=60)
+  @test Plots.ylims(p[1])[1] ≤ minimum(p[1][1][:y])
   p = freqz(f; show=:mag)
   @test length(p.subplots) == 1
   @test p[1][:yaxis][:guide] == "Response (dB)"
