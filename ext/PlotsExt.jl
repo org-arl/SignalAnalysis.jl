@@ -95,14 +95,16 @@ Plots the magnitude of a spectrum against frequency.
 
 # Optional keyword arguments
 - `db=true`: plot magnitude in dB, or linear magnitude if `false`
+- `wrap=true`: show frequencies wrapped to `[-fs/2, fs/2)` (see `fftfreq`), or
+  unwrapped (see `domain`) if `false`
 - `ylims=50`: a number gives the y-scale dB range below the maximum; limits
   may also be given as usual
 - other `kwargs` are passed on to `plot`
 """
-@recipe function plot(X::SampledSpectrum; db=true)
+@recipe function plot(X::SampledSpectrum; db=true, wrap=true)
   ticks --> :native
   legend --> ndims(X) > 1 && size(X, 2) > 1
-  f = domain(X)
+  f = wrap ? fftfreq(X) : collect(domain(X))
   y = abs.(samples(X))
   if issorted(f)
     i = axes(y, 1)
@@ -389,8 +391,13 @@ for each subplot separately, use a row matrix, e.g. `ylims=[(-60, 0) (-π, π)]`
       yguide --> "Response (dB)"
       legend --> false
       if r isa Real
-        maxdb = maximum(filter(isfinite, mag))
-        ylims := (maxdb - r, maxdb + 3)
+        finitemag = filter(isfinite, mag)
+        if isempty(finitemag)
+          ylims := (-r, 0)
+        else
+          maxdb = maximum(finitemag)
+          ylims := (maxdb - r, maxdb + 3)
+        end
       end
       f, mag
     end
@@ -421,8 +428,10 @@ SignalAnalysis.freqz!(args...; kwargs...) = freqz!(args...; kwargs...)
 # helper functions
 
 function dblims(y, r)
+  y = filter(isfinite, y)
+  isempty(y) && return (-r, 0)
   ymax = ceil(Int, maximum(y) / 5) * 5
-  ymin = max(ymax - r, floor(Int, minimum(filter(isfinite, y)) / 5) * 5)
+  ymin = max(ymax - r, floor(Int, minimum(y) / 5) * 5)
   (ymin, ymax)
 end
 

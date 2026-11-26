@@ -29,9 +29,10 @@ end
 
 """
 $(SIGNATURES)
-Returns the domain of the signal.
+Returns the domain of the signal. For padded signals, the domain follows the
+signal's indices, so padding before the signal has negative times.
 """
-domain(x) = (0:nframes(x)-1) ./ framerate(x)
+domain(x) = (firstindex(x, 1)-1:lastindex(x, 1)-1) ./ framerate(x)
 
 """
     time(i, x::SampledSignal)
@@ -149,9 +150,43 @@ samples(s::SampledSignal) = samples(getfield(s, :data))
 samples(s::PaddedView) = collect(s)
 samples(s) = s
 
+const PaddedIndex = Union{Integer,AbstractRange{Int},Vector{Int}}
+
+struct InfinitePaddedView{T,N,A<:AbstractArray{T,N}} <: AbstractArray{T,N}
+  data::A
+  fill::T
+  delay::Int
+end
+
+Base.size(p::InfinitePaddedView) = size(p.data)
+Base.axes(p::InfinitePaddedView) = axes(p.data)
+
+Base.checkbounds(::Type{Bool}, p::InfinitePaddedView, i::PaddedIndex, j::PaddedIndex...) =
+  all(Base.checkindex(Bool, axes(p.data, d + 1), j[d]) for d ∈ eachindex(j) if d < ndims(p.data))
+
+function Base.getindex(p::InfinitePaddedView{T,1}, i::Int) where T
+  k = i - p.delay
+  checkbounds(Bool, p.data, k) ? p.data[k] : p.fill
+end
+
+function Base.getindex(p::InfinitePaddedView{T,2}, i::Int, j::Int) where T
+  Base.checkindex(Bool, axes(p.data, 2), j) || throw(BoundsError(p, (i, j)))
+  k = i - p.delay
+  checkbounds(Bool, p.data, k, j) ? p.data[k, j] : p.fill
+end
+
+samples(p::InfinitePaddedView) = collect(p)
+
 """
-$(TYPEDSIGNATURES)
-Generates a padded view of a signal with optional delay/advance.
+    padded(s, padding; delay=0, fill=0)
+    padded(s; delay=0, fill=0)
+
+Generates a padded view of a signal with optional delay/advance, without changing
+its indexing. With `padding` (a number, or a tuple for left and right), the signal
+is extended by `padding` samples filled with `fill`. Without `padding`, the signal
+is extended indefinitely in both directions, so that any index is valid, while its
+length and iteration remain unchanged. A positive `delay` shifts the signal later
+in time, so that `padded(s; delay=k)[i] == s[i - k]`.
 """
 function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T}
   if length(padding) == 1
@@ -164,10 +199,6 @@ function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T}
   PaddedView(fill, s, (firstindex(s,1)-left:lastindex(s,1)+right,), (firstindex(s,1)+delay:delay+lastindex(s,1),))
 end
 
-"""
-$(TYPEDSIGNATURES)
-Generates a padded view of a signal with optional delay/advance.
-"""
 function padded(s::AbstractMatrix{T}, padding; delay=0, fill=zero(T)) where {T}
   if length(padding) == 1
     left = padding
@@ -180,9 +211,13 @@ function padded(s::AbstractMatrix{T}, padding; delay=0, fill=zero(T)) where {T}
   PaddedView(fill, s, (firstindex(s,1)-left:lastindex(s,1)+right,channelindices), (firstindex(s,1)+delay:delay+lastindex(s,1),channelindices))
 end
 
-function padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T
-  samerateas(s, padded(samples(s), padding; delay=delay, fill=fill))
-end
+padded(s::AbstractVecOrMat{T}; delay=0, fill=zero(T)) where {T} = InfinitePaddedView(s, convert(T, fill), Int(delay))
+
+padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T =
+  MetaArray(getfield(s, :meta), padded(getfield(s, :data), padding; delay=delay, fill=fill))
+
+padded(s::SampledSignal{T}; delay=0, fill=zero(T)) where T =
+  MetaArray(getfield(s, :meta), padded(getfield(s, :data); delay=delay, fill=fill))
 
 """
     partition(x::SampledSignal, n; step=n, flush=true)
@@ -314,13 +349,16 @@ julia> toframe(0.2:0.01:0.3, x)
 """
 toframe(t, s::SampledSignal) = 1 .+ round.(Int, inseconds.(t) .* framerate(s))
 toframe(t, fs) = 1 .+ round.(Int, inseconds.(t) .* inHz(fs))
-toframe(t::NTuple{2,<:Real}, s::SampledSignal) = UnitRange((1 .+ round.(Int, inseconds.(t) .* framerate(s)))...)
-toframe(t::NTuple{2,<:Real}, fs) = UnitRange((1 .+ round.(Int, inseconds.(t) .* inHz(fs)))...)
+toframe(t::Tuple{Any,Any}, s::SampledSignal) = UnitRange((1 .+ round.(Int, inseconds.(t) .* framerate(s)))...)
+toframe(t::Tuple{Any,Any}, fs) = UnitRange((1 .+ round.(Int, inseconds.(t) .* inHz(fs)))...)
 
 """
     (:)(start::Unitful.Time, stop::Unitful.Time)
+    (:)(start::Unitful.Frequency, stop::Unitful.Frequency)
 
-Generates a time range index for a signal.
+Generates a time range index for a signal, or a frequency range index for a
+spectrum. If `start` has no units, it takes the units of `stop`, so `200:300ms`
+is 200 ms to 300 ms, and `1:2kHz` is 1 kHz to 2 kHz.
 
 # Examples:
 ```julia-repl
@@ -338,13 +376,15 @@ SampledSignal @ 8000.0 Hz, 9-element Array{Float64,1}:
  -0.27722340584395494
 ```
 """
-(::Colon)(t1::Units.Unitful.Time, t2::Units.Unitful.Time) = promote(inseconds(t1), inseconds(t2))
-(::Colon)(t1::Real, t2::Units.Unitful.Time) = promote(inseconds(t1), inseconds(t2))
+(::Colon)(t1::Units.Unitful.Time, t2::Units.Unitful.Time) = (t1, t2)
+(::Colon)(t1::Real, t2::Units.Unitful.Time) = (t1 * Units.Unitful.unit(t2), t2)
+(::Colon)(f1::Units.Unitful.Frequency, f2::Units.Unitful.Frequency) = (f1, f2)
+(::Colon)(f1::Real, f2::Units.Unitful.Frequency) = (f1 * Units.Unitful.unit(f2), f2)
 
-Base.getindex(s::SampledSignal, t::NTuple{2}) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s))
-Base.getindex(s::SampledSignal, t::NTuple{2}, ndx...) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s), ndx...)
-Base.setindex!(s::SampledSignal, v, t::NTuple{2}) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s))
-Base.setindex!(s::SampledSignal, v, t::NTuple{2}, ndx...) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s), ndx...)
+const TimeRange = Tuple{Units.Unitful.Time,Units.Unitful.Time}
+
+Base.getindex(s::SampledSignal, t::TimeRange, ndx...) = Base.getindex(s, toframe(t[1], s):toframe(t[2], s), ndx...)
+Base.setindex!(s::SampledSignal, v, t::TimeRange, ndx...) = Base.setindex!(s, v, toframe(t[1], s):toframe(t[2], s), ndx...)
 
 function Base.vec(s::SampledSignal)
   if ndims(s) < 3 && isone(size(s, 2))
