@@ -287,7 +287,9 @@ function test_signals()
   @test @inferred(domain(X)) ≈ (0:63) .* (1000 / 64)
   @test typeof(domain(X)) == typeof(domain(xc))
   @test fftfreq(X) ≈ fftfreq(64, 1000)
-  @test fftfreq(X) isa Vector{Float32}
+  @test fftfreq(X) isa Vector{Float64}
+  @test eltype(fftfreq(xc)) == eltype(freq(1:2, X)) == Float64
+  @test eltype(domain(xc)) == Float64 && time(2, xc) isa Float64
   @test startswith(sprint(show, MIME("text/plain"), X), "SampledSpectrum of 64-point signal @ 1000.0 Hz, bins 0:63")
   @test occursin("one-sided", sprint(show, MIME("text/plain"), rfft(real(xc))))
   @test occursin("padded", sprint(show, MIME("text/plain"), padded(X)))
@@ -519,8 +521,9 @@ function test_signals()
   @test fftfreq(xm) == fftfreq(16, 1000)
 
   x = signal([1.0, 2.0, 3.0, 2.0, 1.0], 10.0)
-  @test x.((0:4) ./ 10) == samples(x)
-  @test x((0:4) ./ 10) == samples(x)
+  @test x.(domain(x)) == samples(x)
+  @test x(domain(x)) == samples(x)
+  @test x(time(1:5, x)) == samples(x)
   @test x(0.2) == x(200ms) == x(1//5) == 3.0
   @test x(-0.1) == 0 && x(0.5) == 0
   @test x(-10.0) == 0 && x(10.0) == 0

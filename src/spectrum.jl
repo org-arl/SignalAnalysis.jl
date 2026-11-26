@@ -236,7 +236,7 @@ frequencies are not wrapped, so an unshifted two-sided spectrum spans `0` to
 `fs`, and a shifted one spans `-fs/2` to `fs/2`. Use [`fftfreq`](@ref) for
 frequencies wrapped to the interval `[-fs/2, fs/2)`.
 """
-domain(X::SampledSpectrum) = (firstbin(X):lastbin(X)) .* (framerate(X) / spectruminfo(X).n)
+domain(X::SampledSpectrum) = (firstbin(X):lastbin(X)) .* (Float64(framerate(X)) / spectruminfo(X).n)
 
 """
     fftfreq(X::SampledSpectrum)
@@ -247,7 +247,7 @@ interval `[-fs/2, fs/2)` for two-sided spectra.
 function AbstractFFTs.fftfreq(X::SampledSpectrum)
   f = collect(domain(X))
   spectruminfo(X).onesided && return f
-  fs = framerate(X)
+  fs = Float64(framerate(X))
   mod.(f .+ fs / 2, fs) .- fs / 2
 end
 
@@ -258,8 +258,8 @@ end
 Frequencies of the bins of an `n`-point FFT of signal `x`. If `n` is not
 specified, the number of frames in `x` is used.
 """
-AbstractFFTs.fftfreq(x::SampledSignal) = fftfreq(nframes(x), framerate(x))
-AbstractFFTs.fftfreq(n::Integer, x::SampledSignal) = fftfreq(n, framerate(x))
+AbstractFFTs.fftfreq(x::SampledSignal) = fftfreq(nframes(x), Float64(framerate(x)))
+AbstractFFTs.fftfreq(n::Integer, x::SampledSignal) = fftfreq(n, Float64(framerate(x)))
 
 """
     tobin(f, X::SampledSpectrum)
@@ -292,8 +292,8 @@ tobin(f::Tuple{Any,Any}, fs, n) = UnitRange(tobin(f[1], fs, n), tobin(f[2], fs, 
 Gets the frequency (in Hz) of the `i`th bin of spectrum `X`. The index `i` can be
 a range or an array of indices, and may lie outside `X` for padded spectra.
 """
-DSP.freq(i::Real, X::SampledSpectrum) = (spectruminfo(X).k0 + i - 1) * (framerate(X) / spectruminfo(X).n)
-DSP.freq(i::AbstractArray{<:Real}, X::SampledSpectrum) = (spectruminfo(X).k0 .+ i .- 1) .* (framerate(X) / spectruminfo(X).n)
+DSP.freq(i::Real, X::SampledSpectrum) = (spectruminfo(X).k0 + i - 1) * (Float64(framerate(X)) / spectruminfo(X).n)
+DSP.freq(i::AbstractArray{<:Real}, X::SampledSpectrum) = (spectruminfo(X).k0 .+ i .- 1) .* (Float64(framerate(X)) / spectruminfo(X).n)
 
 ### transforms
 
