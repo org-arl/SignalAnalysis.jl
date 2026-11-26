@@ -149,6 +149,25 @@ samples(s::SampledSignal) = samples(getfield(s, :data))
 samples(s::PaddedView) = collect(s)
 samples(s) = s
 
+for f in (:fft, :ifft, :bfft, :rfft)
+  @eval FFTW.AbstractFFTs.$f(x::SampledSignal, args...; kwargs...) =
+    FFTW.AbstractFFTs.$f(samples(x), args...; kwargs...)
+end
+for f in (:irfft, :brfft)
+  @eval FFTW.AbstractFFTs.$f(x::SampledSignal, d::Integer, args...; kwargs...) =
+    FFTW.AbstractFFTs.$f(samples(x), d, args...; kwargs...)
+end
+
+"""
+    fftfreq(x::SampledSignal)
+    fftfreq(n, x::SampledSignal)
+
+Frequencies of the bins of an `n`-point FFT of signal `x`. If `n` is not
+specified, the number of frames in `x` is used.
+"""
+FFTW.AbstractFFTs.fftfreq(x::SampledSignal) = fftfreq(nframes(x), framerate(x))
+FFTW.AbstractFFTs.fftfreq(n::Integer, x::SampledSignal) = fftfreq(n, framerate(x))
+
 """
 $(TYPEDSIGNATURES)
 Generates a padded view of a signal with optional delay/advance.
