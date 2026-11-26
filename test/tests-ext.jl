@@ -77,10 +77,15 @@
   @test Plots.ylims(p[1])[2] - Plots.ylims(p[1])[1] ≤ 20
   p = plot(fft(x); db=false)
   @test p[1][:yaxis][:guide] == "Magnitude"
-  @test p[1][1][:x] ≈ fftshift(domain(fft(x))) ./ 1000
+  @test p[1][1][:x] ≈ fftshift(fftfreq(fft(x))) ./ 1000
   @test p[1][1][:y] ≈ fftshift(abs.(samples(fft(x))))
+  p = plot(fft(x); db=false, wrap=false)
+  @test p[1][1][:x] ≈ domain(fft(x)) ./ 1000
+  @test p[1][1][:y] ≈ abs.(samples(fft(x)))
   p = plot(fftshift(fft(x)); db=false)
   @test p[1][1][:x] ≈ domain(fftshift(fft(x))) ./ 1000
+  p = plot(padded(fft(x)[100:200]))
+  @test length(p[1][1][:x]) == 101
   p = plot(fft(x); ylims=(-20, 10))
   @test Plots.ylims(p[1]) == (-20, 10)
   @test_throws ArgumentError plot(fft(x); db=false, ylims=20)
@@ -88,10 +93,18 @@
   @test Plots.ylims(p[1]) == (0, 1)
   p = plot(fft(signal(ones(64), 1000)))
   @test all(isfinite, Plots.ylims(p[1]))
+  p = plot(fft(signal(zeros(64), 8000)))
+  @test Plots.ylims(p[1]) == (-50, 0)
+  p = plot(rfft(signal(zeros(64), 8000)); ylims=30)
+  @test Plots.ylims(p[1]) == (-30, 0)
+  p = psd(signal(zeros(4096), 8000))
+  @test Plots.ylims(p[1]) == (-50, 0)
   p = plot(rfft(real(x)))
   @test p isa Plots.Plot
   p = plot(fftshift(fft([x -x])))
   @test p isa Plots.Plot
+  p = freqz([0.0])
+  @test Plots.ylims(p[1]) == (-50, 0)
   f = fir(127, 15kHz; fs=44.1kHz)
   p = freqz(f)
   @test p isa Plots.Plot

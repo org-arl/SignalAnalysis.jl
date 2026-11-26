@@ -134,6 +134,37 @@ function test_signals()
   @test x2d1[-1,:] == x2d[1,:]
   @test x2d1[7998,:] == x2d[8000,:]
 
+  x = signal(collect(1.0:10.0), 1000)
+  x1 = padded(x, (2, 3))
+  @test axes(x1, 1) == -1:13
+  @test x1[1] == x[1]
+  @test x1[-1] == 0
+  @test framerate(x1) == 1000
+  @test first(domain(x1)) ≈ -0.002
+  @test length(domain(x1)) == 15
+  @test samples(x1) == [0; 0; 1:10; 0; 0; 0]
+  x1 = padded(x)
+  @test axes(x1) == axes(x)
+  @test length(x1) == 10
+  @test x1[-100] == 0
+  @test x1[1000] == 0
+  @test x1[3] == x[3]
+  @test samples(x1[-1:2]) == [0, 0, 1, 2]
+  @test collect(view(x1, -1:2)) == [0, 0, 1, 2]
+  @test framerate(x1) == 1000
+  @test samples(x1) == samples(x)
+  x1 = padded(x; delay=2, fill=-1)
+  @test x1[1] == -1
+  @test x1[3] == x[1]
+  @test x1[12] == x[10]
+  @test samples(x1) == [-1; -1; 1:8]
+  x1 = padded(collect(1:3))
+  @test x1[0] == 0 && x1[2] == 2
+  x2d = padded(signal([1.0 2.0; 3.0 4.0], 1000))
+  @test x2d[0, 2] == 0
+  @test x2d[2, 2] == 4
+  @test_throws BoundsError x2d[0, 3]
+
   x = signal(collect(1:10), 1.0)
   @test length(collect(partition(x, 5))) == 2
   @test length(collect(partition(x, 4))) == 3
@@ -199,6 +230,11 @@ function test_signals()
   @test toframe(0.2:0.01:0.3, framerate(x))[1:3] == [1601, 1681, 1761]
   @test x[0.2:0.201s] == x[1601:1609]
   @test x[0:0.201s] == x[1:1609]
+  @test x[200:201ms] == x[1601:1609]
+  @test x[(0.2s, 201ms)] == x[1601:1609]
+  @test_throws ArgumentError x[(0.2, 0.201)]
+  x[(0.2s, 0.201s)] = zeros(9)
+  @test all(iszero, x[1601:1609])
 
   x = signal(randn(rng, 8000), 1000)
   t = toframe(0:0.1:1, x)
@@ -240,7 +276,13 @@ function test_signals()
   @test samples(X) ≈ fft(samples(xc))
   @test framerate(X) == 1000
   @test nframes(X) == 64
-  @test domain(X) ≈ fftfreq(64, 1000)
+  @test @inferred(domain(X)) ≈ (0:63) .* (1000 / 64)
+  @test typeof(domain(X)) == typeof(domain(xc))
+  @test fftfreq(X) ≈ fftfreq(64, 1000)
+  @test fftfreq(X) isa Vector{Float32}
+  @test startswith(sprint(show, MIME("text/plain"), X), "SampledSpectrum of 64-point signal @ 1000.0 Hz, bins 0:63")
+  @test occursin("one-sided", sprint(show, MIME("text/plain"), rfft(real(xc))))
+  @test occursin("padded", sprint(show, MIME("text/plain"), padded(X)))
   y = @inferred ifft(X)
   @test y isa SignalAnalysis.SampledSignal
   @test framerate(y) == 1000
@@ -250,8 +292,6 @@ function test_signals()
   @test ifft(xc) ≈ ifft(samples(xc))
   @test bfft(xc) ≈ bfft(samples(xc))
   @test framerate(ifft(log.(abs.(X)))) == 1000
-  @test framerate(ifft(vcat(X[1:32], zeros(64), X[33:end]))) == 2000
-  @test framerate(ifft(X[1:32])) == 500
 
   for fs ∈ (8000, 11025, 44100, 48000, 96000), n ∈ (63, 100, 1000, 4097)
     x = signal(randn(rng, n), fs)
@@ -259,35 +299,144 @@ function test_signals()
     @test framerate(irfft(rfft(x))) == framerate(x)
   end
 
+  B = X[11:20]
+  @test B isa SignalAnalysis.SampledSpectrum
+  @test domain(B) ≈ domain(X)[11:20]
+  @test freq(1, B) ≈ domain(X)[11]
+  @test freq(0, B) ≈ domain(X)[10]
+  @test freq(1:3, B) ≈ domain(X)[11:13]
+  @test domain(X[:]) == domain(X)
+  @test domain(@view X[11:20]) ≈ domain(B)
+  @test domain(X[1:4:end]) ≈ domain(X)[1:4:end]
+  @test domain(X[5:4:end]) ≈ domain(X)[5:4:end]
+  @test domain(X[11:1:20]) ≈ domain(B)
+  @test_throws ArgumentError X[2:4:end]
+  @test_throws ArgumentError X[1:3:end]
+  @test_throws ArgumentError X[end:-1:1]
+  @test X[[1, 3]] isa Vector{ComplexF64}
+  @test X[abs.(samples(X)) .> 0] isa Vector{ComplexF64}
+  @test X[3] == samples(X)[3]
+  @test samples(ifft(X[1:4:end])) ≈ vec(sum(reshape(samples(xc), 16, 4); dims=2))
+
+  @test_throws ArgumentError ifft(B)
+  @test_throws ArgumentError irfft(B)
+  @test X[125Hz:250Hz] isa SignalAnalysis.SampledSpectrum
+  @test domain(X[125Hz:250Hz]) ≈ 125:15.625:250
+  @test domain(X[125:250Hz]) ≈ domain(X[125Hz:250Hz])
+  @test domain(X[(125Hz, 250Hz)]) ≈ domain(X[125Hz:250Hz])
+  @test_throws ArgumentError X[-100Hz:100Hz]
+  @test_throws ArgumentError X[(125, 250)]
+  @test tobin(125Hz, X) == 9
+  @test tobin(125, X) == 9
+  @test tobin([125Hz, 250Hz], X) == [9, 17]
+  @test tobin((125Hz, 250Hz), X) == 9:17
+  @test tobin(125Hz, B) == -1
+  @test tobin(-125Hz, X) == -7
+  @test tobin(125Hz, 1kHz, 64) == 9
+  @test tobin((125Hz, 250Hz), 1000, 64) == 9:17
+  @test @inferred(tobin(125Hz, X)) isa Int
+  Y = copy(X)
+  Y[125Hz:250Hz] = zeros(9)
+  @test all(iszero, samples(Y)[9:17])
+  @test samples(Y)[18] == samples(X)[18]
+
   S = fftshift(X)
   @test samples(S) ≈ fftshift(samples(X))
-  @test domain(S) ≈ fftshift(fftfreq(64, 1000))
+  @test domain(S) ≈ (-32:31) .* (1000 / 64)
+  @test fftfreq(S) ≈ domain(S)
+  @test domain(S[-125Hz:125Hz]) ≈ (-8:8) .* (1000 / 64)
   @test_throws ArgumentError ifft(S)
   @test_throws ArgumentError fftshift(S)
   @test_throws ArgumentError ifftshift(X)
+  @test_throws ArgumentError fftshift(B)
+  @test_throws ArgumentError fftshift(rfft(real(xc)))
   @test ifftshift(S) ≈ X
   @test ifft(ifftshift(S)) ≈ samples(xc)
   x5 = signal(randn(rng, ComplexF64, 5), 1000)
-  @test domain(fftshift(fft(x5))) ≈ fftshift(fftfreq(5, 1000))
+  @test domain(fftshift(fft(x5))) ≈ (-2:2) .* 200
   @test ifft(ifftshift(fftshift(fft(x5)))) ≈ samples(x5)
+
+  @test vcat(X[1:10], X[11:64]) ≈ X
+  @test vcat(X[1:10], X[11:64]) isa SignalAnalysis.SampledSpectrum
+  @test ifft(vcat(X[1:10], X[11:64])) ≈ samples(xc)
+  @test vcat(X, ComplexF64[]) isa Vector{ComplexF64}
+  @test vcat(ComplexF64[], X) isa Vector{ComplexF64}
+  @test [zeros(4); S; zeros(4)] isa Vector{ComplexF64}
+  @test_throws ArgumentError vcat(X[1:10], X[12:64])
+  @test_throws ArgumentError vcat(X, X[1:1])
+  @test_throws ArgumentError vcat(X[1:10], fft(signal(randn(rng, ComplexF64, 64), 2000))[11:64])
+  @test hcat(X, X) isa SignalAnalysis.SampledSpectrum
+  @test domain(hcat(B, B)) ≈ domain(B)
+  @test hcat(X, samples(X)) isa Matrix{ComplexF64}
+  @test_throws ArgumentError hcat(X, B)
+
+  P = padded(B)
+  @test P isa SignalAnalysis.SampledSpectrum
+  @test axes(P) == axes(B)
+  @test P[1:10] ≈ B
+  @test P[0] == 0
+  @test P[11] == 0
+  @test P[1 + 64] == B[1]
+  @test P[1 - 64] == B[1]
+  @test domain(P[-5:15]) ≈ domain(X)[5:25]
+  @test padded(P) === P
+  @test_throws ArgumentError padded(P, 1)
+  @test_throws ArgumentError fftshift(P)
+  @test_throws ArgumentError padded(X; fill=1)
+  @test_throws ArgumentError padded(B, 1; delay=1)
+  Z = zeros(ComplexF64, 64)
+  Z[11:20] .= samples(B)
+  @test ifft(P) ≈ ifft(Z)
+  @test framerate(ifft(P)) == 1000
+  @test ifft(padded(S)) ≈ samples(xc)
+  @test ifft(padded(S[-125Hz:125Hz])) ≈ ifft(samples(X) .* (abs.(fftfreq(64, 1000)) .≤ 125))
+  @test domain(padded(X)[-125Hz:125Hz]) ≈ (-8:8) .* (1000 / 64)
+
+  Q = padded(B, (2, 3))
+  @test axes(Q, 1) == -1:13
+  @test Q[1:10] ≈ B
+  @test Q[-1] == 0
+  @test domain(Q) ≈ domain(X)[9:23]
+  @test_throws ArgumentError padded(B, (30, 30))
+  @test ifft(padded(X[2:64], (1, 0))) ≈ ifft([0; samples(X)[2:64]])
 
   xr = signal(randn(rng, 64), 1000)
   @test fft(xr) ≈ fft(samples(xr))
   R = @inferred rfft(xr)
   @test R ≈ rfft(samples(xr))
   @test domain(R) ≈ (0:32) .* (1000 / 64)
-  @test irfft(R) ≈ samples(xr)
+  @test fftfreq(R) ≈ domain(R)
+  @test @inferred(irfft(R)) ≈ samples(xr)
   @test framerate(irfft(R)) == 1000
   @test brfft(R) ≈ 64 .* samples(xr)
   @test irfft(R, 64) ≈ samples(xr)
-  @test framerate(irfft(vcat(R, zeros(32)), 128)) == 2000
-  @test_throws ArgumentError irfft(R[1:20])
+  @test_throws ArgumentError irfft(R, 65)
+  @test irfft(fft(xr)) ≈ samples(xr)
+  @test domain(R[1:2:end]) ≈ (0:16) .* (1000 / 32)
+  @test irfft(R[1:2:end]) ≈ samples(xr)[1:32] .+ samples(xr)[33:64]
   @test_throws ArgumentError ifft(R)
-  @test_throws ArgumentError irfft(X)
-  @test_throws ArgumentError fftshift(R)
+  @test_throws ArgumentError irfft(R[1:20])
+  RB = padded(R[5:10])
+  RZ = zeros(ComplexF64, 33)
+  RZ[5:10] .= samples(R)[5:10]
+  @test irfft(RB) ≈ irfft(RZ, 64)
+  @test samples(ifft(RB)) ≈ irfft(RZ, 64)
+  @test RB[52] ≈ conj(RB[6])
+  @test irfft(padded(fft(xr)[5:10])) ≈ irfft(RZ, 64)
+  @test_throws ArgumentError padded(R[5:10], (5, 30))
   xr2 = signal(rfft(samples(xr)), 1000)
   @test irfft(xr2, 64) ≈ samples(xr)
   @test brfft(xr2, 64) ≈ 64 .* samples(xr)
+
+  H = spectrum(samples(X), 1000)
+  @test H isa SignalAnalysis.SampledSpectrum
+  @test ifft(H) ≈ samples(xc)
+  @test framerate(ifft(H)) == 1000
+  @test irfft(spectrum(samples(R), 1000; onesided=true)) ≈ samples(xr)
+  x9 = signal(randn(rng, 9), 1000)
+  @test irfft(spectrum(rfft(samples(x9)), 1000; onesided=true, n=9)) ≈ samples(x9)
+  @test_throws ArgumentError spectrum(samples(X), 1000; n=64)
+  @test_throws ArgumentError spectrum(samples(R), 1000; onesided=true, n=66)
 
   xm = signal(randn(rng, ComplexF64, 16, 2), 1000)
   Xm = fft(xm)
@@ -301,7 +450,13 @@ function test_signals()
   @test_throws ArgumentError fft(xm, (1, 2))
   @test ifft(Xm) ≈ samples(xm)
   @test fftshift(Xm) ≈ fftshift(samples(Xm), 1)
-  @test domain(Xm) ≈ fftfreq(16, 1000)
+  @test domain(Xm) ≈ (0:15) .* (1000 / 16)
+  @test Xm[:, 2] isa SignalAnalysis.SampledSpectrum
+  @test domain(Xm[3:5, 1]) ≈ domain(Xm)[3:5]
+  @test Xm[1:3] isa Vector{ComplexF64}
+  @test Xm[2, :] isa Vector{ComplexF64}
+  @test ifft(padded(Xm[3:5, :])) ≈ ifft([zeros(2, 2); samples(Xm)[3:5, :]; zeros(11, 2)], 1)
+  @test padded(Xm)[0, 2] == Xm[16, 2]
 
   @test_throws Exception fft(xc) .* fft(signal(randn(rng, ComplexF64, 64), 2000))
   @test framerate(circconv(xr, xr)) == 1000
