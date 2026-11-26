@@ -45,7 +45,7 @@ julia> h = ifft(spectrum(H, 8kHz))   # impulse response from frequency response 
 function spectrum(H::AbstractArray, fs; onesided=false, n=nothing)
   m = size(H, 1)
   if onesided
-    n === nothing && (n = 2 * (m - 1))
+    n === nothing && (n = max(2 * (m - 1), 1))
     n ÷ 2 + 1 == m || throw(ArgumentError("a one-sided spectrum of an $n-point FFT has $(n ÷ 2 + 1) bins, not $m"))
   else
     n === nothing || throw(ArgumentError("n is only needed for one-sided spectra"))
@@ -76,7 +76,7 @@ Base.size(p::PeriodicView) = size(p.data)
 Base.axes(p::PeriodicView) = axes(p.data)
 
 Base.checkbounds(::Type{Bool}, p::PeriodicView, i::PaddedIndex, j::PaddedIndex...) =
-  all(Base.checkindex(Bool, axes(p.data, d + 1), j[d]) for d ∈ eachindex(j) if d < ndims(p.data))
+  Base.checkbounds_indices(Bool, Base.tail(axes(p.data)), j)
 
 function binvalue(p::PeriodicView{T}, k, j...) where T
   m = p.info
@@ -107,11 +107,16 @@ samples(p::PeriodicView) = samples(p.data)
     padded(X::SampledSpectrum)
     padded(X::SampledSpectrum, padding)
 
-Generates a padded view of spectrum `X`, without changing its indexing. With
-`padding` (a number, or a tuple for left and right), the spectrum is extended by
-zeros, within one period of its FFT grid. Without `padding`, the spectrum is
-extended indefinitely: zeros within one period, repeating periodically beyond.
-One-sided spectra are extended by conjugate symmetry, as for a real signal.
+Pads spectrum `X` with zeros. Without `padding`, the spectrum is padded
+indefinitely: the result is a view with the same indices as `X`, but any index is
+valid, giving zeros within one period of the FFT grid, and repeating periodically
+beyond it. One-sided spectra are extended by conjugate symmetry, as for a real
+signal.
+
+With `padding` (a number, or a tuple of left and right amounts), the result is a
+new spectrum indexed from 1, extended by that many zero bins on each side, within
+one period of its FFT grid. Its frequencies stay correct, since the spectrum keeps
+track of its bins.
 
 A padded spectrum can be inverted with `ifft` or `irfft`, which select one period
 of it. This allows a band of a spectrum to be inverted, e.g. `ifft(padded(X[a:b]))`.
@@ -137,7 +142,7 @@ function padded(X::SampledSpectrum, padding; kwargs...)
     size(X, 1) + left + right ≤ m.n ||
       throw(ArgumentError("spectrum can only be padded within one period of $(m.n) bins"))
   end
-  withinfo(padded(getfield(X, :data), (left, right)), m)
+  withinfo(samples(padded(samples(X), (left, right))), SpectrumInfo(m.fs, m.n, m.onesided, firstbin(X) - left))
 end
 
 ### indexing

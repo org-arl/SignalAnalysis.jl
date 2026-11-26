@@ -29,10 +29,9 @@ end
 
 """
 $(SIGNATURES)
-Returns the domain of the signal. For padded signals, the domain follows the
-signal's indices, so padding before the signal has negative times.
+Returns the domain of the signal.
 """
-domain(x) = (firstindex(x, 1)-1:lastindex(x, 1)-1) ./ framerate(x)
+domain(x) = (0:nframes(x)-1) ./ framerate(x)
 
 """
     time(i, x::SampledSignal)
@@ -162,7 +161,7 @@ Base.size(p::InfinitePaddedView) = size(p.data)
 Base.axes(p::InfinitePaddedView) = axes(p.data)
 
 Base.checkbounds(::Type{Bool}, p::InfinitePaddedView, i::PaddedIndex, j::PaddedIndex...) =
-  all(Base.checkindex(Bool, axes(p.data, d + 1), j[d]) for d ∈ eachindex(j) if d < ndims(p.data))
+  Base.checkbounds_indices(Bool, Base.tail(axes(p.data)), j)
 
 function Base.getindex(p::InfinitePaddedView{T,1}, i::Int) where T
   k = i - p.delay
@@ -181,12 +180,20 @@ samples(p::InfinitePaddedView) = collect(p)
     padded(s, padding; delay=0, fill=0)
     padded(s; delay=0, fill=0)
 
-Generates a padded view of a signal with optional delay/advance, without changing
-its indexing. With `padding` (a number, or a tuple for left and right), the signal
-is extended by `padding` samples filled with `fill`. Without `padding`, the signal
-is extended indefinitely in both directions, so that any index is valid, while its
-length and iteration remain unchanged. A positive `delay` shifts the signal later
-in time, so that `padded(s; delay=k)[i] == s[i - k]`.
+Pads a signal with `fill`, with optional delay/advance. A positive `delay` shifts
+the signal later, so that `padded(s; delay=k)[i] == s[i - k]`.
+
+Without `padding`, the signal is padded indefinitely in both directions. The result
+is a view with the same indices and length as `s`, but any index is valid. This is
+the simplest way to access a signal beyond its ends, e.g. `y[i-k]` in a loop.
+
+With `padding` (a number, or a tuple of left and right amounts), the signal is
+extended by that many samples:
+- For an array, the result is a view that keeps the original indexing, so its
+  indices start at `1 - left`.
+- For a `SampledSignal`, the result is a new signal indexed from 1, with the
+  padding prepended and appended. Padding on the left therefore delays the
+  signal: its first sample moves to index `left + 1`, at time `left / fs`.
 """
 function padded(s::AbstractVector{T}, padding; delay=0, fill=zero(T)) where {T}
   if length(padding) == 1
@@ -214,7 +221,7 @@ end
 padded(s::AbstractVecOrMat{T}; delay=0, fill=zero(T)) where {T} = InfinitePaddedView(s, convert(T, fill), Int(delay))
 
 padded(s::SampledSignal{T}, padding; delay=0, fill=zero(T)) where T =
-  MetaArray(getfield(s, :meta), padded(getfield(s, :data), padding; delay=delay, fill=fill))
+  samerateas(s, padded(samples(s), padding; delay=delay, fill=fill))
 
 padded(s::SampledSignal{T}; delay=0, fill=zero(T)) where T =
   MetaArray(getfield(s, :meta), padded(getfield(s, :data); delay=delay, fill=fill))
