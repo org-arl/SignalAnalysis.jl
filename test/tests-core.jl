@@ -136,13 +136,19 @@ function test_signals()
 
   x = signal(collect(1.0:10.0), 1000)
   x1 = padded(x, (2, 3))
-  @test axes(x1, 1) == -1:13
-  @test x1[1] == x[1]
-  @test x1[-1] == 0
+  @test axes(x1, 1) == 1:15
+  @test x1[3] == x[1]
+  @test x1[1] == 0
   @test framerate(x1) == 1000
-  @test first(domain(x1)) ≈ -0.002
-  @test length(domain(x1)) == 15
+  @test domain(x1) ≈ (0:14) ./ 1000
   @test samples(x1) == [0; 0; 1:10; 0; 0; 0]
+  @test axes(padded(collect(1.0:10.0), (2, 3)), 1) == -1:13
+  xr = padded(signal(randn(rng, 64), 8000), (2, 3))
+  @test framerate(downconvert(xr, 1, 1000)) == 8000
+  @test framerate(upconvert(downconvert(xr, 1, 1000), 1, 1000)) == 8000
+  @test length(vcat(xr, xr)) == 138
+  @test length(analytic(xr)) == 69
+  @test ifft(fft(xr)) ≈ samples(xr)
   x1 = padded(x)
   @test axes(x1) == axes(x)
   @test length(x1) == 10
@@ -164,6 +170,8 @@ function test_signals()
   @test x2d[0, 2] == 0
   @test x2d[2, 2] == 4
   @test_throws BoundsError x2d[0, 3]
+  @test_throws BoundsError padded(collect(1.0:4.0))[2, 5]
+  @test padded(collect(1.0:4.0))[2, 1] == 2
 
   x = signal(collect(1:10), 1.0)
   @test length(collect(partition(x, 5))) == 2
@@ -393,10 +401,12 @@ function test_signals()
   @test domain(padded(X)[-125Hz:125Hz]) ≈ (-8:8) .* (1000 / 64)
 
   Q = padded(B, (2, 3))
-  @test axes(Q, 1) == -1:13
-  @test Q[1:10] ≈ B
-  @test Q[-1] == 0
+  @test axes(Q, 1) == 1:15
+  @test Q[3:12] ≈ B
+  @test Q[1] == 0
   @test domain(Q) ≈ domain(X)[9:23]
+  @test samples(Q) isa Vector{ComplexF64}
+  @test vcat(Q, X[24:64]) isa SignalAnalysis.SampledSpectrum
   @test_throws ArgumentError padded(B, (30, 30))
   @test ifft(padded(X[2:64], (1, 0))) ≈ ifft([0; samples(X)[2:64]])
 
@@ -436,6 +446,9 @@ function test_signals()
   x9 = signal(randn(rng, 9), 1000)
   @test irfft(spectrum(rfft(samples(x9)), 1000; onesided=true, n=9)) ≈ samples(x9)
   @test_throws ArgumentError spectrum(samples(X), 1000; n=64)
+  @test SignalAnalysis.spectruminfo(spectrum([1.0 + 0im], 1000; onesided=true)).n == 1
+  @test domain(spectrum([1.0 + 0im], 1000; onesided=true)) == [0]
+  @test_throws BoundsError padded(X)[2, 5]
   @test_throws ArgumentError spectrum(samples(R), 1000; onesided=true, n=66)
 
   xm = signal(randn(rng, ComplexF64, 16, 2), 1000)
