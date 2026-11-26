@@ -1,6 +1,6 @@
 name = "SignalAnalysis"
 uuid = "df1fea92-c066-49dd-8b36-eace3378ea47"
-version = "0.14.0"
+version = "0.15.0"
 authors = ["Mandar Chitre <mandar@nus.edu.sg>"]
 
 [deps]
