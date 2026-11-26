@@ -14,6 +14,7 @@ While this package works with most array-like data types, it uses the [`SignalBa
 
 ### Various APIs:
 - [Creating & managing signals](https://org-arl.github.io/SignalAnalysis.jl/stable/signals.html)
+- [Spectra](https://org-arl.github.io/SignalAnalysis.jl/stable/spectrum.html)
 - [Generating signals](https://org-arl.github.io/SignalAnalysis.jl/stable/generate.html)
 - [Basic signal analysis](https://org-arl.github.io/SignalAnalysis.jl/stable/basic.html)
 - [Signal processing](https://org-arl.github.io/SignalAnalysis.jl/stable/dsp.html)

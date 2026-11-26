@@ -12,6 +12,7 @@ While this package works with most array-like data types, it uses the [`SignalBa
 ### APIs
 
 - [Creating & managing signals](@ref)
+- [Spectra](@ref)
 - [Generating signals](@ref)
 - [Basic signal analysis](@ref)
 - [Signal processing](@ref)

@@ -24,6 +24,17 @@ scatter(x)
 ```
 Stem plots have circle markers by default, and `marker=:none` removes them.
 
+Spectra (see [Spectra](@ref)) are plotted as magnitude (in dB) against frequency:
+```julia
+plot(X::SampledSpectrum; db=true, wrap=true, kwargs...)
+```
+**Optional arguments**:
+- `db=true`: plot magnitude in dB, or linear magnitude if `false`
+- `wrap=true`: show frequencies wrapped to `[-fs/2, fs/2)`, or unwrapped (`0` to `fs`) if `false`
+- `ylims=50`: a number gives the dB range below the maximum; limits may also be given as usual
+
+For spectra, power spectral densities and filter frequency responses, a single number for `ylims` gives the dB range of the plot below its maximum, while a tuple gives the limits as usual.
+
 We also provide convenience plot recipes for common signal processing plots:
 ```@docs
 psd

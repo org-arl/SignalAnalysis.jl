@@ -13,6 +13,7 @@ makedocs(
     "Home" => "index.md",
     "Manual" => Any[
       "signals.md",
+      "spectrum.md",
       "generate.md",
       "basic.md",
       "dsp.md",
