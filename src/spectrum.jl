@@ -97,8 +97,10 @@ function periodicvalue(p::PeriodicView, i, j...)
   end
 end
 
-Base.getindex(p::PeriodicView{T,1}, i::Int) where T = periodicvalue(p, i)
-Base.getindex(p::PeriodicView{T,2}, i::Int, j::Int) where T = periodicvalue(p, i, j)
+Base.getindex(p::PeriodicView{T,1}, i::Int) where T =
+  checkbounds(Bool, p.data, i) ? @inbounds(p.data[i]) : periodicvalue(p, i)
+Base.getindex(p::PeriodicView{T,2}, i::Int, j::Int) where T =
+  checkbounds(Bool, p.data, i, j) ? @inbounds(p.data[i, j]) : periodicvalue(p, i, j)
 
 samples(p::PeriodicView) = samples(p.data)
 
