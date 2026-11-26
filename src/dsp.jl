@@ -392,22 +392,28 @@ end
 
 """
 $(SIGNATURES)
-Phased-lock loop to track carrier frequency (approximately `fc`) in the input signal.
-If `fc` is not specified, the algorithm will attempt to track the dominant frequency.
+Phase-locked loop to track a carrier of frequency approximately `fc` in the input
+signal. The loop locks onto carriers within its pull-in range of `fc`, which grows
+with `bandwidth`. If `fc` is not specified, the loop starts at 0 Hz.
 """
 function pll(x::AbstractVecOrMat, fc=0.0, bandwidth=1e-3; fs=framerate(x))
   fs = inHz(fs)
   fc = inHz(fc)
   β = √bandwidth
-  n = nchannels(x)
-  ϕ = zeros(1, n)     # phase estimate
-  ω = zeros(1, n)     # integrator
-  y = similar(x, ComplexF64)
-  for j ∈ 1:nframes(x)
-    y[j,:] = cis.(-2π * fc * (j-1)/fs .+ ϕ)
-    Δϕ = angle.(x[j,:] .* conj.(y[j,:])) .* abs.(x[j,:])
-    ω .+= bandwidth * Δϕ
-    ϕ .+= β*Δϕ .+ ω
+  x̄ = samples(x)
+  y = Array{ComplexF64}(undef, size(x̄))
+  for k ∈ 1:nchannels(x̄)
+    xk = @view x̄[:, k]
+    rms = √mean(abs2, xk)
+    g = rms > 0 ? 1 / rms : 0.0
+    ϕ = 0.0
+    ω = 0.0
+    for j ∈ eachindex(xk)
+      y[j, k] = cis(2π * fc * (j - 1) / fs + ϕ)
+      Δϕ = angle(xk[j] * conj(y[j, k])) * abs(xk[j]) * g
+      ω += bandwidth * Δϕ
+      ϕ += β * Δϕ + ω
+    end
   end
   signal(y, fs)
 end

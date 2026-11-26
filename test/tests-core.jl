@@ -572,6 +572,19 @@ function test_dsp()
   e3 = √mean(abs2.(x[800:end] .- x3[800:end]))
   @test e2/e3 > 3
 
+  t = (0:15999) / 16000
+  for (a, f0) ∈ ((1.0, 1010.0), (1.0, 1100.0), (100.0, 1010.0), (0.01, 1010.0))
+    x = signal(a .* cis.(2π * f0 * t .+ 0.3), 16kHz)
+    y = pll(x, 1kHz)
+    @test framerate(y) == 16000
+    @test samples(y)[end-3999:end] ≈ cis.(2π * f0 * t[end-3999:end] .+ 0.3) atol=1e-3
+  end
+  x = signal(hcat(cis.(2π * 1010 * t), 5 .* cis.(2π * 990 * t)), 16kHz)
+  y = pll(x, 1kHz)
+  @test size(y) == size(x)
+  @test samples(y)[end-3999:end, :] ≈ samples(x)[end-3999:end, :] ./ [1 5] atol=1e-3
+  @test samples(pll(signal(zeros(ComplexF64, 100), 16kHz), 1kHz)) ≈ cis.(2π * 1000 * t[1:100])
+
   x = cw(7kHz, 1s, 44.1kHz)
   f = fir(127, 5kHz, 10kHz; fs=44.1kHz)
   x1 = filt(f, x)
