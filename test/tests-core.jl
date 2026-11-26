@@ -303,6 +303,9 @@ function test_signals()
   @test X8(1050, 1) == X8(1050)
   @test_throws BoundsError X8(1050, 2)
   @test_throws ArgumentError X8[10:20](1050)
+  @test isnan(X8(NaN))
+  @test_throws DomainError X8(Inf)
+  @test_throws "zero-fill the missing bins" X8[10:20](1050)
   @test_throws ArgumentError rfft(x8)[2:end](1050)
   Xm2 = fft(signal(randn(rng, 64, 2), 1000))
   @test Xm2(10.5, 2) == Xm2(10.5)[2]
@@ -562,6 +565,12 @@ function test_signals()
   @test_throws MethodError x(100ms:200ms)
   @test padded(x; fill=1.0)(-5.05) ≈ 1 atol=1e-3
   @test padded(x; fill=1.0)(-0.1) == 1
+  @test isnan(x(NaN)) && isnan(x(NaN, 1))
+  @test x([0.1, NaN])[1] == x(0.1) && isnan(x([0.1, NaN])[2])
+  @test x(Inf) == 0 && x(-Inf) == 0
+  @test padded(x; fill=1.0)(Inf) == 1 && padded(x; fill=1.0)(-Inf) == 1
+  @test signal(ComplexF64[1, 2, 3], 10.0)(NaN) === complex(NaN, NaN)
+  @test @inferred(x(NaN)) isa Float64
   y = signal([1.0 4.0; 2.0 5.0; 3.0 6.0], 10.0)
   @test y(0.1) == [2.0, 5.0]
   @test y(0.15, 2) == y(0.15)[2]
@@ -1167,6 +1176,9 @@ function test_dsp()
   @test all(delay(x, 3)[1:3, :] .== 0)
   @test delay(x, -3.7) ≈ x((0:499) ./ 1000 .+ 0.0037)
   @test all(delay(x, 600.5) .== 0)
+  @test all(delay(x, Inf) .== 0) && all(delay(x, -Inf) .== 0)
+  @test all(isnan, delay(x, NaN))
+  @test all(z -> isnan(real(z)) && isnan(imag(z)), delay(complex.(x), NaN))
   x = signal(randn(rng, Float32, 100), 10)
   @test @inferred(delay(x, 0.5)) isa typeof(x)
 

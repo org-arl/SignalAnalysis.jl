@@ -736,12 +736,16 @@ function delay!(x, n::Integer)
 end
 
 function delay!(x, v::Real)
-  vi = floor(Int, v)
-  v == vi && return delay!(x, vi)
+  if isnan(v)
+    x .= nanvalue(eltype(x))
+    return x
+  end
   if abs(v) > size(x, 1) + SINC_HALFWIDTH
     x .= 0
     return x
   end
+  vi = floor(Int, v)
+  v == vi && return delay!(x, vi)
   w = sincweights(real(float(eltype(x))), 1 - (v - vi))
   for j ∈ axes(x, 2)
     c = view(x, :, j)
