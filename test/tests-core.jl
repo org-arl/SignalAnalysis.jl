@@ -233,6 +233,25 @@ function test_signals()
   @test framerate(x1) == 1.0
   @test nframes(x1) == 200
 
+  xc = signal(randn(rng, ComplexF64, 64), 1000)
+  @test fft(xc) isa Vector{ComplexF64}
+  @test fft(xc) ≈ fft(samples(xc))
+  @test ifft(xc) ≈ ifft(samples(xc))
+  @test bfft(xc) ≈ bfft(samples(xc))
+  xr = signal(randn(rng, 64), 1000)
+  @test fft(xr) ≈ fft(samples(xr))
+  @test rfft(xr) ≈ rfft(samples(xr))
+  X = signal(rfft(samples(xr)), 1000)
+  @test irfft(X, 64) ≈ samples(xr)
+  @test brfft(X, 64) ≈ 64 .* samples(xr)
+  xm = signal(randn(rng, ComplexF64, 16, 2), 1000)
+  @test fft(xm, 1) ≈ fft(samples(xm), 1)
+
+  @test fftfreq(xr) == fftfreq(64, 1000)
+  @test fftfreq(256, xr) == fftfreq(256, 1000)
+  @test fftfreq(xr[1:16]) == fftfreq(16, 1000)
+  @test fftfreq(xm) == fftfreq(16, 1000)
+
 end
 
 function test_generate()
