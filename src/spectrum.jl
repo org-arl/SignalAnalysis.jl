@@ -295,6 +295,99 @@ a range or an array of indices, and may lie outside `X` for padded spectra.
 DSP.freq(i::Real, X::SampledSpectrum) = (spectruminfo(X).k0 + i - 1) * (Float64(framerate(X)) / spectruminfo(X).n)
 DSP.freq(i::AbstractArray{<:Real}, X::SampledSpectrum) = (spectruminfo(X).k0 .+ i .- 1) .* (Float64(framerate(X)) / spectruminfo(X).n)
 
+### values between bins
+
+const FrequencyLike = Union{Real,Units.Unitful.Frequency}
+
+"""
+    (X::SampledSpectrum)(f)
+    (X::SampledSpectrum)(f, ch)
+
+Evaluate spectrum `X` at frequency `f`, which may lie between bins. The frequency
+`f` is in Hz, or may be given with frequency units (e.g. `1.5kHz`). The result is
+the discrete-time Fourier transform of the signal that the spectrum represents, so
+it is exact, and agrees with the bins at bin frequencies, up to rounding. As for
+the bins, time 0 of that signal is its first sample. The result is periodic in
+frequency, with period `fs`, and one-sided spectra are extended by conjugate
+symmetry, as for a real signal.
+
+The spectrum must be complete: all bins of a two-sided spectrum (shifted or not),
+all non-negative frequency bins of a one-sided spectrum, or a [`padded`](@ref)
+spectrum, whose missing bins are zero. Each value takes `O(n)` operations for an
+`n`-point FFT, so for values on a fine regular grid, zero-padding the signal
+before the FFT is faster.
+
+For a single-channel spectrum, `X(f)` returns a single value. For a multichannel
+spectrum, it returns a vector with one value per channel, and `X(f, ch)` returns
+the value of channel `ch`. If `f` is a vector of frequencies, the result is a
+vector (for a single-channel spectrum, or when `ch` is given), or a matrix with
+one row per frequency and one column per channel.
+
+# Examples:
+```julia-repl
+julia> X = fft(signal(cos.(2π * 1050 * (0:99) / 8000), 8kHz));
+
+julia> abs(X(1kHz))
+22.887595468624955
+
+julia> abs(X(1050))
+50.48110116186148
+```
+"""
+function (X::SampledSpectrum)(f::FrequencyLike)
+  B, ks = binswithindices(X)
+  dtftvalue(B, ks, fractionalbin(f, X))
+end
+
+function (X::SampledSpectrum)(f::FrequencyLike, ch::Integer)
+  Base.checkindex(Bool, axes(X, 2), ch) || throw(BoundsError(X, (f, ch)))
+  B, ks = binswithindices(X)
+  dtftvalue(B, ks, fractionalbin(f, X), ch)
+end
+
+function (X::SampledSpectrum)(f::AbstractVector)
+  B, ks = binswithindices(X)
+  dtftvalue(B, ks, fractionalbin.(f, Ref(X)))
+end
+
+function (X::SampledSpectrum)(f::AbstractVector, ch::Integer)
+  Base.checkindex(Bool, axes(X, 2), ch) || throw(BoundsError(X, (f, ch)))
+  B, ks = binswithindices(X)
+  [dtftvalue(B, ks, fractionalbin(f1, X), ch) for f1 ∈ f]
+end
+
+fractionalbin(f, X) = Float64(inHz(f)) * spectruminfo(X).n / Float64(framerate(X))
+
+# bins of a complete spectrum, with the FFT bin number of each row
+function binswithindices(X::SampledSpectrum)
+  m = spectruminfo(X)
+  X isa PaddedSpectrum && return gatherbins(X, 0:m.n-1), 0:m.n-1
+  m.onesided && return gatherbins(padded(withinfo(onesidedbins(X), m)), 0:m.n-1), 0:m.n-1
+  size(X, 1) == m.n || incomplete(X)
+  samples(X), firstbin(X):lastbin(X)
+end
+
+dtftvalue(B::AbstractVector, ks, ν::Real) = dtftvalue(B, ks, ν, 1)
+dtftvalue(B::AbstractMatrix, ks, ν::Real) = [dtftvalue(B, ks, ν, j) for j ∈ axes(B, 2)]
+dtftvalue(B::AbstractVector, ks, νs::AbstractVector) = [dtftvalue(B, ks, ν, 1) for ν ∈ νs]
+dtftvalue(B::AbstractMatrix, ks, νs::AbstractVector) = [dtftvalue(B, ks, ν, j) for ν ∈ νs, j ∈ axes(B, 2)]
+
+function dtftvalue(B, ks, ν::Real, ch)
+  T = complex(float(eltype(B)))
+  n = length(ks)
+  acc = zero(T)
+  for (i, k) ∈ zip(axes(B, 1), ks)
+    acc += T(dirichlet(ν - k, n)) * B[i, ch]
+  end
+  acc
+end
+
+# DTFT at fractional bin δ of a unit bin at 0 of an n-point DFT
+function dirichlet(δ, n)
+  isinteger(δ / n) && return one(ComplexF64)
+  cispi(-δ * (n - 1) / n) * sinpi(δ) / (n * sinpi(δ / n))
+end
+
 ### transforms
 
 function checkregion(region)
