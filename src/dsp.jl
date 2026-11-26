@@ -683,9 +683,15 @@ end
     delay!(x, v)
 
 Delay signal `x` by `v` units. The delay may be specified in samples or in time
-units (e.g. 2.3𝓈). The function supports delays of fractional or negative
-number of samples. The length of the returned signal is the same as the original,
-with any part of the signal that is shifted beyond the original length discarded.
+units (e.g. 2.3𝓈). Delays may be negative, and may be a fractional number of
+samples. For a multichannel signal, every channel is delayed. The length of the
+returned signal is the same as the original, with any part of the signal that is
+shifted beyond the original length discarded, and zeros shifted in.
+
+Fractional delays use the same band-limited interpolation as evaluating a signal
+at a time (see [`SampledSignal`](@ref)), so a signal `s` delayed by `τ` seconds
+has the value `s(t - τ)` at every sample time `t`. Frequencies above about 90% of
+the Nyquist frequency are attenuated.
 
 # Examples:
 ```julia-repl
@@ -706,23 +712,58 @@ SampledSignal @ 10.0 Hz, 3-element Vector{Float64}:
 julia> x = signal([1.0, 2.0, 3.0, 2.0, 1.0], 10.0)
 julia> delay!(x, 1.2)
 SampledSignal @ 10.0 Hz, 5-element Vector{Float64}:
- -0.10771311593885118
-  0.8061269251734184
-  1.7488781412804602
-  2.9434587943152617
-  2.2755141401574472
+ -0.10392666815161294
+  0.8034767135536652
+  1.7503401027230303
+  2.9432140000798874
+  2.274536909816327
 
 julia> x = signal([1.0, 2.0, 3.0, 2.0, 1.0], 10.0)
 julia> delay!(x, -0.11𝓈)
 SampledSignal @ 10.0 Hz, 5-element Vector{Float64}:
-  2.136038062052266
-  2.98570052268015
-  1.870314441196549
-  0.9057002486847239
- -0.06203155191384361
+  2.1354604073929195
+  2.985636168304411
+  1.8710195275583208
+  0.9043683839765194
+ -0.06009907434381305
 ```
 """
-function delay!(x, n::Integer; npad=0)
+function delay!(x, n::Integer)
+  for j ∈ axes(x, 2)
+    shift!(view(x, :, j), n)
+  end
+  x
+end
+
+function delay!(x, v::Real)
+  vi = floor(Int, v)
+  v == vi && return delay!(x, vi)
+  if abs(v) > size(x, 1) + SINC_HALFWIDTH
+    x .= 0
+    return x
+  end
+  w = sincweights(real(float(eltype(x))), 1 - (v - vi))
+  for j ∈ axes(x, 2)
+    c = view(x, :, j)
+    p = padded(copy(samples(c)))
+    for i ∈ eachindex(c)
+      c[i] = sincsum(p, i - vi - 1, w, 1)
+    end
+  end
+  x
+end
+
+delay!(x, t::Units.Unitful.Time) = delay!(x, inseconds(t) * framerate(x))
+
+"""
+    delay(x, v)
+
+Create a delayed version of signal `x` with `v` units of delay.
+See [`delay!`](@ref) for details.
+"""
+delay(x, v) = delay!(copy(x), v)
+
+function shift!(x, n)
   if n > length(x) || n < -length(x)
     x .= 0
   elseif n > 0
@@ -738,42 +779,6 @@ function delay!(x, n::Integer; npad=0)
   end
   x
 end
-
-function delay!(x, v::Real; npad=32)
-  if v > length(x) || v < -length(x)
-    x .= 0
-    return x
-  end
-  vi = floor(Int, v)
-  v > vi || return delay!(x, vi)
-  n = nextfastfft(length(x) + 2 * npad)
-  X = zeros(ComplexF64, n)
-  X[npad+1:npad+length(x)] .= samples(x)
-  fft!(X)
-  X .*= cis.(-2π .* (v - vi) .* fftfreq(n))
-  ifft!(X)
-  for (i, j) ∈ zip(eachindex(x), 1:length(x))
-    k = j - vi + npad
-    if k < 1 || k > length(X)
-      x[i] = 0
-    elseif eltype(x) <: Complex
-      x[i] = X[k]
-    else
-      x[i] = real(X[k])
-    end
-  end
-  x
-end
-
-delay!(x, t::Units.Unitful.Time; kwargs...) = delay!(x, inseconds(t) * framerate(x); kwargs...)
-
-"""
-    delay(x, v)
-
-Create a delayed version of signal `x` with `v` units of delay.
-See [`delay!`](@ref) for details.
-"""
-delay(x, v; kwargs...) = delay!(copy(x), v; kwargs...)
 
 """
 $(SIGNATURES)

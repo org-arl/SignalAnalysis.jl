@@ -518,6 +518,42 @@ function test_signals()
   @test fftfreq(xr[1:16]) == fftfreq(16, 1000)
   @test fftfreq(xm) == fftfreq(16, 1000)
 
+  x = signal([1.0, 2.0, 3.0, 2.0, 1.0], 10.0)
+  @test x.((0:4) ./ 10) == samples(x)
+  @test x((0:4) ./ 10) == samples(x)
+  @test x(0.2) == x(200ms) == x(1//5) == 3.0
+  @test x(-0.1) == 0 && x(0.5) == 0
+  @test x(-10.0) == 0 && x(10.0) == 0
+  @test x(0.45) != 0
+  @test x(0.15) > 2.5
+  @test x([0.15, 0.25]) == [x(0.15), x(0.25)]
+  @test x(0.15, 1) == x(0.15)
+  @test_throws BoundsError x(0.15, 2)
+  @test_throws MethodError x(100ms:200ms)
+  @test padded(x; fill=1.0)(-5.05) ≈ 1 atol=1e-3
+  @test padded(x; fill=1.0)(-0.1) == 1
+  y = signal([1.0 4.0; 2.0 5.0; 3.0 6.0], 10.0)
+  @test y(0.1) == [2.0, 5.0]
+  @test y(0.15, 2) == y(0.15)[2]
+  @test y([0.0, 0.15]) == [y(0.0)'; y(0.15)']
+  @test y([0.0, 0.15], 1) == y([0.0, 0.15])[:, 1]
+  @test_throws BoundsError y(0.1, 3)
+  x = signal(sin.(2π * 300 * (0:1999) / 1000), 1000)
+  t = 0.5 .+ 0.9 .* rand(rng, 100)
+  @test maximum(abs, x(t) .- sin.(2π * 300 * t)) < 2e-3
+  @test x(t .* 𝓈) == x(t)
+  @test x(t)[1] isa Float64
+  @test signal(Float32.(samples(x)), 1000)(0.5) isa Float32
+  @test signal(ComplexF32.(samples(x)), 1000)(0.5) isa ComplexF32
+  @test signal(collect(1:10), 1000)(0.0015) isa Float64
+  @test @inferred(x(0.5)) isa Float64
+  @test @inferred(x(0.5, 1)) isa Float64
+  @test @inferred(x(t)) isa Vector{Float64}
+  @test @inferred(y(0.15)) isa Vector{Float64}
+  @test @inferred(y(0.15, 1)) isa Float64
+  @test @inferred(y([0.0, 0.15])) isa Matrix{Float64}
+  @test @inferred(y([0.0, 0.15], 2)) isa Vector{Float64}
+
 end
 
 function test_generate()
@@ -1038,7 +1074,8 @@ function test_dsp()
   @test delay!([1,2,3,4], -1) == [2,3,4,0]
   @test delay!([1,2,3,4], 1) == [0,1,2,3]
 
-  x = signal(vcat(zeros(128), [1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
+  pulse = exp.(-((-8:8) ./ 2.5) .^ 2)
+  x = signal(vcat(zeros(128), pulse, zeros(128)), 100.0)
   y = copy(samples(x))
   delay!(x, 1)
   @test samples(x) == circshift(y, 1)
@@ -1046,7 +1083,7 @@ function test_dsp()
   @test samples(x) == circshift(y, -32)
   delay!(x, 10.7)
   delay!(x, 21.3)
-  @test samples(x) ≈ y atol=0.05
+  @test samples(x) ≈ y atol=1e-3
 
   x = signal(vcat(zeros(128), [1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
   y = copy(samples(x))
@@ -1054,7 +1091,7 @@ function test_dsp()
   delay!(x, -10)
   @test samples(x) ≈ y atol=1e-3
 
-  x = signal(vcat(zeros(128), ComplexF64[1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
+  x = signal(vcat(zeros(128), ComplexF64.(pulse), zeros(128)), 100.0)
   y = copy(samples(x))
   delay!(x, 1)
   @test samples(x) == circshift(y, 1)
@@ -1062,7 +1099,7 @@ function test_dsp()
   @test samples(x) == circshift(y, -32)
   delay!(x, 10.7)
   delay!(x, 21.3)
-  @test samples(x) ≈ y atol=0.05
+  @test samples(x) ≈ y atol=1e-3
 
   x = signal(vcat(zeros(128), ComplexF64[1.0, 2.0, 3.0, 2.0, 1.0], zeros(128)), 100.0)
   y = copy(samples(x))
@@ -1070,7 +1107,7 @@ function test_dsp()
   delay!(x, -10)
   @test samples(x) ≈ y atol=1e-3
 
-  x = signal(vcat(zeros(ComplexF32, 128), ComplexF32[1.0, 2.0, 3.0, 2.0, 1.0], zeros(ComplexF32, 128)), 100.0)
+  x = signal(vcat(zeros(ComplexF32, 128), ComplexF32.(pulse), zeros(ComplexF32, 128)), 100.0)
   y = copy(samples(x))
   delay!(x, 1)
   @test samples(x) == circshift(y, 1)
@@ -1078,7 +1115,7 @@ function test_dsp()
   @test samples(x) == circshift(y, -32)
   delay!(x, 10.7)
   delay!(x, 21.3)
-  @test samples(x) ≈ y atol=0.05
+  @test samples(x) ≈ y atol=1e-3
 
   x = signal(vcat(zeros(ComplexF32, 128), ComplexF32[1.0, 2.0, 3.0, 2.0, 1.0], zeros(ComplexF32, 128)), 100.0)
   y = copy(samples(x))
@@ -1091,6 +1128,17 @@ function test_dsp()
   delay!(x, 0.9999999)
   delay!(x, -0.9999999)
   @test samples(x) ≈ y atol=1e-3
+
+  x = signal(randn(rng, 500, 3), 1000)
+  y = delay(x, 3.7)
+  @test samples(y) ≈ x((0:499) ./ 1000 .- 0.0037)
+  @test delay(x, 3.7ms) ≈ y
+  @test delay(x, 3)[4:end, :] == x[1:end-3, :]
+  @test all(delay(x, 3)[1:3, :] .== 0)
+  @test delay(x, -3.7) ≈ x((0:499) ./ 1000 .+ 0.0037)
+  @test all(delay(x, 600.5) .== 0)
+  x = signal(randn(rng, Float32, 100), 10)
+  @test @inferred(delay(x, 0.5)) isa typeof(x)
 
   x = rand(rng, ComplexF64, 4096)
   @test vec(dzt(x, length(x))) == x

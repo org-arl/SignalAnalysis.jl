@@ -56,6 +56,21 @@ y[101]                      # same as x[1], now at time 100/20000 = 5 ms
 ```
 For plain arrays (rather than signals), finite padding instead gives a view that keeps the original indices, so `padded(v, 100)[-99]` is the first sample of the padding and `padded(v, 100)[1] == v[1]`.
 
+### Values between samples
+
+A signal may be called as a function of time, to treat it as a continuous-time signal. The time is in seconds, or given with units, and time 0 is the first sample:
+```julia
+x = signal(randn(20000), 20kHz)
+x(0.1)                      # value at 100 ms, same as x[2001]
+x(100.03ms)                 # value between two samples
+x(0:1e-5:0.01)              # values at many times, as a vector
+```
+Values between samples are computed by band-limited interpolation, using a Kaiser-windowed sinc kernel spanning about 37 samples. This is the same design as the default filter of `resample()`. Frequencies above about 90% of the Nyquist frequency are attenuated, so signals that are to be evaluated between samples should have little content in that band. At sample times, the samples are returned unchanged. Samples beyond the ends of the signal are taken to be zero (or the fill value of a [`padded`](@ref) signal), so values within about 18 samples outside the signal may be non-zero.
+
+For a multichannel signal, `x(t)` returns a vector with one value per channel, and `x(t, ch)` returns the value of channel `ch`. A vector of times gives a matrix with one row per time and one column per channel.
+
+Each value takes about 37 multiply-adds per channel to compute. To evaluate a whole signal on a new sampling grid, `resample()` is much faster. To delay a signal by a fractional number of samples, use [`delay`](@ref), which uses the same interpolation. A signal delayed by a time `τ` (e.g. `delay(x, 0.25ms)`) has the value `x(t - τ)` at each sample time `t`. Note that a delay given as a plain number is in samples (e.g. `delay(x, 2.5)`), while a time given to `x(t)` as a plain number is in seconds.
+
 ### API reference
 
 ```@autodocs

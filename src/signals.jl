@@ -16,6 +16,14 @@ const SampledSignal = MetaArray{<:Any,SamplingInfo,T} where T
 const SampledSignalVector = MetaArray{<:AbstractVector,SamplingInfo,T} where T
 const SampledSignalMatrix = MetaArray{<:AbstractMatrix,SamplingInfo,T} where T
 
+const TimeLike = Union{Real,Units.Unitful.Time}
+
+# same design rule as the default filter of DSP.resample
+const SINC_LENGTH, SINC_α = kaiserord(0.2, 60)
+const SINC_HALFWIDTH = (SINC_LENGTH - 1) / 2
+const SINC_OFFSETS = -floor(Int, SINC_HALFWIDTH):floor(Int, SINC_HALFWIDTH)+1
+const SINC_NTAPS = length(SINC_OFFSETS)
+
 SignalBase.nframes(x::AbstractArray) = size(x, 1)
 SignalBase.framerate(x::SampledSignal) = x.fs
 SignalBase.framerate(x::AbstractArray) = 1.0
@@ -41,6 +49,74 @@ or an array of indices.
 """
 Base.time(i::Real, x::SampledSignal) = (i - 1) / framerate(x)
 Base.time(i::AbstractArray{<:Real}, x::SampledSignal) = (i .- 1) ./ framerate(x)
+
+"""
+    (s::SampledSignal)(t)
+    (s::SampledSignal)(t, ch)
+
+Evaluate signal `s` at time `t`, treating it as a continuous-time signal. The
+time `t` is in seconds, or may be given with time units (e.g. `1.5ms`). Time 0
+is the first sample, as in [`domain`](@ref).
+
+Values between samples are computed by band-limited interpolation with a
+Kaiser-windowed sinc kernel (60 dB stopband attenuation, spanning about 37
+samples). This is the same design as the default filter of `resample`.
+Frequencies above about 90% of the Nyquist frequency are attenuated. At sample
+times, the samples are returned unchanged.
+
+Samples outside the signal are read from the signal itself: zero for most
+signals, or the fill value for [`padded`](@ref) signals. The result may
+therefore be non-zero slightly before the start or after the end of the signal.
+
+For a single-channel signal, `s(t)` returns a single value. For a multichannel
+signal, it returns a vector with one value per channel, and `s(t, ch)` returns
+the value of channel `ch`. If `t` is a vector of times, the result is a vector
+(for a single-channel signal, or when `ch` is given), or a matrix with one row
+per time and one column per channel.
+
+Time ranges such as `1ms:2ms` are for slicing signals (`s[1ms:2ms]`), and are
+not accepted here. Slicing rounds the start time to the nearest sample, so
+`s[1ms:2ms](0)` may differ slightly from `s(1ms)`.
+
+# Examples:
+```julia-repl
+julia> x = signal([1.0, 2.0, 3.0, 2.0, 1.0], 10.0);
+
+julia> x(0.1)
+2.0
+
+julia> x(150ms)
+2.672655563713871
+
+julia> y = signal([1.0 4.0; 2.0 5.0; 3.0 6.0], 10.0);
+
+julia> y(0.1)
+2-element Vector{Float64}:
+ 2.0
+ 5.0
+
+julia> y(0.1, 2)
+5.0
+```
+"""
+(s::SampledSignal)(t::TimeLike) = sincinterp(getfield(s, :data), fractionalindex(t, s))
+
+function (s::SampledSignal)(t::TimeLike, ch::Integer)
+  data = getfield(s, :data)
+  Base.checkindex(Bool, axes(data, 2), ch) || throw(BoundsError(s, (t, ch)))
+  sincinterp(data, fractionalindex(t, s), ch)
+end
+
+function (s::SampledSignal)(t::AbstractVector)
+  data = getfield(s, :data)
+  sincinterp(data, fractionalindex.(t, Ref(s)))
+end
+
+function (s::SampledSignal)(t::AbstractVector, ch::Integer)
+  data = getfield(s, :data)
+  Base.checkindex(Bool, axes(data, 2), ch) || throw(BoundsError(s, (t, ch)))
+  [sincinterp(data, fractionalindex(τ, s), ch) for τ ∈ t]
+end
 
 """
 $(TYPEDSIGNATURES)
@@ -447,3 +523,50 @@ SampledSignal @ 8000.0 Hz, 5-element Vector{Float64}:
 ```
 """
 samerateas(x, y) = signal(samples(y), framerate(x))
+
+### helpers
+
+fractionalindex(t, s) = firstindex(s, 1) + Float64(inseconds(t)) * Float64(framerate(s))
+
+sincinterp(data::AbstractVector, pos::Real) = sincinterp(data, pos, 1)
+sincinterp(data::AbstractMatrix, pos::Real) = [sincinterp(data, pos, j) for j ∈ axes(data, 2)]
+sincinterp(data::AbstractVector, pos::AbstractVector) = [sincinterp(data, p, 1) for p ∈ pos]
+
+function sincinterp(data::AbstractMatrix, pos::AbstractVector)
+  [sincinterp(data, p, j) for p ∈ pos, j ∈ axes(data, 2)]
+end
+
+function sincinterp(data, pos::Real, ch)
+  k₀ = floor(Int, pos)
+  sincsum(padded(data), k₀, sincweights(real(float(eltype(data))), pos - k₀), ch)
+end
+
+# value at fractional index k₀ + d, where `w = sincweights(R, d)`
+function sincsum(p, k₀, w, ch)
+  acc = zero(float(eltype(p)))
+  for (m, n) ∈ enumerate(SINC_OFFSETS)
+    acc += w[m] * p[k₀ + n, ch]
+  end
+  acc
+end
+
+function sincweights(R, d)
+  β = π * SINC_α
+  I₀β = besseli0(β)
+  ntuple(Val(SINC_NTAPS)) do m
+    x = d - SINC_OFFSETS[m]
+    r = x / SINC_HALFWIDTH
+    R(abs(r) < 1 ? sinc(x) * besseli0(β * √(1 - r^2)) / I₀β : 0.0)
+  end
+end
+
+function besseli0(x)
+  term = acc = one(x)
+  k = 0
+  while term > eps(acc)
+    k += 1
+    term *= (x / 2k)^2
+    acc += term
+  end
+  acc
+end
