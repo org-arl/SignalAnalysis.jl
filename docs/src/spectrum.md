@@ -36,6 +36,16 @@ tobin((1kHz, 2kHz), X)   # 1001:2001
 tobin(1kHz, 8kHz, 8000)  # 1001, for an 8000-point FFT at 8 kHz
 ```
 
+### Values between bins
+
+A spectrum may be called as a function of frequency, to get its value between bins. The frequency is in Hz, or given with units:
+```julia
+X(1000.5)                # value halfway between two bins
+X(1.0005kHz)             # same value
+X(990:0.1:1010)          # values at many frequencies, as a vector
+```
+The value is the discrete-time Fourier transform of the signal that the spectrum represents, so it is exact, and matches the bins at bin frequencies. This is useful, for example, to find the frequency of a spectral peak more precisely than the bin spacing. The spectrum must be complete: all its bins (shifted or not), all non-negative frequency bins of a one-sided spectrum, or a padded spectrum. Each value takes time proportional to the FFT length, so for values on a fine regular grid, zero-padding the signal before the FFT is faster. For a multichannel spectrum, `X(f)` returns one value per channel, and `X(f, ch)` the value of channel `ch`.
+
 ### Selecting bands
 
 Spectra can be indexed by frequency, in the same way that signals can be indexed by time. The result is a spectrum that still knows the frequencies of its bins:

@@ -288,6 +288,33 @@ function test_signals()
   @test typeof(domain(X)) == typeof(domain(xc))
   @test fftfreq(X) ≈ fftfreq(64, 1000)
   @test fftfreq(X) isa Vector{Float64}
+  x8 = signal(cos.(2π * 1050 * (0:99) / 8000), 8000)
+  X8 = fft(x8)
+  dtft(f) = sum(samples(x8) .* cis.(-2π * f * (0:99) / 8000))
+  @test X8(domain(X8)) == samples(X8)
+  @test X8(1050) ≈ dtft(1050)
+  @test X8(1.05kHz) == X8(1050)
+  @test X8([1000, 1050]) ≈ dtft.([1000, 1050])
+  @test X8(1050 + 8000) ≈ X8(1050)
+  @test fftshift(X8)(1050) ≈ X8(1050)
+  @test rfft(x8)(1050) ≈ X8(1050)
+  @test rfft(x8)(-1050) ≈ X8(-1050)
+  @test padded(X8[10:20])(1050) ≈ fft(ifft(padded(X8[10:20])))(1050)
+  @test X8(1050, 1) == X8(1050)
+  @test_throws BoundsError X8(1050, 2)
+  @test_throws ArgumentError X8[10:20](1050)
+  @test_throws ArgumentError rfft(x8)[2:end](1050)
+  Xm2 = fft(signal(randn(rng, 64, 2), 1000))
+  @test Xm2(10.5, 2) == Xm2(10.5)[2]
+  @test Xm2([10.5, 20.5]) == [transpose(Xm2(10.5)); transpose(Xm2(20.5))]
+  @test Xm2([10.5, 20.5], 1) == Xm2([10.5, 20.5])[:, 1]
+  @test fft(signal(randn(rng, Float32, 16), 100))(3.3) isa ComplexF32
+  @test @inferred(X8(1050)) isa ComplexF64
+  @test @inferred(X8(1050, 1)) isa ComplexF64
+  @test @inferred(X8([1000, 1050])) isa Vector{ComplexF64}
+  @test @inferred(Xm2(10.5)) isa Vector{ComplexF64}
+  @test @inferred(Xm2([10.5, 20.5])) isa Matrix{ComplexF64}
+  @test @inferred(rfft(x8)(1050)) isa ComplexF64
   @test eltype(fftfreq(xc)) == eltype(freq(1:2, X)) == Float64
   @test eltype(domain(xc)) == Float64 && time(2, xc) isa Float64
   @test startswith(sprint(show, MIME("text/plain"), X), "SampledSpectrum of 64-point signal @ 1000.0 Hz, bins 0:63")
